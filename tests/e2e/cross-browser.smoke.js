@@ -1,21 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-const TRANSPARENT_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+4S7Z1AAAAABJRU5ErkJggg==",
-  "base64",
-);
-
 test("loads the static map and switches its core presentation", async ({ page }) => {
   const errors = [];
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
-    status: 200,
-    contentType: "image/png",
-    body: TRANSPARENT_PNG,
-  }));
 
   await page.goto("/");
   try {

@@ -184,6 +184,19 @@ test("serves provider-neutral security headers", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true");
 });
 
+test("keeps local sectors usable when basemap tiles are unavailable", async ({ page }) => {
+  await page.route("**/__test-tile.png", (route) => route.abort("failed"));
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
+  await expect(page.locator("#dataset-status")).toContainText("achtergrondkaart tijdelijk niet beschikbaar");
+  await expect(page.locator("#sector-options option")).toHaveCount(154);
+
+  const expectedNetworkErrors = runtimeErrors.get(page);
+  expect(expectedNetworkErrors.length).toBeGreaterThan(0);
+  expect(expectedNetworkErrors.every((message) => message.includes("Failed to load resource"))).toBe(true);
+  runtimeErrors.set(page, []);
+});
+
 test.afterEach(async ({ page }) => {
   expect(runtimeErrors.get(page), "De app mag geen browserfouten loggen").toEqual([]);
 });

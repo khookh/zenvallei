@@ -127,7 +127,9 @@ export function createMapController({
   };
 
   const ready = new Promise((resolve, reject) => {
-    map.once("load", async () => {
+    // The sector overlay depends on the style, not on successful basemap tiles.
+    // Initialising at style.load keeps local data usable during a tile outage.
+    map.once("style.load", async () => {
       try {
         performance.mark("heat-overlay-start");
         map.addSource(SECTOR_SOURCE_ID, { type: "geojson", data: geojson, promoteId: "sectorId" });
