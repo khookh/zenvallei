@@ -1,4 +1,5 @@
 import { validateApplicationData } from "./data-validation.js";
+import { addMunicipalityStatistics } from "./aggregate-statistics.js";
 
 export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
   const prefix = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -31,13 +32,22 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
     if (!assetUrl || /^(?:https?:)?\/\//.test(assetUrl)) return assetUrl;
     return `${prefix}${assetUrl.replace(/^\//, "")}`;
   };
-  if (landCover?.raster) landCover.raster.imageUrl = resolveAssetUrl(landCover.raster.imageUrl);
+  if (landCover?.raster) {
+    landCover.raster.imageUrl = resolveAssetUrl(landCover.raster.imageUrl);
+    Object.entries(landCover.raster.rasterVariants ?? {}).forEach(([key, value]) => {
+      landCover.raster.rasterVariants[key] = resolveAssetUrl(value);
+    });
+  }
   if (landCover?.change) landCover.change.imageUrl = resolveAssetUrl(landCover.change.imageUrl);
   if (urbanAtlas?.geojsonUrl) urbanAtlas.geojsonUrl = resolveAssetUrl(urbanAtlas.geojsonUrl);
   Object.values(vegetation?.years ?? {}).forEach((year) => {
     if (year?.imageUrl) year.imageUrl = resolveAssetUrl(year.imageUrl);
+    Object.entries(year?.rasterVariants ?? {}).forEach(([key, value]) => {
+      year.rasterVariants[key] = resolveAssetUrl(value);
+    });
   });
   validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation });
+  addMunicipalityStatistics({ scores: scorePayload.sectors, landCover, urbanAtlas, vegetation });
   return { geojson, scores: scorePayload.sectors, methodology, provenance, landCover, urbanAtlas, vegetation };
 }
 

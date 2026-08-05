@@ -25,6 +25,7 @@ Official workbook / geometry / raster / polygons / satellite observation
 - `main.js` owns session-only state and coordinates controls.
 - `map-controller.js` owns the basemap, viewport, Statbel selection geometry and generic layer lifecycle.
 - `src/layers` owns dataset meaning, palette, lazy loading, popup content and sector-panel models.
+- `aggregate-statistics.js` derives area-weighted municipality summaries from the prepared sector records.
 - `panel.js` and the legend renderer turn plain presentation models into accessible UI.
 - `i18n.js` is the stable translation API; the Dutch and English catalogues are separate files with identical keys.
 
@@ -35,6 +36,7 @@ The map controller deliberately does not decide what an Urban Atlas, LCM, Sentin
 - Commands in `scripts/prepare-*.mjs` are CLI entry points.
 - Reusable geospatial and statistical functions live in `scripts/lib`.
 - Preparation writes only browser-ready assets and provenance to `public/data`.
+- Raster layers contain a full Zennevallei image and municipality-specific transparent variants. Vector layers use the same municipality filter directly.
 - Runtime code never imports preparation modules.
 - Preparation modules never import UI code.
 

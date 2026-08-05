@@ -85,6 +85,18 @@
               <button class="heat-metric-button" type="button" data-heat-metric="vulnerability" aria-pressed="false" data-i18n="heatMetric.vulnerability">Kwetsbaarheid</button>
             </div>
           </div>
+          <div class="vegetation-year-control" id="vegetation-year-control" hidden>
+            <div class="vegetation-year-heading">
+              <label for="vegetation-year-slider" data-i18n="vegetation.yearPrompt">Opnamejaar</label>
+              <output id="vegetation-year-output" for="vegetation-year-slider">2023</output>
+            </div>
+            <div class="vegetation-year-slider-row">
+              <button id="vegetation-year-previous" type="button" aria-label="Vorig jaar" data-i18n-aria-label="vegetation.previousYear">‹</button>
+              <input id="vegetation-year-slider" type="range" min="2023" max="2023" step="1" value="2023" aria-describedby="vegetation-year-date" />
+              <button id="vegetation-year-next" type="button" aria-label="Volgend jaar" data-i18n-aria-label="vegetation.nextYear">›</button>
+            </div>
+            <p id="vegetation-year-date" class="vegetation-year-date"></p>
+          </div>
           <section class="layer-context" id="layer-context" aria-live="polite" aria-atomic="true">
             <p class="layer-context-meta" id="layer-context-meta"></p>
             <p class="layer-context-copy" id="layer-context-copy"></p>

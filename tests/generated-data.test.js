@@ -150,6 +150,14 @@ describe("generated Zennevallei data contract", () => {
     expect({ width, height, channels }).toEqual({ width: 2479, height: 1537, channels: 4 });
     expect(channelStats[3].min).toBe(0);
     expect(channelStats[3].max).toBe(255);
+    expect(Object.keys(landCover.raster.rasterVariants)).toHaveLength(8);
+    for (const [municipality, assetUrl] of Object.entries(landCover.raster.rasterVariants)) {
+      if (municipality === "all") continue;
+      const { channels: municipalityChannels } = await sharp(path.join(dataDir, "..", assetUrl)).stats();
+      expect(municipalityChannels[3].max).toBe(255);
+      expect(municipalityChannels[3].mean).toBeGreaterThan(0);
+      expect(municipalityChannels[3].mean).toBeLessThan(channelStats[3].mean);
+    }
     expect(landCover.vegetationCodes).toEqual([10, 30]);
     expect(landCover.builtUpCodes).toEqual([90]);
     expect(landCover.metricDefinitions).toEqual({

@@ -378,7 +378,7 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("27,06 ha");
     expect(panel.textContent).toContain("Mediane NDVI");
     expect(panel.textContent).toContain("0,681");
-    expect(panel.textContent).toContain("Uitgesloten akkerland");
+    expect(panel.textContent).toContain("Uitgesloten landbouwgewassen");
     expect(panel.textContent).toContain("Berekende NDVI-drempel: 0,66");
     expect(panel.textContent).toContain("ROC AUC 0,911");
     document.querySelector('[data-section="vegetation-methodology"]').open = true;

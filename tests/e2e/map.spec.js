@@ -48,6 +48,10 @@ const LAND_COVER_FIXTURE = {
     available: true,
     year: 2020,
     imageUrl: "data/land-cover/land-cover-2020.png",
+    rasterVariants: {
+      all: "data/land-cover/land-cover-2020.png",
+      Beersel: "data/land-cover/land-cover-2020-beersel.png",
+    },
     coordinates: [[4.072, 50.828], [4.424, 50.828], [4.424, 50.689], [4.072, 50.689]],
   },
   classes: [
@@ -164,6 +168,9 @@ const VEGETATION_FIXTURE = JSON.parse(fs.readFileSync(
   path.resolve(import.meta.dirname, "..", "..", "public", "data", "vegetation.json"),
   "utf8",
 ));
+// Keep the established 2023 values in the detailed regression while a
+// separate interaction below verifies the complete annual selector.
+VEGETATION_FIXTURE.activeYear = 2023;
 
 test.beforeEach(async ({ page }) => {
   const errors = [];
@@ -175,11 +182,11 @@ test.beforeEach(async ({ page }) => {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
   await page.route("**/data/land-cover.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(LAND_COVER_FIXTURE) }));
-  await page.route("**/data/land-cover/land-cover-2020.png", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
+  await page.route("**/data/land-cover/land-cover-2020*.png", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
   await page.route("**/data/urban-atlas.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(URBAN_ATLAS_FIXTURE) }));
   await page.route("**/data/urban-atlas.geojson", (route) => route.fulfill({ status: 200, contentType: "application/geo+json", body: JSON.stringify(URBAN_ATLAS_GEOJSON) }));
   await page.route("**/data/vegetation.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VEGETATION_FIXTURE) }));
-  await page.route("**/data/vegetation/likely-vegetation-2023.png", (route) => {
+  await page.route("**/data/vegetation/likely-vegetation-*.png", (route) => {
     vegetationRasterRequests.set(page, vegetationRasterRequests.get(page) + 1);
     return route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG });
   });
@@ -556,6 +563,8 @@ test("switches to Copernicus land cover and preserves the selected sector", asyn
   await search.press("Enter");
   await expect(panel).toContainText("Dominante landbedekking");
   await page.locator("#panel-close").click();
+  await expect(panel).toContainText("Gemeenteoverzicht");
+  await page.locator("#panel-close").click();
   await page.locator("#legend").evaluate((element) => element.removeAttribute("open"));
   await page.locator("#reset-view").click();
   await page.waitForFunction(() => !window.__heatMap.map.isMoving());
@@ -694,7 +703,7 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   await expect(page.locator("#legend-content")).toContainText("Waarschijnlijk begroeid");
   await expect(page.locator("#legend-content")).toContainText("Onder de NDVI-drempel");
   await expect(page.locator("#legend-content")).toContainText("Uitgesloten of geen waarneming");
-  await expect(page.locator("#layer-context-meta")).toContainText("24 juni 2023");
+  await expect(page.locator("#layer-context-meta")).toContainText("24 jun 2023");
   await expect(page.locator("#layer-context-copy")).toContainText("geen definitieve landbedekkingskaart");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Vegetatie-indicatie 2023 in de Zennevallei");
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-opacity"))).toBe(0.68);
@@ -705,7 +714,7 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   await expect(panel).toContainText("27,06 ha");
   await expect(panel).toContainText("Mediane NDVI");
   await expect(panel).toContainText("0,681");
-  await expect(panel).toContainText("Uitgesloten akkerland");
+  await expect(panel).toContainText("Uitgesloten landbouwgewassen");
   await expect(panel.locator('[data-section="vegetation-methodology"]')).not.toHaveAttribute("open", "");
   await panel.locator('[data-section="vegetation-methodology"] > summary').click();
   await expect(panel).toContainText("Berekende NDVI-drempel: 0,66");
@@ -727,6 +736,17 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   await expect(panel).toContainText("Calculated NDVI threshold: 0.66");
   await expect(panel.locator('[data-section="vegetation-methodology"]')).toHaveAttribute("open", "");
 
+  await page.locator("#vegetation-year-slider").evaluate((element) => {
+    element.value = element.max;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await expect(vegetationButton).toHaveText("Likely vegetation 2026");
+  await expect(page.locator("#vegetation-year-output")).toHaveText("2026");
+  await expect(page.locator("#vegetation-year-date")).toContainText("20 Jun 2026");
+  await expect(panel).toContainText("58.68");
+  await expect(panel.locator('[data-section="vegetation-methodology"]')).toHaveAttribute("open", "");
+  await expect.poll(() => vegetationRasterRequests.get(page)).toBe(2);
+
   const subsequentSwitch = await page.evaluate(async () => {
     await window.__heatMap.setLayer("heat");
     const started = performance.now();
@@ -734,13 +754,46 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
     return performance.now() - started;
   });
   expect(subsequentSwitch).toBeLessThan(100);
-  expect(vegetationRasterRequests.get(page)).toBe(1);
+  expect(vegetationRasterRequests.get(page)).toBe(2);
 
   const accessibilityResults = await new AxeBuilder({ page })
     .exclude("#map")
     .withTags(["wcag2a", "wcag2aa"])
     .analyze();
   expect(accessibilityResults.violations).toEqual([]);
+});
+
+test("filters all environmental overlays and opens area-weighted municipality summaries", async ({ page }) => {
+  const panel = page.locator("#detail-panel");
+  await page.locator("#municipality-select").selectOption("Beersel");
+  await expect(panel).toHaveAttribute("aria-hidden", "true");
+
+  await page.locator('[data-layer="land-cover"]').click();
+  await expect(panel).toHaveAttribute("aria-hidden", "false");
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
+  await expect(panel).toContainText("61,22%");
+  expect(await page.evaluate(() => window.__heatMap.map.getSource("land-cover-image").serialize().url)).toContain("land-cover-2020-beersel.png");
+
+  await page.locator('[data-layer="urban-atlas"]').click();
+  await expect(panel).toContainText("Groenbedekking");
+  await expect(panel).toContainText("40%");
+  expect(await page.evaluate(() => window.__heatMap.map.getFilter("urban-atlas-fill"))).toEqual(["==", ["get", "municipality"], "Beersel"]);
+
+  await page.locator('[data-layer="vegetation"]').click();
+  await expect(panel).toContainText("Hoeveel lijkt begroeid?");
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
+  expect(await page.evaluate(() => window.__heatMap.map.getSource("likely-vegetation-image").serialize().url)).toContain("likely-vegetation-2023-beersel.png");
+
+  const search = page.locator("#sector-search");
+  await search.fill("23003A001");
+  await search.press("Enter");
+  await expect(panel).toContainText("23003A001");
+  await expect(panel).not.toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
+  await page.locator("#panel-close").click();
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
+
+  await page.locator('[data-layer="heat"]').click();
+  await expect(panel).toHaveAttribute("aria-hidden", "true");
 });
 
 test("filters the map and exposes no-data sectors honestly", async ({ page }) => {

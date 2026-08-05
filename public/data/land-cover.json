@@ -39,7 +39,17 @@
         4.072070537190814,
         50.68951929521115
       ]
-    ]
+    ],
+    "rasterVariants": {
+      "all": "data/land-cover/land-cover-2020.png",
+      "Beersel": "data/land-cover/land-cover-2020-beersel.png",
+      "Drogenbos": "data/land-cover/land-cover-2020-drogenbos.png",
+      "Halle": "data/land-cover/land-cover-2020-halle.png",
+      "Linkebeek": "data/land-cover/land-cover-2020-linkebeek.png",
+      "Pepingen": "data/land-cover/land-cover-2020-pepingen.png",
+      "Sint-Genesius-Rode": "data/land-cover/land-cover-2020-sint-genesius-rode.png",
+      "Sint-Pieters-Leeuw": "data/land-cover/land-cover-2020-sint-pieters-leeuw.png"
+    }
   },
   "classes": [
     {

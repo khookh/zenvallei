@@ -3,7 +3,7 @@ import "./styles.css";
 import { MAP_CONFIG } from "./config.js";
 import { findSectorFromQuery, loadApplicationData, sectorSearchLabel, sectorsForMunicipality } from "./data.js";
 import { DEFAULT_HEAT_METRIC } from "./heat-metric.js";
-import { DEFAULT_LANGUAGE, applyDocumentTranslations, getLanguage, setLanguage, t } from "./i18n.js";
+import { DEFAULT_LANGUAGE, applyDocumentTranslations, formatDate, getLanguage, setLanguage, t } from "./i18n.js";
 import { buildLayerRegistry } from "./layers/registry.js";
 import { createMapController } from "./map-controller.js";
 import { createDetailPanel } from "./panel.js";
@@ -30,6 +30,12 @@ const elements = {
   heatMetricControl: document.querySelector("#heat-metric-control"),
   heatMetricSwitch: document.querySelector(".heat-metric-switch"),
   heatMetricButtons: [...document.querySelectorAll("[data-heat-metric]")],
+  vegetationYearControl: document.querySelector("#vegetation-year-control"),
+  vegetationYearSlider: document.querySelector("#vegetation-year-slider"),
+  vegetationYearOutput: document.querySelector("#vegetation-year-output"),
+  vegetationYearDate: document.querySelector("#vegetation-year-date"),
+  vegetationYearPrevious: document.querySelector("#vegetation-year-previous"),
+  vegetationYearNext: document.querySelector("#vegetation-year-next"),
   layerContextMeta: document.querySelector("#layer-context-meta"),
   layerContextCopy: document.querySelector("#layer-context-copy"),
   layerHelp: document.querySelector("#layer-help"),
@@ -59,6 +65,7 @@ const application = {
 };
 
 const activeLayer = () => application.layers?.get(application.activeLayer);
+const supportsMunicipalitySummary = () => ["land-cover", "urban-atlas", "vegetation"].includes(application.activeLayer);
 
 function updateMapControlsDisclosure({ refreshMap = true } = {}) {
   const collapsed = application.mapControlsCollapsed;
@@ -117,6 +124,8 @@ function updateAnnouncement() {
     elements.announcement.textContent = t("announcement.heatMetricChanged", {
       metric: t(`heatMetric.${announcement.metric}`),
     });
+  } else if (announcement.type === "vegetationYear") {
+    elements.announcement.textContent = t("announcement.vegetationYearChanged", { year: announcement.year });
   } else if (announcement.type === "unavailable") {
     elements.announcement.textContent = t("announcement.layerUnavailable", {
       layer: application.layers.get(announcement.layerId)?.getLabel() ?? announcement.layerId,
@@ -157,15 +166,36 @@ function updateLayerControls() {
 function updateSecondaryControls() {
   const control = activeLayer()?.getSecondaryControl?.() ?? null;
   elements.heatMetricControl.hidden = !control;
-  if (!control) return;
-  elements.heatMetricSwitch.setAttribute("aria-label", control.ariaLabel);
-  elements.heatMetricButtons.forEach((button) => {
-    const option = control.options.find((entry) => entry.id === button.dataset.heatMetric);
-    if (!option) return;
-    button.textContent = option.label;
-    button.setAttribute("aria-pressed", String(option.active));
-    button.classList.toggle("is-active", option.active);
+  if (control) {
+    elements.heatMetricSwitch.setAttribute("aria-label", control.ariaLabel);
+    elements.heatMetricButtons.forEach((button) => {
+      const option = control.options.find((entry) => entry.id === button.dataset.heatMetric);
+      if (!option) return;
+      button.textContent = option.label;
+      button.setAttribute("aria-pressed", String(option.active));
+      button.classList.toggle("is-active", option.active);
+    });
+  }
+
+  const showYears = application.activeLayer === "vegetation" && application.data?.vegetation?.available;
+  elements.vegetationYearControl.hidden = !showYears;
+  if (!showYears) return;
+  const years = [...application.data.vegetation.availableYears].sort((left, right) => left - right);
+  const activeYear = Number(application.mapController?.getLayerOption("vegetation", "year")
+    ?? application.data.vegetation.activeYear);
+  const index = Math.max(0, years.indexOf(activeYear));
+  const yearData = application.data.vegetation.years[activeYear];
+  elements.vegetationYearSlider.min = "0";
+  elements.vegetationYearSlider.max = String(Math.max(0, years.length - 1));
+  elements.vegetationYearSlider.value = String(index);
+  elements.vegetationYearSlider.setAttribute("aria-valuetext", String(activeYear));
+  elements.vegetationYearOutput.value = String(activeYear);
+  elements.vegetationYearOutput.textContent = String(activeYear);
+  elements.vegetationYearDate.textContent = t("vegetation.yearObservation", {
+    date: formatDate(yearData?.acquisitionDate),
   });
+  elements.vegetationYearPrevious.disabled = index === 0;
+  elements.vegetationYearNext.disabled = index === years.length - 1;
 }
 
 function updateLayerContext() {
@@ -294,6 +324,13 @@ async function start() {
   populateSectorOptions(data.scores);
 
   let selectedSectorId = "";
+  const municipalityRecord = (municipality) => ({
+    scope: "municipality",
+    municipality,
+    sectorName: municipality,
+    sectorId: "",
+    sectorCount: data.provenance.output.municipalityCounts[municipality] ?? 0,
+  });
   const sharedPanelData = {
     methodology: data.methodology,
     landCover: data.landCover,
@@ -309,11 +346,19 @@ async function start() {
     onLayerOptionChange: (name, value) => {
       if (name === "metric") activateHeatMetric(value);
     },
-    onClose: () => {
+    onClose: (closedView) => {
       selectedSectorId = "";
       application.mapController?.setSelected("");
       application.announcement = { type: "closed" };
       updateAnnouncement();
+      if (closedView?.type === "record" && closedView.record.scope !== "municipality"
+        && elements.municipality.value && supportsMunicipalitySummary()) {
+        queueMicrotask(() => panel.open(
+          municipalityRecord(elements.municipality.value),
+          elements.municipality,
+          application.activeLayer,
+        ));
+      }
     },
   });
   application.panel = panel;
@@ -328,6 +373,22 @@ async function start() {
     renderLegend();
     panel.refresh();
     application.announcement = { type: "heatMetric", metric };
+    updateAnnouncement();
+    return true;
+  }
+
+  function activateVegetationYear(year) {
+    const numericYear = Number(year);
+    if (application.activeLayer !== "vegetation") return false;
+    if (numericYear === application.mapController.getLayerOption("vegetation", "year")) return false;
+    if (!application.mapController.setLayerOption("vegetation", "year", numericYear)) return false;
+    updateLayerControls();
+    updateSecondaryControls();
+    updateLayerContext();
+    updateDatasetStatus();
+    renderLegend();
+    panel.refresh();
+    application.announcement = { type: "vegetationYear", year: numericYear };
     updateAnnouncement();
     return true;
   }
@@ -382,6 +443,11 @@ async function start() {
       panel.close({ restoreFocus: false });
     }
     application.mapController.setMunicipality(municipality);
+    if (!selectedSectorId && municipality && supportsMunicipalitySummary()) {
+      panel.open(municipalityRecord(municipality), elements.municipality, application.activeLayer);
+    } else if (!municipality && panel.isMunicipalitySummary?.()) {
+      panel.close({ restoreFocus: false });
+    }
   });
 
   const search = () => {
@@ -413,6 +479,21 @@ async function start() {
   elements.heatMetricButtons.forEach((button) => {
     button.addEventListener("click", () => activateHeatMetric(button.dataset.heatMetric));
     button.addEventListener("keydown", (event) => moveSegmentFocus(event, elements.heatMetricButtons, button));
+  });
+  const vegetationYears = () => [...(data.vegetation?.availableYears ?? [])].sort((left, right) => left - right);
+  elements.vegetationYearSlider.addEventListener("input", () => {
+    const years = vegetationYears();
+    activateVegetationYear(years[Number(elements.vegetationYearSlider.value)]);
+  });
+  elements.vegetationYearPrevious.addEventListener("click", () => {
+    const years = vegetationYears();
+    const current = application.mapController.getLayerOption("vegetation", "year");
+    activateVegetationYear(years[Math.max(0, years.indexOf(current) - 1)]);
+  });
+  elements.vegetationYearNext.addEventListener("click", () => {
+    const years = vegetationYears();
+    const current = application.mapController.getLayerOption("vegetation", "year");
+    activateVegetationYear(years[Math.min(years.length - 1, years.indexOf(current) + 1)]);
   });
   elements.layerButtons.forEach((button) => {
     button.addEventListener("click", async () => {
@@ -446,7 +527,13 @@ async function start() {
       updateLayerContext();
       updateDatasetStatus();
       renderLegend();
-      panel.setActiveLayer(layerId);
+      if (selectedSectorId) {
+        panel.setActiveLayer(layerId);
+      } else if (elements.municipality.value && supportsMunicipalitySummary()) {
+        panel.open(municipalityRecord(elements.municipality.value), button, layerId);
+      } else if (panel.isMunicipalitySummary?.()) {
+        panel.close({ restoreFocus: false });
+      }
       application.announcement = { type: "layer", layerId };
       updateAnnouncement();
     });

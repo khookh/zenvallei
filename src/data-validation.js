@@ -6,7 +6,7 @@ const SUPPORTED_SCHEMA_VERSIONS = Object.freeze({
   provenance: [1],
   landCover: [1, 2],
   urbanAtlas: [1],
-  vegetation: [1],
+  vegetation: [1, 2],
 });
 
 export function schemaVersionOf(payload) {
@@ -77,6 +77,15 @@ export function validateApplicationData({ geojson, scorePayload, methodology, pr
     }
     if (Object.keys(activeYear.sectorStats ?? {}).length !== sectorIds.size) {
       throw new Error(`vegetation.json contains ${Object.keys(activeYear.sectorStats ?? {}).length} sector records; expected ${sectorIds.size}.`);
+    }
+    const availableYears = Array.isArray(vegetation.availableYears)
+      ? vegetation.availableYears
+      : [vegetation.activeYear];
+    if (availableYears.some((year) => {
+      const data = vegetation.years?.[year];
+      return !data?.imageUrl || Object.keys(data.sectorStats ?? {}).length !== sectorIds.size;
+    })) {
+      throw new Error("vegetation.json contains an incomplete annual series.");
     }
   }
   return { sectorIds, scores };

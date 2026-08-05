@@ -12,6 +12,10 @@ function classDefinition(landCover, code) {
 /** Create the Copernicus LCM-10 image layer. */
 export function createLandCoverLayer({ landCover }) {
   const year = () => landCover?.activeYear ?? 2020;
+  let activeMunicipality = "";
+  let displayedImageUrl = "";
+  const imageUrl = () => landCover?.raster?.rasterVariants?.[activeMunicipality || "all"]
+    ?? landCover?.raster?.imageUrl;
 
   return defineLayer({
     id: "land-cover",
@@ -57,9 +61,10 @@ export function createLandCoverLayer({ landCover }) {
       if (!landCover?.raster?.available) return false;
       map.addSource(SOURCE_ID, {
         type: "image",
-        url: landCover.raster.imageUrl,
+        url: imageUrl(),
         coordinates: landCover.raster.coordinates,
       });
+      displayedImageUrl = imageUrl();
       map.addLayer({
         id: MAP_LAYER_ID,
         type: "raster",
@@ -68,6 +73,7 @@ export function createLandCoverLayer({ landCover }) {
         paint: {
           "raster-opacity": landCover.opacity ?? 0.68,
           "raster-resampling": "nearest",
+          "raster-fade-duration": 0,
         },
       }, beforeLayerId);
       return true;
@@ -75,7 +81,15 @@ export function createLandCoverLayer({ landCover }) {
     setVisible(map, visible) {
       if (map.getLayer(MAP_LAYER_ID)) map.setLayoutProperty(MAP_LAYER_ID, "visibility", visible ? "visible" : "none");
     },
-    applyFilter() {},
+    applyFilter(map, _filter, context = {}) {
+      activeMunicipality = context.municipality ?? "";
+      const source = map.getSource(SOURCE_ID);
+      const nextUrl = imageUrl();
+      if (source?.updateImage && nextUrl && nextUrl !== displayedImageUrl) {
+        displayedImageUrl = nextUrl;
+        source.updateImage({ url: nextUrl, coordinates: landCover.raster.coordinates });
+      }
+    },
     getAttributions() {
       if (!landCover?.raster?.available) return [];
       const links = [

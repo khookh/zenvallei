@@ -6,7 +6,8 @@ export const VEGETATION_POSITIVE_CODES = Object.freeze([
   "14110", "14120", "14130", "23000", "31000", "32000",
 ]);
 export const VEGETATION_NEGATIVE_CODES = Object.freeze(["11100", "12210"]);
-export const VEGETATION_EXCLUDED_CODES = Object.freeze(["21000", "50000"]);
+export const VEGETATION_EXCLUDED_LAND_COVER_CODES = Object.freeze([40]);
+export const VEGETATION_EXCLUDED_URBAN_ATLAS_CODES = Object.freeze(["50000"]);
 export const VEGETATION_MASKED_SCL_CODES = Object.freeze([0, 1, 3, 7, 8, 9, 10, 11]);
 export const VEGETATION_PALETTE = Object.freeze({
   likelyVegetated: "#238B45",
@@ -136,9 +137,10 @@ export function calibrateNdviThreshold(positiveValues, negativeValues, { binSize
   };
 }
 
-export function classifyVegetationPixel(ndvi, valid, urbanAtlasCode, threshold) {
+export function classifyVegetationPixel(ndvi, valid, classifications, threshold) {
   if (!valid || !Number.isFinite(ndvi)) return "no-data";
-  if (VEGETATION_EXCLUDED_CODES.includes(String(urbanAtlasCode))) return "excluded";
+  if (VEGETATION_EXCLUDED_LAND_COVER_CODES.includes(Number(classifications?.landCoverCode))
+    || VEGETATION_EXCLUDED_URBAN_ATLAS_CODES.includes(String(classifications?.urbanAtlasCode))) return "excluded";
   return ndvi >= threshold ? "likely-vegetated" : "below-threshold";
 }
 

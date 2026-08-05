@@ -44,9 +44,11 @@ Prepared assets are committed under `public/data`, so a clone can build and run 
 ```powershell
 pnpm data:prepare -- --scores "C:\path\Cijfers_hittekwetsbaarheid_2026.xlsx" --sectors "C:\path\statbel-sectors.zip"
 pnpm landcover:prepare
+pnpm landcover:variants
 pnpm urban-atlas:prepare -- --source "C:\path\official-urban-atlas-product"
-pnpm vegetation:download -- --date 2023-06-24
-pnpm vegetation:prepare -- --date 2023-06-24
+pnpm vegetation:discover -- --from-year 2015 --to-year 2026
+pnpm vegetation:download -- --all
+pnpm vegetation:prepare
 ```
 
 LCM-10 and Urban Atlas downloads read `CDSE_ACCESS_TOKEN` only during preparation. Sentinel Hub uses temporary `CDSE_SH_CLIENT_ID` and `CDSE_SH_CLIENT_SECRET` environment variables. Never place credentials in `.env`, source code, generated manifests or documentation.
@@ -58,6 +60,7 @@ See [Data pipeline](docs/data-pipeline.md) for complete examples and validation 
 - [Architecture](docs/architecture.md): responsibilities and data flow.
 - [Add a layer](docs/add-a-layer.md): a complete layer-module example.
 - [Data pipeline](docs/data-pipeline.md): inputs, commands, caching and outputs.
+- [Likely vegetation series](docs/vegetation-series.md): annual selection, NDVI calibration, masks and limitations.
 - [Deployment](docs/deployment.md): LAN operation and public-host checklist.
 - [Contributing](CONTRIBUTING.md): conventions and required checks.
 - [Third-party data](THIRD_PARTY_DATA.md): source terms and attribution.

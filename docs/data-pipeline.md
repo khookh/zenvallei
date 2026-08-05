@@ -35,7 +35,11 @@ Reuse a verified cached source:
 pnpm landcover:prepare -- --cog "C:\data\official-lcm-product.zip"
 ```
 
-The command verifies source identity and checksum, clips to the sector union and writes `land-cover/land-cover-2020.png` plus `land-cover.json`.
+The command verifies source identity and checksum, clips to the sector union and writes `land-cover/land-cover-2020.png` plus `land-cover.json`. Then create the seven municipality-specific raster variants:
+
+```powershell
+pnpm landcover:variants
+```
 
 ## Urban Atlas 2021
 
@@ -58,7 +62,7 @@ The command verifies the official product variant, EPSG:3035, FUA, reference yea
 
 Outputs: `urban-atlas.geojson` and `urban-atlas.json`.
 
-## Sentinel-2 likely vegetation 2023
+## Sentinel-2 likely vegetation series
 
 Create a non-SPA OAuth client in the Copernicus Sentinel Hub account settings. Supply its values only for the download process:
 
@@ -67,7 +71,8 @@ $env:CDSE_SH_CLIENT_ID = Read-Host "Sentinel Hub OAuth client ID"
 $secureSecret = Read-Host "Sentinel Hub OAuth client secret" -AsSecureString
 $env:CDSE_SH_CLIENT_SECRET = [System.Net.NetworkCredential]::new("", $secureSecret).Password
 try {
-  pnpm vegetation:download -- --date 2023-06-24
+  pnpm vegetation:discover -- --from-year 2015 --to-year 2026
+  pnpm vegetation:download -- --all
 } finally {
   Remove-Item Env:CDSE_SH_CLIENT_ID -ErrorAction SilentlyContinue
   Remove-Item Env:CDSE_SH_CLIENT_SECRET -ErrorAction SilentlyContinue
@@ -75,17 +80,21 @@ try {
 }
 ```
 
-The download command requests one stitched Sentinel-2 L2A GeoTIFF in EPSG:32631. It contains NDVI and a validity band at 10 m. The cache is accepted only when its CRS, resolution, dimensions, bands, NDVI range and valid-pixel coverage pass validation.
+The discovery command requires both Sentinel tiles and measures cloud and coverage over the actual Zennevallei sector union. It writes the deterministic choice and alternatives to `.cache/vegetation/selection.json`. Weak observations are recorded as warnings.
+
+The download command requests one stitched Sentinel-2 L2A GeoTIFF per selected year in EPSG:32631. Each file contains NDVI and a validity band at 10 m. The cache is accepted only when its CRS, resolution, dimensions, bands, NDVI range and valid-pixel coverage pass validation.
 
 Create the browser asset and sector statistics from the verified cache:
 
 ```powershell
-pnpm vegetation:prepare -- --date 2023-06-24
+pnpm vegetation:prepare
 ```
 
-The preparation command rasterises Urban Atlas on a 3 × 3 subpixel grid. Calibration pixels require at least eight of nine samples in one reference class. The threshold maximises Youden's J statistic. Urban Atlas arable land and water remain in the sector denominator but are transparent in the output image.
+The preparation command rasterises Urban Atlas on a 3 x 3 subpixel grid. Calibration pixels require at least eight of nine samples in one reference class. The threshold maximises Youden's J statistic using the 2023 observation and is frozen for every year.
 
-Outputs: `vegetation/likely-vegetation-2023.png` and `vegetation.json`. Raw GeoTIFFs and OAuth credentials remain outside the browser assets and repository.
+Pixels classified as Cropland, code 40, in LCM-10 2020 are transparent. Urban Atlas class 21000, Arable land, is not used as the crop mask. Urban Atlas water is also transparent. Both exclusions stay in the valid-area denominator.
+
+Outputs: one full PNG and seven municipality variants per year, plus `vegetation.json`. Raw GeoTIFFs and OAuth credentials remain outside the browser assets and repository. See [Likely vegetation series](vegetation-series.md) for the complete method.
 
 ## Contracts and provenance
 

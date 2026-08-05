@@ -143,7 +143,7 @@ export function createMapController({
     [COMMON_LAYER_IDS.hit, COMMON_LAYER_IDS.outline].forEach((layerId) => {
       if (map.getLayer(layerId)) map.setFilter(layerId, filter);
     });
-    layers.forEach((layer) => layer.applyFilter(map, filter));
+    layers.forEach((layer) => layer.applyFilter(map, filter, { municipality: activeMunicipality }));
   };
 
   const ready = new Promise((resolve, reject) => {

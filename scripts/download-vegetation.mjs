@@ -11,7 +11,7 @@ const PROJECT_ROOT = path.resolve(import.meta.dirname, "..");
 const DEFAULT_SECTORS_PATH = path.join(PROJECT_ROOT, "public", "data", "sectors.geojson");
 const DEFAULT_CACHE_DIR = path.join(PROJECT_ROOT, ".cache", "vegetation");
 const DEFAULT_DATE = "2023-06-24";
-const OUTPUT_FILENAME = "sentinel-2-l2a-ndvi-validity-2023-06-24-epsg32631-10m.tif";
+const DEFAULT_SELECTION_PATH = path.join(DEFAULT_CACHE_DIR, "selection.json");
 const TOKEN_URL = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token";
 const PROCESS_URL = "https://sh.dataspace.copernicus.eu/api/v1/process";
 const EPSG_32631 = "+proj=utm +zone=31 +datum=WGS84 +units=m +no_defs +type=crs";
@@ -66,11 +66,15 @@ function parseArguments(argv) {
     date: DEFAULT_DATE,
     sectorsPath: DEFAULT_SECTORS_PATH,
     cacheDir: DEFAULT_CACHE_DIR,
+    selectionPath: DEFAULT_SELECTION_PATH,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const next = argv[index + 1];
     switch (argv[index]) {
       case "--date": options.date = next; index += 1; break;
+      case "--year": options.year = Number(next); index += 1; break;
+      case "--all": options.all = true; break;
+      case "--selection": options.selectionPath = path.resolve(next); index += 1; break;
       case "--sectors": options.sectorsPath = path.resolve(next); index += 1; break;
       case "--cache": options.cacheDir = path.resolve(next); index += 1; break;
       case "--force": options.force = true; break;
@@ -83,7 +87,10 @@ function parseArguments(argv) {
 
 function printHelp() {
   console.log(`Gebruik: pnpm vegetation:download -- [opties]\n\n` +
-    `  --date <JJJJ-MM-DD>  Opnamedatum; deze versie ondersteunt 2023-06-24\n` +
+    `  --all                Download alle geselecteerde jaren\n` +
+    `  --year <JJJJ>        Download een geselecteerd jaar\n` +
+    `  --date <JJJJ-MM-DD>  Download een expliciete datum\n` +
+    `  --selection <pad>    Jaarselectie van vegetation:discover\n` +
     `  --sectors <pad>      GeoJSON met de 154 Statbel-sectoren\n` +
     `  --cache <map>        Lokale cachemap\n` +
     `  --force              Download een bestaande geldige cache opnieuw\n\n` +
@@ -136,7 +143,7 @@ function buildRequest(date, grid) {
             to: `${date}T23:59:59Z`,
           },
           mosaickingOrder: "leastCC",
-          maxCloudCoverage: 1,
+          maxCloudCoverage: 100,
         },
         processing: {
           harmonizeValues: true,
@@ -269,23 +276,12 @@ async function downloadRaster(request, destination) {
   await fsp.rename(temporaryPath, destination);
 }
 
-async function main() {
-  const options = parseArguments(process.argv.slice(2));
-  if (options.help) return printHelp();
-  if (options.date !== DEFAULT_DATE) {
-    throw new Error(`Deze eerste versie ondersteunt alleen ${DEFAULT_DATE}.`);
-  }
-  const sectors = JSON.parse(await fsp.readFile(options.sectorsPath, "utf8"));
-  if (sectors.features?.length !== 154) {
-    throw new Error(`De sectorbron bevat ${sectors.features?.length ?? 0} sectoren; verwacht 154.`);
-  }
-  const grid = createGrid(sectors);
-  const request = buildRequest(options.date, grid);
+async function prepareJob(job, options, grid) {
+  const request = buildRequest(job.date, grid);
   const requestHash = createHash("sha256").update(JSON.stringify(request)).digest("hex");
-  const destination = path.join(options.cacheDir, OUTPUT_FILENAME);
+  const filename = `sentinel-2-l2a-ndvi-validity-${job.date}-epsg32631-10m.tif`;
+  const destination = path.join(options.cacheDir, filename);
   const metadataPath = `${destination}.json`;
-  await fsp.mkdir(options.cacheDir, { recursive: true });
-
   const cached = !options.force && await fsp.stat(destination).catch(() => null);
   let validation = null;
   if (cached) {
@@ -299,7 +295,7 @@ async function main() {
     }
   }
   if (!validation) {
-    console.log(`Download Sentinel-2 L2A NDVI op ${grid.width} x ${grid.height} pixels...`);
+    console.log(`Download Sentinel-2 L2A NDVI voor ${job.year} (${job.date}) op ${grid.width} x ${grid.height} pixels...`);
     try {
       await downloadRaster(request, destination);
       validation = await validateGeoTiff(destination, grid);
@@ -313,10 +309,18 @@ async function main() {
   const metadata = {
     schemaVersion: 1,
     downloadedAt: new Date().toISOString(),
-    date: options.date,
-    acquisitionTime: VEGETATION_SOURCE.acquisitionTime,
+    year: job.year,
+    date: job.date,
+    acquisitionTime: job.selection?.selected?.products?.[0]?.datetime ?? `${job.date}T00:00:00Z`,
     collection: VEGETATION_SOURCE.collection,
-    products: VEGETATION_SOURCE.products,
+    products: job.selection?.selected?.products ?? (job.date === DEFAULT_DATE ? VEGETATION_SOURCE.products : []),
+    cloudQuality: job.selection ? {
+      status: job.selection.qualityStatus,
+      targetDate: job.selection.targetDate,
+      dayOffset: job.selection.dayOffset,
+      cloudAffectedPercentage: job.selection.selected.cloudAffectedPercentage,
+      coveragePercentage: job.selection.selected.coveragePercentage,
+    } : null,
     requestHash,
     responseSha256: await sha256File(destination),
     byteLength: stats.size,
@@ -331,6 +335,32 @@ async function main() {
   console.log(`Klaar: ${destination}`);
   console.log(`Geldige observaties: ${validation.validPercentage.toFixed(2)}%; NDVI-bereik: ${validation.ndviRange[0].toFixed(3)} tot ${validation.ndviRange[1].toFixed(3)}.`);
   console.log(`SHA-256: ${metadata.responseSha256}`);
+}
+
+async function main() {
+  const options = parseArguments(process.argv.slice(2));
+  if (options.help) return printHelp();
+  const sectors = JSON.parse(await fsp.readFile(options.sectorsPath, "utf8"));
+  if (sectors.features?.length !== 154) {
+    throw new Error(`De sectorbron bevat ${sectors.features?.length ?? 0} sectoren; verwacht 154.`);
+  }
+  const selection = await fsp.readFile(options.selectionPath, "utf8").then(JSON.parse).catch(() => null);
+  let jobs;
+  if (options.all) {
+    if (!selection?.years) throw new Error("Voer eerst pnpm vegetation:discover uit.");
+    jobs = Object.values(selection.years).map((entry) => ({
+      year: Number(entry.year), date: entry.selectedDate, selection: entry,
+    })).sort((left, right) => left.year - right.year);
+  } else if (options.year) {
+    const entry = selection?.years?.[options.year];
+    if (!entry) throw new Error(`Geen geselecteerde Sentinel-opname voor ${options.year}.`);
+    jobs = [{ year: options.year, date: entry.selectedDate, selection: entry }];
+  } else {
+    jobs = [{ year: Number(options.date.slice(0, 4)), date: options.date, selection: null }];
+  }
+  const grid = createGrid(sectors);
+  await fsp.mkdir(options.cacheDir, { recursive: true });
+  for (const job of jobs) await prepareJob(job, options, grid);
 }
 
 main().catch((error) => {

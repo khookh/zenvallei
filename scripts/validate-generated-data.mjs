@@ -44,13 +44,16 @@ for (const [name, stats] of [["land cover", landCover.sectorStats], ["Urban Atla
   }
 }
 
-const vegetationYear = vegetation.years?.[vegetation.activeYear];
-const vegetationIds = Object.keys(vegetationYear?.sectorStats ?? {});
-if (vegetationIds.length !== sectorIds.size || vegetationIds.some((sectorId) => !sectorIds.has(sectorId))) {
-  throw new Error("Likely-vegetation statistics do not match the 154 sector identifiers.");
-}
-
 await fs.access(browserAssetPath(landCover.raster.imageUrl));
+for (const assetUrl of Object.values(landCover.raster.rasterVariants ?? {})) await fs.access(browserAssetPath(assetUrl));
 await fs.access(browserAssetPath(urbanAtlas.geojsonUrl));
-await fs.access(browserAssetPath(vegetationYear.imageUrl));
+for (const year of vegetation.availableYears ?? [vegetation.activeYear]) {
+  const yearData = vegetation.years?.[year];
+  const vegetationIds = Object.keys(yearData?.sectorStats ?? {});
+  if (vegetationIds.length !== sectorIds.size || vegetationIds.some((sectorId) => !sectorIds.has(sectorId))) {
+    throw new Error(`Likely-vegetation statistics for ${year} do not match the 154 sector identifiers.`);
+  }
+  await fs.access(browserAssetPath(yearData.imageUrl));
+  for (const assetUrl of Object.values(yearData.rasterVariants ?? {})) await fs.access(browserAssetPath(assetUrl));
+}
 console.log(`Validated ${sectorIds.size} sectors and all prepared browser assets.`);

@@ -11,6 +11,23 @@ import { safeExternalUrl } from "./security.js";
 
 const safeHref = (value) => escapeHtml(safeExternalUrl(value));
 
+function isMunicipalitySummary(record) {
+  return record.scope === "municipality";
+}
+
+function panelEyebrow(record) {
+  if (isMunicipalitySummary(record)) {
+    return t("panel.municipalitySummary", { count: record.sectorCount });
+  }
+  return `${record.municipality} · ${record.sectorId}`;
+}
+
+function scopedStatistics(dataset, record) {
+  return isMunicipalitySummary(record)
+    ? dataset?.municipalityStats?.[record.municipality]
+    : dataset?.sectorStats?.[record.sectorId];
+}
+
 function scoreCard(labelKey, definitionKey, value, color) {
   return `
     <div class="summary-card score-summary-card">
@@ -226,13 +243,13 @@ function landCoverClassRows(stats, landCover) {
 }
 
 function renderLandCoverRecord(record, methodology, landCover, urbanAtlas, vegetation) {
-  const stats = landCover?.sectorStats?.[record.sectorId];
+  const stats = scopedStatistics(landCover, record);
   const dominant = landCoverDefinition(landCover, stats?.dominantClassCode);
   const dominantLabel = dominant ? t(`class.${dominant.key}`) : t("landCover.noData");
   const dominantColor = dominant?.color ?? "#b4b4b4";
   return `
     <div class="panel-hero land-cover-hero">
-      <p class="panel-eyebrow">${escapeHtml(record.municipality)} · ${escapeHtml(record.sectorId)}</p>
+      <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
       <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
       <div class="score-hero" style="--hero-color:${dominantColor}">
         <div class="land-cover-orb" style="--class-color:${dominantColor}" aria-hidden="true"></div>
@@ -310,7 +327,7 @@ function urbanAtlasArtificialGroups(stats, urbanAtlas) {
 }
 
 function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas, vegetation) {
-  const stats = urbanAtlas?.sectorStats?.[record.sectorId];
+  const stats = scopedStatistics(urbanAtlas, record);
   const dominant = urbanAtlasDefinition(urbanAtlas, stats?.dominantClassCode);
   const dominantLabel = dominant ? urbanAtlasClassLabel(urbanAtlas, dominant.code) : t("urbanAtlas.noData");
   const dominantColor = dominant?.color ?? "#b4b4b4";
@@ -319,7 +336,7 @@ function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas, vege
     : "urbanAtlas.validationUnknown";
   return `
     <div class="panel-hero land-cover-hero urban-atlas-hero">
-      <p class="panel-eyebrow">${escapeHtml(record.municipality)} · ${escapeHtml(record.sectorId)}</p>
+      <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
       <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
       <div class="score-hero" style="--hero-color:${dominantColor}">
         <div class="land-cover-orb" style="--class-color:${dominantColor}" aria-hidden="true"></div>
@@ -377,14 +394,33 @@ function vegetationAreaValue(areaHa, percentage) {
   });
 }
 
+function vegetationComposition(stats, vegetation) {
+  const croplandArea = stats.excludedCroplandAreaHa ?? stats.excludedArableAreaHa ?? 0;
+  const croplandPercentage = stats.excludedCroplandPercentage ?? stats.excludedArablePercentage ?? 0;
+  const items = [
+    { key: "likelyVegetated", area: stats.likelyVegetatedAreaHa, percentage: stats.likelyVegetatedPercentage, color: vegetation.palette.likelyVegetated },
+    { key: "belowThreshold", area: stats.belowThresholdAreaHa, percentage: stats.belowThresholdPercentage, color: vegetation.palette.belowThreshold },
+    { key: "excludedCropland", area: croplandArea, percentage: croplandPercentage, color: "#D9B46C" },
+    { key: "excludedWater", area: stats.excludedWaterAreaHa, percentage: stats.excludedWaterPercentage, color: "#72A9CF" },
+  ];
+  const label = items.map((item) => `${t(`vegetation.${item.key}`)} ${formatNumber(item.percentage)}%`).join(", ");
+  return `
+    <div class="vegetation-composition" role="img" aria-label="${escapeHtml(label)}">
+      ${items.filter((item) => item.percentage > 0).map((item) => `<span style="width:${item.percentage}%;--segment:${item.color}"></span>`).join("")}
+    </div>
+    <div class="vegetation-composition-key">
+      ${items.map((item) => `<span><i style="--swatch:${item.color}" aria-hidden="true"></i><b>${escapeHtml(t(`vegetation.${item.key}`))}</b><strong>${escapeHtml(vegetationAreaValue(item.area, item.percentage))}</strong></span>`).join("")}
+    </div>`;
+}
+
 function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vegetation) {
   const year = vegetation?.activeYear ?? 2023;
   const yearData = vegetation?.years?.[year];
-  const stats = yearData?.sectorStats?.[record.sectorId];
+  const stats = scopedStatistics(yearData, record);
   const calibration = yearData?.calibration;
   return `
     <div class="panel-hero land-cover-hero vegetation-hero">
-      <p class="panel-eyebrow">${escapeHtml(record.municipality)} · ${escapeHtml(record.sectorId)}</p>
+      <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
       <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
       ${stats ? `<div class="score-hero" style="--hero-color:${escapeHtml(vegetation.palette.likelyVegetated)}">
         <div class="score-orb"><strong>${escapeHtml(formatNumber(stats.likelyVegetatedPercentage))}</strong><span>%</span></div>
@@ -395,16 +431,28 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
     <div class="panel-body">
       ${stats ? `<section aria-labelledby="vegetation-summary-title">
         <div class="section-heading"><p class="section-kicker">${escapeHtml(t("vegetation.eyebrow", { year }))}</p><h3 id="vegetation-summary-title">${escapeHtml(t("vegetation.summaryTitle"))}</h3></div>
-        <div class="summary-grid vegetation-summary-grid">
-          ${metricCard("vegetation.medianNdvi", formatNumber(stats.medianNdvi, 3), "#238B45")}
-          ${metricCard("vegetation.belowThreshold", vegetationAreaValue(stats.belowThresholdAreaHa, stats.belowThresholdPercentage), "#52615C")}
-          ${metricCard("vegetation.excludedArable", vegetationAreaValue(stats.excludedArableAreaHa, stats.excludedArablePercentage), "#6F5D1C")}
-          ${metricCard("vegetation.excludedWater", vegetationAreaValue(stats.excludedWaterAreaHa, stats.excludedWaterPercentage), "#24658F")}
-          ${metricCard("vegetation.missingObservation", t("unit.hectares", { value: formatNumber(stats.missingObservationAreaHa) }), "#52615C")}
+        <p class="section-intro vegetation-intro">${escapeHtml(t("vegetation.summaryExplanation"))}</p>
+        ${vegetationComposition(stats, vegetation)}
+      </section>
+      <details class="detail-accordion" data-section="vegetation-observation-details">
+        <summary data-focus-key="vegetation-observation-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("vegetation.observationDetails"))}</span></summary>
+        <div class="accordion-content">
+          <div class="summary-grid vegetation-summary-grid">
+            ${metricCard("vegetation.medianNdvi", formatNumber(stats.medianNdvi, 3), "#238B45")}
+            ${metricCard("vegetation.belowThreshold", vegetationAreaValue(stats.belowThresholdAreaHa, stats.belowThresholdPercentage), "#52615C")}
+            ${metricCard("vegetation.excludedCropland", vegetationAreaValue(stats.excludedCroplandAreaHa ?? stats.excludedArableAreaHa ?? 0, stats.excludedCroplandPercentage ?? stats.excludedArablePercentage ?? 0), "#6F5D1C")}
+            ${metricCard("vegetation.excludedWater", vegetationAreaValue(stats.excludedWaterAreaHa, stats.excludedWaterPercentage), "#24658F")}
+            ${metricCard("vegetation.missingObservation", t("unit.hectares", { value: formatNumber(stats.missingObservationAreaHa) }), "#52615C")}
+          </div>
+          ${stats.medianIsAreaWeightedApproximation ? `<p class="calculation-note">${escapeHtml(t("vegetation.municipalityMedianNote"))}</p>` : ""}
+          <p class="urban-atlas-valid-area vegetation-valid-area">${escapeHtml(t("vegetation.validArea", { area: formatNumber(stats.validAreaHa) }))}</p>
+          <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("vegetation.derivedNote"))}</span></p>
         </div>
-        <p class="urban-atlas-valid-area vegetation-valid-area">${escapeHtml(t("vegetation.validArea", { area: formatNumber(stats.validAreaHa) }))}</p>
-        <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("vegetation.derivedNote"))}</span></p>
-      </section>` : ""}
+      </details>` : ""}
+      ${yearData?.quality?.status === "warning" ? `<p class="panel-warning">${escapeHtml(t("vegetation.qualityWarning", {
+        cloud: formatNumber(yearData.quality.cloudAffectedPercentage, 1),
+        coverage: formatNumber(yearData.quality.coveragePercentage, 1),
+      }))}</p>` : ""}
       <details class="detail-accordion methodology-accordion" data-section="vegetation-methodology">
         <summary data-focus-key="vegetation-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("vegetation.methodologyTitle"))}</span></summary>
         <div class="accordion-content methodology-copy">
@@ -429,7 +477,7 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
           <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("vegetation.calibrationCaveat"))}</p>
           <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("vegetation.classificationCaveat"))}</p>
           <p>${escapeHtml(vegetation?.source?.attribution ?? t("vegetation.attribution"))}</p>
-          ${vegetation?.source?.products?.length ? `<h4>${escapeHtml(t("vegetation.sourceProducts"))}</h4><ul>${vegetation.source.products.map((product) => `<li>${escapeHtml(product.id)}</li>`).join("")}</ul>` : ""}
+          ${(yearData?.products ?? vegetation?.source?.products)?.length ? `<h4>${escapeHtml(t("vegetation.sourceProducts"))}</h4><ul>${(yearData?.products ?? vegetation.source.products).map((product) => `<li>${escapeHtml(product.id)}</li>`).join("")}</ul>` : ""}
           ${vegetation?.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(vegetation.source.accessedAt) }))}</p>` : ""}
           ${vegetation?.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(vegetation.generatedAt) }))}</p>` : ""}
           <h4>${escapeHtml(t("panel.sources"))}</h4>
@@ -599,9 +647,11 @@ export function createDetailPanel({
   };
 
   const close = ({ restoreFocus = true } = {}) => {
+    const closedView = currentView;
+    currentView = null;
     panel.classList.remove("is-open");
     panel.setAttribute("aria-hidden", "true");
-    onClose?.();
+    onClose?.(closedView);
     if (restoreFocus && returnFocusElement instanceof HTMLElement) returnFocusElement.focus();
   };
 
@@ -657,5 +707,6 @@ export function createDetailPanel({
     setHeatMetric,
     refresh: () => renderCurrentView({ preserveState: true }),
     isOpen: () => panel.classList.contains("is-open"),
+    isMunicipalitySummary: () => currentView?.type === "record" && currentView.record.scope === "municipality",
   };
 }
