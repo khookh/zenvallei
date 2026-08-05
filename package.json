@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-lan.ps1",
+    "lan:check": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-lan.ps1 -Check",
     "data:prepare": "node scripts/prepare-data.mjs",
     "landcover:prepare": "node scripts/prepare-landcover.mjs",
     "urban-atlas:prepare": "node scripts/prepare-urban-atlas.mjs",
