@@ -1,0 +1,208 @@
+{
+  "title": "Hittekwetsbaarheid Zennevallei",
+  "locale": "nl-BE",
+  "scoreScale": {
+    "minimum": 0,
+    "maximum": 10,
+    "relativeTo": "Vlaanderen"
+  },
+  "palette": {
+    "no-data": "#EAE2DE",
+    "score-0": "#97D8E5",
+    "score-1": "#6EC3ED",
+    "score-2": "#6AA7F0",
+    "score-3": "#8E85E2",
+    "score-4": "#B657BA",
+    "score-5": "#CC017A",
+    "score-6": "#B10064",
+    "score-7": "#96004E",
+    "score-8": "#7C003A",
+    "score-9": "#610027",
+    "score-10": "#000000",
+    "institution-present-no-score": "#F1CE63"
+  },
+  "vulnerabilityComponents": [
+    {
+      "key": "populationDensity",
+      "sourceColumn": "Inwonersdichtheid",
+      "label": "Inwonersdichtheid",
+      "group": "Bevolking",
+      "groupKey": "population",
+      "weight": 1
+    },
+    {
+      "key": "age0To9",
+      "sourceColumn": "0-9 jaar",
+      "label": "0- tot 9-jarigen",
+      "group": "Bevolking",
+      "groupKey": "population",
+      "weight": 1
+    },
+    {
+      "key": "age65Plus",
+      "sourceColumn": ">65 jaar",
+      "label": "65-plussers",
+      "group": "Bevolking",
+      "groupKey": "population",
+      "weight": 1
+    },
+    {
+      "key": "primaryEducation",
+      "sourceColumn": "Basisonderwijs",
+      "label": "Basisonderwijs",
+      "group": "Kwetsbare voorzieningen",
+      "groupKey": "facilities",
+      "weight": 0.5
+    },
+    {
+      "key": "childcare",
+      "sourceColumn": "Kinderopvang",
+      "label": "Kinderopvang",
+      "group": "Kwetsbare voorzieningen",
+      "groupKey": "facilities",
+      "weight": 0.5
+    },
+    {
+      "key": "residentialElderlyCare",
+      "sourceColumn": "Residentiële ouderenzorg",
+      "label": "Residentiële ouderenzorg",
+      "group": "Kwetsbare voorzieningen",
+      "groupKey": "facilities",
+      "weight": 0.5
+    },
+    {
+      "key": "hospitals",
+      "sourceColumn": "Ziekenhuizen",
+      "label": "Ziekenhuizen",
+      "group": "Kwetsbare voorzieningen",
+      "groupKey": "facilities",
+      "weight": 0.5
+    },
+    {
+      "key": "sesIndex",
+      "sourceColumn": "SES index",
+      "label": "SES-index",
+      "group": "Sociaal-economisch",
+      "groupKey": "socioeconomic",
+      "weight": 2
+    },
+    {
+      "key": "trees50m",
+      "sourceColumn": "Bomen 50m",
+      "label": "Bomen binnen 50 m",
+      "group": "Groen",
+      "groupKey": "green",
+      "weight": 0.5
+    },
+    {
+      "key": "neighborhoodGreen",
+      "sourceColumn": "Buurtgroen",
+      "label": "Buurtgroen",
+      "group": "Groen",
+      "groupKey": "green",
+      "weight": 0.5
+    }
+  ],
+  "sesComponents": [
+    {
+      "key": "singleParentFamilies",
+      "sourceColumn": "Eenoudergezinnen",
+      "label": "Eenoudergezinnen"
+    },
+    {
+      "key": "rentalHousing",
+      "sourceColumn": "Huurwoningen",
+      "label": "Huurwoningen"
+    },
+    {
+      "key": "income",
+      "sourceColumn": "Inkomen",
+      "label": "Inkomen"
+    },
+    {
+      "key": "lowEducation",
+      "sourceColumn": "Laaggeschoolden",
+      "label": "Laag opleidingsniveau"
+    },
+    {
+      "key": "nonEuCitizen",
+      "sourceColumn": "Niet EU-burger",
+      "label": "Niet-EU-burgers"
+    },
+    {
+      "key": "jobSeekers",
+      "sourceColumn": "Werkzoekenden",
+      "label": "Werkzoekenden"
+    },
+    {
+      "key": "pre1945Housing",
+      "sourceColumn": "Woningen voor 1945",
+      "label": "Woningen van vóór 1945"
+    },
+    {
+      "key": "livingArea",
+      "sourceColumn": "Woonoppervlakte",
+      "label": "Woonoppervlakte"
+    }
+  ],
+  "indicatorDefinitions": {
+    "(DEEL)/INDICATOREN": "OMSCHRIJVING",
+    "Hittekwetsbaarheid": "Synthese-index hittekwetsbaarheid. Dit is de combinatie van de indicatoren ‘kwetsbaarheid’ en ‘hitte’.\r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (natural breaks).",
+    "Hitte": "Het meerjarig gemiddelde van het aantal hittegolfgraaddagen voor de jaren 2000-2019 per statistische sector.\r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Kwetsbaarheid": "Synthese-index totale kwetsbaarheid. Dit is de combinatie van de indicatoren ‘inwonersdichtheid’, ‘0-9 jaar’, ‘>65 jaar’,\r\n‘basisonderwijs’, ‘kinderopvang’, ‘residentiële ouderenzorg’, ‘ziekenhuizen’, ‘SES index’, ‘bomen 50m’ en ‘buurtgroen’.\r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Inwonersdichtheid": "Aantal inwoners per km² (2022).\r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "0-9 jaar": "Proportie inwoners 0-9 jaar t.o.v. alle leeftijden (2022).\r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    ">65 jaar": "Proportie inwoners > 65 jaar t.o.v. alle leeftijden (2022).\r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Basisonderwijs": "Aanwezigheid (gewoon en buitengewoon) kleuter- en basisscholen (2025).\r\nScore 0 = geen school, score 3 = 1 school, score 7 = 2-3 of score 10 (> 3).",
+    "Kinderopvang": "Aanwezigheid groeps- en gezinsopvang baby's en peuters (2025).\r\nScore 0 = geen kinderopvang, score 3 = 1-2 KO, score 7 = 3-5 KO of score 10 (> 5 KO).",
+    "Residentiële ouderenzorg": "Aanwezigheid woonzorgcentra en groepen van assistentiewoningen (2025).\r\nScore 0 = geen RVT, score 3 = 1 RVT, score 7 = 2-3 RVT of score 10 (> 3 RVT).",
+    "Ziekenhuizen": "Aanwezigheid (algemene en psychiatrische) ziekenhuizen (2025).\r\nScore 10 indien ziekenhuis aanwezig, anders 0.",
+    "SES index": "Synthese-index socio-economische kwetsbaarheid. Dit is de combinatie van de indicatoren ‘eenoudergezinnen’, ‘huurwoningen’, ‘inkomen’, ‘laaggeschoolden’, ‘niet EU-burger’, ‘werkzoekenden’, ‘woningen voor 1945’ en ‘woonoppervlakte’. Score 0-10. Hoe hoger de score, hoe kwetsbaarder de buurt. Bron: Vanderstraeten L. & Van Hecke E. (2023). Buurten met een concentratie van kwetsbare huishoudens en kwetsbare woonsituaties anno 2021. Steunpunt Wonen.",
+    "Eenoudergezinnen": "Verhouding van het aantal eenoudergezinnen ten opzichte van het totaal aantal private huishoudens (2021). \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Huurwoningen": "Percentage huurwoningen (2021). \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Inkomen": "Kwetsbaar inkomen (de score stijgt naarmate het gemiddeld inkomen per persoon daalt). \r\nGebaseerd op het gemiddeld netto belastbaar inkomen per inwoner (2019). \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Laaggeschoolden": "Aandeel 25-plussers zonder diploma secundair onderwijs t.o.v. de volledige groep 25-plussers (2017). \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Niet EU-burger": "Aandeel niet-EU15-burgers (excl. VS en andere rijke OESO-landen) (2021). \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Werkzoekenden": "Aandeel werkzoekenden t.o.v. de actieve werkbevolking (2021). \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Woningen voor 1945": "Percentage woningen gebouwd voor 1945 (2021). \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Woonoppervlakte": "Kwetsbare woonoppervlakte (de score stijgt naarmate de gemiddelde oppervlakte per persoon daalt) (2021). \r\nGebaseerd op de gemiddelde woonoppervlakte per persoon. \r\nScore 0-10 op basis van situering t.o.v. de rest van Vlaanderen (decielen).",
+    "Bomen 50m": "Percentage personen met <10% hooggroen in nabije omgeving (50m) anno 2021. \r\nScore 0 = 0%, score 2 = 0-5%, score 5 = 5-20%, score 7 = 20-50% en score 10 (>50%).",
+    "Buurtgroen": "Percentage inwoners zonder toegang tot buurtgroen (2022). \r\nScore 0 = 0%, score 2 = 0-5%, score 5 = 5-20%, score 7 = 20-50% en score 10 (>50%).",
+    "Download link rapport:": "https://www.klimaatengezondheid.be/hittekwetsbaarheidskaartvlaanderen",
+    "Bronvermelding:": "Verachtert et al., 2023. Instrumenten voor evaluatie van gezondheidsimpact door hitte in Vlaanderen, nu en in de toekomst. VITO en UHasselt i.o.v. departeme Zorg."
+  },
+  "caveats": [
+    "De scores zijn relatieve klasseringen ten opzichte van de rest van Vlaanderen.",
+    "De gepubliceerde eindscore kan niet exact worden herberekend uit de afgeronde deelscores.",
+    "Hitte en kwetsbaarheid worden via decielen geclassificeerd; de eindscore hittekwetsbaarheid gebruikt natuurlijke breekpunten (natural breaks).",
+    "Een lage score betekent niet dat er geen gezondheidsrisico door hitte bestaat."
+  ],
+  "sources": {
+    "scores": {
+      "label": "Vlaamse overheid, Departement Zorg: Cijfers hittekwetsbaarheid 2026",
+      "pageUrl": "https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen",
+      "downloadUrl": "https://cld.webplatform.departementzorg.be/raw/upload/v1785223345/Cijfers_hittekwetsbaarheid_2026_jvhnl1.xlsx",
+      "filename": "Cijfers_hittekwetsbaarheid_2026_jvhnl1.xlsx",
+      "expectedSha256": "43a2be5942f7739310eeeeeed9961a03f3fb213c8acf777643a6270d5b6a8bba"
+    },
+    "manual": {
+      "label": "Vlaamse overheid, Departement Zorg: Handleiding hittekwetsbaarheid 2026",
+      "downloadUrl": "https://cld.webplatform.departementzorg.be/raw/upload/v1778503586/Handleiding_hittekwetsbaarheidstool_2026_nyhdbz.docx"
+    },
+    "geometry": {
+      "label": "Statbel: Statistische sectoren 2024",
+      "pageUrl": "https://statbel.fgov.be/en/open-data/statistical-sectors-2024",
+      "downloadUrl": "https://statbel.fgov.be/sites/default/files/files/opendata/Statistische%20sectoren/sh_statbel_statistical_sectors_3812_20240101.geojson.zip",
+      "filename": "sh_statbel_statistical_sectors_3812_20240101.geojson.zip",
+      "expectedSha256": "90d5d995e75f586d24fddc416f9aa3baafef794de8c2883af0054a03f958c6f8",
+      "snapshotDate": "2024-01-01",
+      "sourceCrs": "EPSG:3812",
+      "accuracy": "1:10.000"
+    },
+    "osm": {
+      "label": "© OpenStreetMap contributors",
+      "copyrightUrl": "https://www.openstreetmap.org/copyright",
+      "tilePolicyUrl": "https://operations.osmfoundation.org/policies/tiles/"
+    }
+  }
+}

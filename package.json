@@ -1,0 +1,44 @@
+{
+  "name": "zennevallei-hittekwetsbaarheid",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lokale, interactieve hittekwetsbaarheidskaart voor de Zennevallei.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "data:prepare": "node scripts/prepare-data.mjs",
+    "landcover:prepare": "node scripts/prepare-landcover.mjs",
+    "urban-atlas:prepare": "node scripts/prepare-urban-atlas.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:all": "pnpm test && pnpm test:e2e && pnpm build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
+  },
+  "dependencies": {
+    "flatgeobuf": "4.4.0",
+    "maplibre-gl": "^6.1.0",
+    "polygon-clipping": "0.15.7",
+    "proj4": "^2.21.0",
+    "unzipper": "^0.12.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.1",
+    "geotiff": "^2.1.4-beta.1",
+    "jsdom": "^30.0.1",
+    "sharp": "^0.34.4",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}

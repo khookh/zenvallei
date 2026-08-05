@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-08-05T10:25:28.809Z",
+  "inputs": {
+    "scores": {
+      "path": "Cijfers_hittekwetsbaarheid_2026_jvhnl1.xlsx",
+      "sha256": "43a2be5942f7739310eeeeeed9961a03f3fb213c8acf777643a6270d5b6a8bba",
+      "sourceUrl": "https://cld.webplatform.departementzorg.be/raw/upload/v1785223345/Cijfers_hittekwetsbaarheid_2026_jvhnl1.xlsx",
+      "retrievedAt": "2026-08-05T10:25:28.809Z"
+    },
+    "geometry": {
+      "path": "statistical-sectors-3812-2024.geojson.zip",
+      "sha256": "90d5d995e75f586d24fddc416f9aa3baafef794de8c2883af0054a03f958c6f8",
+      "sourceUrl": "https://statbel.fgov.be/sites/default/files/files/opendata/Statistische%20sectoren/sh_statbel_statistical_sectors_3812_20240101.geojson.zip",
+      "retrievedAt": "2026-08-05T10:25:28.809Z",
+      "snapshotDate": "2024-01-01",
+      "sourceCrs": "EPSG:3812"
+    }
+  },
+  "output": {
+    "targetCrs": "EPSG:4326",
+    "sectorCount": 154,
+    "inputVertices": 28693,
+    "outputVertices": 28693,
+    "bounds": {
+      "minLon": 4.072070537190814,
+      "minLat": 50.68951929521115,
+      "maxLon": 4.423981006099223,
+      "maxLat": 50.82754332896499
+    },
+    "municipalityCounts": {
+      "Beersel": 39,
+      "Drogenbos": 7,
+      "Halle": 41,
+      "Linkebeek": 7,
+      "Pepingen": 15,
+      "Sint-Genesius-Rode": 22,
+      "Sint-Pieters-Leeuw": 23
+    },
+    "scoredCount": 140,
+    "insufficientDataCount": 14,
+    "institutionPresentNoScoreCount": 0
+  },
+  "nameMismatches": [
+    {
+      "sectorId": "23077D00-",
+      "workbookName": "VLEZENBEK-KERN",
+      "statbelName": "VLEZENBEEK-KERN"
+    }
+  ]
+}

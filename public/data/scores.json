@@ -1,0 +1,6011 @@
+{
+  "generatedAt": "2026-08-05T10:25:28.809Z",
+  "sectors": {
+    "23003A001": {
+      "sectorId": "23003A001",
+      "sectorName": "BEERSEL-KERN",
+      "workbookSectorName": "BEERSEL-KERN",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 7,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 10,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 7,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 7,
+          "lowEducation": 1,
+          "nonEuCitizen": 10,
+          "jobSeekers": 6,
+          "pre1945Housing": 9,
+          "livingArea": 7
+        }
+      }
+    },
+    "23003A022": {
+      "sectorId": "23003A022",
+      "sectorName": "LAARHEIDE",
+      "workbookSectorName": "LAARHEIDE",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 10,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 6,
+          "income": 3,
+          "lowEducation": 2,
+          "nonEuCitizen": 3,
+          "jobSeekers": 7,
+          "pre1945Housing": 8,
+          "livingArea": 8
+        }
+      }
+    },
+    "23003A09-": {
+      "sectorId": "23003A09-",
+      "sectorName": "BEERSEL VERSPR. BEWONING-WEST",
+      "workbookSectorName": "BEERSEL VERSPR. BEWONING-WEST",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 4,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 6,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 4,
+          "income": 4,
+          "lowEducation": 0,
+          "nonEuCitizen": 4,
+          "jobSeekers": 9,
+          "pre1945Housing": 4,
+          "livingArea": 2
+        }
+      }
+    },
+    "23003A212": {
+      "sectorId": "23003A212",
+      "sectorName": "NEZING - KERN",
+      "workbookSectorName": "NEZING - KERN",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 6,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 5,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 3,
+          "rentalHousing": 5,
+          "income": null,
+          "lowEducation": 2,
+          "nonEuCitizen": 9,
+          "jobSeekers": null,
+          "pre1945Housing": 10,
+          "livingArea": 9
+        }
+      }
+    },
+    "23003B01-": {
+      "sectorId": "23003B01-",
+      "sectorName": "GROOTVELD",
+      "workbookSectorName": "GROOTVELD",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 8,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 1,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 3,
+          "pre1945Housing": 1,
+          "livingArea": 4
+        }
+      }
+    },
+    "23003B043": {
+      "sectorId": "23003B043",
+      "sectorName": "GROOTBOS",
+      "workbookSectorName": "GROOTBOS",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 8,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 4,
+          "income": 1,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 1,
+          "pre1945Housing": 4,
+          "livingArea": 6
+        }
+      }
+    },
+    "23003C00-": {
+      "sectorId": "23003C00-",
+      "sectorName": "DWORP-CENTRUM",
+      "workbookSectorName": "DWORP-CENTRUM",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 2,
+          "primaryEducation": 10,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 8,
+          "income": 3,
+          "lowEducation": 1,
+          "nonEuCitizen": 1,
+          "jobSeekers": 5,
+          "pre1945Housing": 9,
+          "livingArea": 5
+        }
+      }
+    },
+    "23003C010": {
+      "sectorId": "23003C010",
+      "sectorName": "GRAVENHOF",
+      "workbookSectorName": "GRAVENHOF",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 7,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 8,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 2,
+          "rentalHousing": 1,
+          "income": 1,
+          "lowEducation": 2,
+          "nonEuCitizen": 9,
+          "jobSeekers": 0,
+          "pre1945Housing": 3,
+          "livingArea": 3
+        }
+      }
+    },
+    "23003C022": {
+      "sectorId": "23003C022",
+      "sectorName": "MOLENVELD",
+      "workbookSectorName": "MOLENVELD",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 7,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 3,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 3,
+          "rentalHousing": 0,
+          "income": 1,
+          "lowEducation": 2,
+          "nonEuCitizen": 1,
+          "jobSeekers": 3,
+          "pre1945Housing": 6,
+          "livingArea": 8
+        }
+      }
+    },
+    "23003C090": {
+      "sectorId": "23003C090",
+      "sectorName": "STW.BUIZINGEN -ALSEMBERG-NOORD VERSPREIDE BEWONING",
+      "workbookSectorName": "STW.BUIZINGEN -ALSEMBERG-NOORD VERSPREIDE BEWONING",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 3,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 7,
+          "age65Plus": 5,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 4,
+          "income": 1,
+          "lowEducation": 2,
+          "nonEuCitizen": 8,
+          "jobSeekers": 6,
+          "pre1945Housing": 9,
+          "livingArea": 4
+        }
+      }
+    },
+    "23003E00-": {
+      "sectorId": "23003E00-",
+      "sectorName": "BLOKBOS",
+      "workbookSectorName": "BLOKBOS",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 9,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 6,
+          "income": null,
+          "lowEducation": 5,
+          "nonEuCitizen": 10,
+          "jobSeekers": 4,
+          "pre1945Housing": 9,
+          "livingArea": 10
+        }
+      }
+    },
+    "23003E01-": {
+      "sectorId": "23003E01-",
+      "sectorName": "WOLFSHAGEN",
+      "workbookSectorName": "WOLFSHAGEN",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 8,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 9,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 5,
+          "income": null,
+          "lowEducation": 8,
+          "nonEuCitizen": 2,
+          "jobSeekers": 7,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23003E032": {
+      "sectorId": "23003E032",
+      "sectorName": "BLOKBOS - UITBREIDING",
+      "workbookSectorName": "BLOKBOS - UITBREIDING",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 6,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 10,
+          "age65Plus": 5,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": null,
+          "lowEducation": 10,
+          "nonEuCitizen": 10,
+          "jobSeekers": 9,
+          "pre1945Housing": 2,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A00-": {
+      "sectorId": "23027A00-",
+      "sectorName": "HALLE-CENTRUM",
+      "workbookSectorName": "HALLE-CENTRUM",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 10,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 3,
+          "age65Plus": 9,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 7,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 10,
+          "income": 8,
+          "lowEducation": 6,
+          "nonEuCitizen": 10,
+          "jobSeekers": 9,
+          "pre1945Housing": 9,
+          "livingArea": 7
+        }
+      }
+    },
+    "23027A011": {
+      "sectorId": "23027A011",
+      "sectorName": "BASCUUL",
+      "workbookSectorName": "BASCUUL",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 9,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 7,
+          "age65Plus": 6,
+          "primaryEducation": 0,
+          "childcare": 7,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 9,
+          "income": 9,
+          "lowEducation": 7,
+          "nonEuCitizen": 0,
+          "jobSeekers": 7,
+          "pre1945Housing": 8,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A02-": {
+      "sectorId": "23027A02-",
+      "sectorName": "DON BOSCO",
+      "workbookSectorName": "DON BOSCO",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 9,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 7,
+          "age65Plus": 6,
+          "primaryEducation": 10,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 6,
+          "income": 4,
+          "lowEducation": 3,
+          "nonEuCitizen": 1,
+          "jobSeekers": 5,
+          "pre1945Housing": 4,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A042": {
+      "sectorId": "23027A042",
+      "sectorName": "WINDMOLEKEN",
+      "workbookSectorName": "WINDMOLEKEN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 6,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 8,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 7,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 10,
+          "income": 10,
+          "lowEducation": 9,
+          "nonEuCitizen": 0,
+          "jobSeekers": 10,
+          "pre1945Housing": 2,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A052": {
+      "sectorId": "23027A052",
+      "sectorName": "DE WIP",
+      "workbookSectorName": "DE WIP",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 5,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 9,
+          "income": 9,
+          "lowEducation": 5,
+          "nonEuCitizen": 1,
+          "jobSeekers": 5,
+          "pre1945Housing": 7,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A091": {
+      "sectorId": "23027A091",
+      "sectorName": "ELBEEK",
+      "workbookSectorName": "ELBEEK",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 6,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 9,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 10,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 4,
+          "income": 3,
+          "lowEducation": 7,
+          "nonEuCitizen": 2,
+          "jobSeekers": 8,
+          "pre1945Housing": 7,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A100": {
+      "sectorId": "23027A100",
+      "sectorName": "SINT-ROCHUS-KERN",
+      "workbookSectorName": "SINT-ROCHUS-KERN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 9,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 6,
+          "age65Plus": 7,
+          "primaryEducation": 7,
+          "childcare": 7,
+          "residentialElderlyCare": 7,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 7
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": 8,
+          "lowEducation": 5,
+          "nonEuCitizen": 9,
+          "jobSeekers": 8,
+          "pre1945Housing": 8,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A11-": {
+      "sectorId": "23027A11-",
+      "sectorName": "VOGELWEELDE",
+      "workbookSectorName": "VOGELWEELDE",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 8,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 10,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 7,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 8.75,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 10,
+          "income": 10,
+          "lowEducation": 9,
+          "nonEuCitizen": 10,
+          "jobSeekers": 9,
+          "pre1945Housing": 1,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A12-": {
+      "sectorId": "23027A12-",
+      "sectorName": "OUDE TUINWIJK",
+      "workbookSectorName": "OUDE TUINWIJK",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 9,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 5,
+          "age65Plus": 6,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 5,
+          "rentalHousing": 3,
+          "income": 5,
+          "lowEducation": 7,
+          "nonEuCitizen": 9,
+          "jobSeekers": 2,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A131": {
+      "sectorId": "23027A131",
+      "sectorName": "PANORAMA",
+      "workbookSectorName": "PANORAMA",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 7,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 10,
+          "age65Plus": 5,
+          "primaryEducation": 10,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 7,
+          "income": 4,
+          "lowEducation": 2,
+          "nonEuCitizen": 9,
+          "jobSeekers": 5,
+          "pre1945Housing": 4,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A142": {
+      "sectorId": "23027A142",
+      "sectorName": "NACHTEGAAL",
+      "workbookSectorName": "NACHTEGAAL",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 9,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 6,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 5,
+          "rentalHousing": 9,
+          "income": 5,
+          "lowEducation": 2,
+          "nonEuCitizen": 9,
+          "jobSeekers": 3,
+          "pre1945Housing": 5,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A152": {
+      "sectorId": "23027A152",
+      "sectorName": "HEUVELPARK",
+      "workbookSectorName": "HEUVELPARK",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 8,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 7
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 8,
+          "income": 8,
+          "lowEducation": 7,
+          "nonEuCitizen": 9,
+          "jobSeekers": 8,
+          "pre1945Housing": 4,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A183": {
+      "sectorId": "23027A183",
+      "sectorName": "SMEERHOUT",
+      "workbookSectorName": "SMEERHOUT",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23027A1AA": {
+      "sectorId": "23027A1AA",
+      "sectorName": "RODENEMPLEIN",
+      "workbookSectorName": "RODENEMPLEIN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 6,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 5,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 1,
+          "income": 2,
+          "lowEducation": 4,
+          "nonEuCitizen": 3,
+          "jobSeekers": 5,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A1PA": {
+      "sectorId": "23027A1PA",
+      "sectorName": "OUDE NAAM - RODENEM",
+      "workbookSectorName": "OUDE NAAM - RODENEM",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23027A20-": {
+      "sectorId": "23027A20-",
+      "sectorName": "ESSENBEEK-KERN",
+      "workbookSectorName": "ESSENBEEK-KERN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 6,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 2,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 5,
+          "income": 8,
+          "lowEducation": 4,
+          "nonEuCitizen": 9,
+          "jobSeekers": 4,
+          "pre1945Housing": 10,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A212": {
+      "sectorId": "23027A212",
+      "sectorName": "DEFLOERE",
+      "workbookSectorName": "DEFLOERE",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 5,
+        "vulnerability": 3,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 7,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 7,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 4,
+          "income": 3,
+          "lowEducation": 2,
+          "nonEuCitizen": 1,
+          "jobSeekers": 4,
+          "pre1945Housing": 8,
+          "livingArea": 7
+        }
+      }
+    },
+    "23027A402": {
+      "sectorId": "23027A402",
+      "sectorName": "BREEDHOUT",
+      "workbookSectorName": "BREEDHOUT",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 6,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 7,
+          "age65Plus": 8,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 5,
+          "rentalHousing": 3,
+          "income": 4,
+          "lowEducation": 2,
+          "nonEuCitizen": 3,
+          "jobSeekers": 0,
+          "pre1945Housing": 8,
+          "livingArea": 5
+        }
+      }
+    },
+    "23027A511": {
+      "sectorId": "23027A511",
+      "sectorName": "EUROPAWIJK",
+      "workbookSectorName": "EUROPAWIJK",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 9,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 7,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 4,
+          "income": 5,
+          "lowEducation": 5,
+          "nonEuCitizen": 8,
+          "jobSeekers": 0,
+          "pre1945Housing": 2,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A572": {
+      "sectorId": "23027A572",
+      "sectorName": "INDUSTRIE-ZUID",
+      "workbookSectorName": "INDUSTRIE-ZUID",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 7,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 8,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 5,
+          "rentalHousing": 6,
+          "income": 8,
+          "lowEducation": 2,
+          "nonEuCitizen": 10,
+          "jobSeekers": null,
+          "pre1945Housing": 9,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027B00-": {
+      "sectorId": "23027B00-",
+      "sectorName": "BUIZINGEN-DORP",
+      "workbookSectorName": "BUIZINGEN-DORP",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 9,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 10,
+          "age65Plus": 1,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 5,
+          "income": 8,
+          "lowEducation": 3,
+          "nonEuCitizen": 2,
+          "jobSeekers": 5,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027B03-": {
+      "sectorId": "23027B03-",
+      "sectorName": "FLORAWIJK",
+      "workbookSectorName": "FLORAWIJK",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 8,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 7,
+          "age65Plus": 7,
+          "primaryEducation": 3,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 1,
+          "income": 1,
+          "lowEducation": 1,
+          "nonEuCitizen": 1,
+          "jobSeekers": 2,
+          "pre1945Housing": 1,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027B091": {
+      "sectorId": "23027B091",
+      "sectorName": "BUIZINGEN - BOS",
+      "workbookSectorName": "BUIZINGEN - BOS",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 4,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 1,
+          "age65Plus": 10,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 0,
+          "rentalHousing": 8,
+          "income": 0,
+          "lowEducation": 6,
+          "nonEuCitizen": 7,
+          "jobSeekers": 7,
+          "pre1945Housing": 7,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027C00-": {
+      "sectorId": "23027C00-",
+      "sectorName": "STWG.'S GRAVENBRAKEL-OOST-KERN",
+      "workbookSectorName": "STWG.'S GRAVENBRAKEL-OOST-KERN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 8,
+          "income": 9,
+          "lowEducation": 5,
+          "nonEuCitizen": 10,
+          "jobSeekers": 9,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027C01-": {
+      "sectorId": "23027C01-",
+      "sectorName": "STWG.'S GRAVENBRAKEL-WEST-KERN",
+      "workbookSectorName": "STWG.'S GRAVENBRAKEL-WEST-KERN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 7,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 7,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 4,
+          "income": 7,
+          "lowEducation": 3,
+          "nonEuCitizen": 0,
+          "jobSeekers": 5,
+          "pre1945Housing": 9,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027C022": {
+      "sectorId": "23027C022",
+      "sectorName": "KRIEKENVELD",
+      "workbookSectorName": "KRIEKENVELD",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 6,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 8,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 3,
+          "rentalHousing": 3,
+          "income": 5,
+          "lowEducation": 5,
+          "nonEuCitizen": 1,
+          "jobSeekers": 1,
+          "pre1945Housing": 3,
+          "livingArea": 8
+        }
+      }
+    },
+    "23027C033": {
+      "sectorId": "23027C033",
+      "sectorName": "HONDZOCHT",
+      "workbookSectorName": "HONDZOCHT",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 4,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 7,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 4,
+          "income": 8,
+          "lowEducation": 7,
+          "nonEuCitizen": 2,
+          "jobSeekers": 3,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23064B002": {
+      "sectorId": "23064B002",
+      "sectorName": "ELINGEN-KERN",
+      "workbookSectorName": "ELINGEN-KERN",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 3,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 0,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": null,
+          "income": 2,
+          "lowEducation": 1,
+          "nonEuCitizen": 0,
+          "jobSeekers": null,
+          "pre1945Housing": 8,
+          "livingArea": 1
+        }
+      }
+    },
+    "23064C002": {
+      "sectorId": "23064C002",
+      "sectorName": "BEERT-KERN",
+      "workbookSectorName": "BEERT-KERN",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 4,
+        "vulnerability": 3,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 0,
+          "age65Plus": 10,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 0,
+          "rentalHousing": 4,
+          "income": 0,
+          "lowEducation": 1,
+          "nonEuCitizen": 6,
+          "jobSeekers": 3,
+          "pre1945Housing": 8,
+          "livingArea": 3
+        }
+      }
+    },
+    "23064D002": {
+      "sectorId": "23064D002",
+      "sectorName": "BELLINGEN-KERN",
+      "workbookSectorName": "BELLINGEN-KERN",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 7,
+          "age65Plus": 6,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 0,
+          "rentalHousing": 1,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 0,
+          "jobSeekers": null,
+          "pre1945Housing": 7,
+          "livingArea": 5
+        }
+      }
+    },
+    "23064E002": {
+      "sectorId": "23064E002",
+      "sectorName": "BOGAARDEN-KERN",
+      "workbookSectorName": "BOGAARDEN-KERN",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 4,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 10,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 2,
+          "rentalHousing": 7,
+          "income": null,
+          "lowEducation": 0,
+          "nonEuCitizen": 7,
+          "jobSeekers": 9,
+          "pre1945Housing": 10,
+          "livingArea": 7
+        }
+      }
+    },
+    "23064F002": {
+      "sectorId": "23064F002",
+      "sectorName": "HEIKRUIS-KERN",
+      "workbookSectorName": "HEIKRUIS-KERN",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 3,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 2,
+          "age65Plus": 10,
+          "primaryEducation": 3,
+          "childcare": 0,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 7,
+          "income": 4,
+          "lowEducation": 8,
+          "nonEuCitizen": 9,
+          "jobSeekers": 6,
+          "pre1945Housing": 10,
+          "livingArea": 8
+        }
+      }
+    },
+    "23077A022": {
+      "sectorId": "23077A022",
+      "sectorName": "RATTENDAAL",
+      "workbookSectorName": "RATTENDAAL",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 9,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 6,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 0,
+          "rentalHousing": 2,
+          "income": 5,
+          "lowEducation": 4,
+          "nonEuCitizen": 9,
+          "jobSeekers": 4,
+          "pre1945Housing": 1,
+          "livingArea": 7
+        }
+      }
+    },
+    "23077A22-": {
+      "sectorId": "23077A22-",
+      "sectorName": "KLEIN BIJGAARDEN",
+      "workbookSectorName": "KLEIN BIJGAARDEN",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 10,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 10,
+          "age65Plus": 3,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 6,
+          "income": 9,
+          "lowEducation": 6,
+          "nonEuCitizen": 0,
+          "jobSeekers": 8,
+          "pre1945Housing": 1,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077B002": {
+      "sectorId": "23077B002",
+      "sectorName": "OUDENAKEN-KERN",
+      "workbookSectorName": "OUDENAKEN-KERN",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 5,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 9,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 2,
+          "rentalHousing": 2,
+          "income": 3,
+          "lowEducation": 1,
+          "nonEuCitizen": 8,
+          "jobSeekers": null,
+          "pre1945Housing": 8,
+          "livingArea": 3
+        }
+      }
+    },
+    "23077C002": {
+      "sectorId": "23077C002",
+      "sectorName": "SINT-LAUREINS-BERCHEM-KERN",
+      "workbookSectorName": "SINT-LAUREINS-BERCHEM-KERN",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 4,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 0,
+          "age65Plus": 1,
+          "primaryEducation": 3,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": null,
+          "income": 0,
+          "lowEducation": 4,
+          "nonEuCitizen": 0,
+          "jobSeekers": null,
+          "pre1945Housing": 7,
+          "livingArea": 4
+        }
+      }
+    },
+    "23077D00-": {
+      "sectorId": "23077D00-",
+      "sectorName": "VLEZENBEEK-KERN",
+      "workbookSectorName": "VLEZENBEK-KERN",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 9,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 8,
+          "age65Plus": 7,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 10,
+          "income": 5,
+          "lowEducation": 3,
+          "nonEuCitizen": 9,
+          "jobSeekers": 6,
+          "pre1945Housing": 6,
+          "livingArea": 9
+        }
+      }
+    },
+    "23077D012": {
+      "sectorId": "23077D012",
+      "sectorName": "KAPELLEVELD",
+      "workbookSectorName": "KAPELLEVELD",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 8,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 3,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 8,
+          "income": 3,
+          "lowEducation": 4,
+          "nonEuCitizen": 2,
+          "jobSeekers": 3,
+          "pre1945Housing": 2,
+          "livingArea": 6
+        }
+      }
+    },
+    "23077D023": {
+      "sectorId": "23077D023",
+      "sectorName": "SOBROEK",
+      "workbookSectorName": "SOBROEK",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 7,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 5,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 7,
+          "income": 4,
+          "lowEducation": 5,
+          "nonEuCitizen": 3,
+          "jobSeekers": 6,
+          "pre1945Housing": 4,
+          "livingArea": 7
+        }
+      }
+    },
+    "23100A10-": {
+      "sectorId": "23100A10-",
+      "sectorName": "'T HOLLEKEN-KERN",
+      "workbookSectorName": "'T HOLLEKEN-KERN",
+      "municipality": "Linkebeek",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 5,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 7,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": null,
+          "lowEducation": 0,
+          "nonEuCitizen": 9,
+          "jobSeekers": 4,
+          "pre1945Housing": 10,
+          "livingArea": 9
+        }
+      }
+    },
+    "23100A112": {
+      "sectorId": "23100A112",
+      "sectorName": "'T HOLLEKEN-STATION",
+      "workbookSectorName": "'T HOLLEKEN-STATION",
+      "municipality": "Linkebeek",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 6,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 6,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 8,
+          "pre1945Housing": 7,
+          "livingArea": 4
+        }
+      }
+    },
+    "23101A02-": {
+      "sectorId": "23101A02-",
+      "sectorName": "KLEIN LUIK",
+      "workbookSectorName": "KLEIN LUIK",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 5,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 2,
+          "primaryEducation": 3,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 7,
+          "income": 3,
+          "lowEducation": 1,
+          "nonEuCitizen": 9,
+          "jobSeekers": 7,
+          "pre1945Housing": 8,
+          "livingArea": 9
+        }
+      }
+    },
+    "23101A030": {
+      "sectorId": "23101A030",
+      "sectorName": "WAUTERBOS",
+      "workbookSectorName": "WAUTERBOS",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 6,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 7,
+          "age65Plus": 6,
+          "primaryEducation": 3,
+          "childcare": 3,
+          "residentialElderlyCare": 7,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 6,
+          "lowEducation": 4,
+          "nonEuCitizen": 9,
+          "jobSeekers": 7,
+          "pre1945Housing": 8,
+          "livingArea": 9
+        }
+      }
+    },
+    "23101A10-": {
+      "sectorId": "23101A10-",
+      "sectorName": "SINT-GENESIUS-RODE - DE HOEK",
+      "workbookSectorName": "SINT-GENESIUS-RODE - DE HOEK",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 4,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 7,
+          "age65Plus": 5,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 7,
+          "income": 6,
+          "lowEducation": 2,
+          "nonEuCitizen": 9,
+          "jobSeekers": 8,
+          "pre1945Housing": 6,
+          "livingArea": 9
+        }
+      }
+    },
+    "23101A122": {
+      "sectorId": "23101A122",
+      "sectorName": "MEZENLAAN",
+      "workbookSectorName": "MEZENLAAN",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 3,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 8,
+          "age65Plus": 9,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 4,
+          "income": 0,
+          "lowEducation": 1,
+          "nonEuCitizen": 9,
+          "jobSeekers": 7,
+          "pre1945Housing": 0,
+          "livingArea": 7
+        }
+      }
+    },
+    "23101A40-": {
+      "sectorId": "23101A40-",
+      "sectorName": "MIDDENHUT",
+      "workbookSectorName": "MIDDENHUT",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 4,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 8,
+          "age65Plus": 5,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 2,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 7,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 9,
+          "jobSeekers": 6,
+          "pre1945Housing": 6,
+          "livingArea": 0
+        }
+      }
+    },
+    "23101A422": {
+      "sectorId": "23101A422",
+      "sectorName": "KREFTENBROEK",
+      "workbookSectorName": "KREFTENBROEK",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 8,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 4,
+          "income": null,
+          "lowEducation": 0,
+          "nonEuCitizen": 9,
+          "jobSeekers": 1,
+          "pre1945Housing": 3,
+          "livingArea": 0
+        }
+      }
+    },
+    "23003A012": {
+      "sectorId": "23003A012",
+      "sectorName": "KERKVELD",
+      "workbookSectorName": "KERKVELD",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 6,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 8,
+          "age65Plus": 4,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 7,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 5,
+          "income": 2,
+          "lowEducation": 1,
+          "nonEuCitizen": 9,
+          "jobSeekers": 5,
+          "pre1945Housing": 3,
+          "livingArea": 8
+        }
+      }
+    },
+    "23003A081": {
+      "sectorId": "23003A081",
+      "sectorName": "BEERSEL VERSPR. BEWONING-OOST",
+      "workbookSectorName": "BEERSEL VERSPR. BEWONING-OOST",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 2,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 0,
+          "age65Plus": 10,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 10,
+          "income": 2,
+          "lowEducation": 10,
+          "nonEuCitizen": 4,
+          "jobSeekers": null,
+          "pre1945Housing": 2,
+          "livingArea": 10
+        }
+      }
+    },
+    "23003A11-": {
+      "sectorId": "23003A11-",
+      "sectorName": "SCHAVEYS",
+      "workbookSectorName": "SCHAVEYS",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 8,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 1,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 7,
+          "jobSeekers": 4,
+          "pre1945Housing": 2,
+          "livingArea": 1
+        }
+      }
+    },
+    "23003A291": {
+      "sectorId": "23003A291",
+      "sectorName": "ZENNEVALLEI",
+      "workbookSectorName": "ZENNEVALLEI",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23003A31-": {
+      "sectorId": "23003A31-",
+      "sectorName": "DACHELEN BERG",
+      "workbookSectorName": "DACHELEN BERG",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 7,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 8,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 5,
+          "income": 2,
+          "lowEducation": 0,
+          "nonEuCitizen": 9,
+          "jobSeekers": 3,
+          "pre1945Housing": 7,
+          "livingArea": 8
+        }
+      }
+    },
+    "23003B00-": {
+      "sectorId": "23003B00-",
+      "sectorName": "KOM",
+      "workbookSectorName": "KOM",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 6,
+          "age65Plus": 7,
+          "primaryEducation": 10,
+          "childcare": 3,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 9,
+          "income": 2,
+          "lowEducation": 4,
+          "nonEuCitizen": 1,
+          "jobSeekers": 8,
+          "pre1945Housing": 8,
+          "livingArea": 8
+        }
+      }
+    },
+    "23003B02-": {
+      "sectorId": "23003B02-",
+      "sectorName": "INGENDAEL",
+      "workbookSectorName": "INGENDAEL",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 8,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 1,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 3,
+          "pre1945Housing": 1,
+          "livingArea": 4
+        }
+      }
+    },
+    "23003B032": {
+      "sectorId": "23003B032",
+      "sectorName": "WIT KAPELLEKEN",
+      "workbookSectorName": "WIT KAPELLEKEN",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 5,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 8,
+          "age65Plus": 4,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 2,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 1,
+          "pre1945Housing": 5,
+          "livingArea": 5
+        }
+      }
+    },
+    "23003B081": {
+      "sectorId": "23003B081",
+      "sectorName": "HOOGVELD",
+      "workbookSectorName": "HOOGVELD",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 2,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 10,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 4,
+          "income": 10,
+          "lowEducation": 0,
+          "nonEuCitizen": 2,
+          "jobSeekers": 9,
+          "pre1945Housing": 9,
+          "livingArea": 10
+        }
+      }
+    },
+    "23003B09-": {
+      "sectorId": "23003B09-",
+      "sectorName": "GROTE KAPEL",
+      "workbookSectorName": "GROTE KAPEL",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 3,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 6,
+          "age65Plus": 10,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 5,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 9,
+          "income": 3,
+          "lowEducation": 5,
+          "nonEuCitizen": 9,
+          "jobSeekers": 9,
+          "pre1945Housing": 2,
+          "livingArea": 9
+        }
+      }
+    },
+    "23003B114": {
+      "sectorId": "23003B114",
+      "sectorName": "HEIDE",
+      "workbookSectorName": "HEIDE",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 6,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 10,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 7,
+          "lowEducation": 1,
+          "nonEuCitizen": 3,
+          "jobSeekers": 1,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23003C033": {
+      "sectorId": "23003C033",
+      "sectorName": "DESTELHEIDE",
+      "workbookSectorName": "DESTELHEIDE",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 9,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 4,
+          "income": 4,
+          "lowEducation": 1,
+          "nonEuCitizen": 9,
+          "jobSeekers": 2,
+          "pre1945Housing": 7,
+          "livingArea": 7
+        }
+      }
+    },
+    "23003C081": {
+      "sectorId": "23003C081",
+      "sectorName": "STW.BUIZINGEN -ALSEMBERG-ZUID VERSPREIDE BEWONING",
+      "workbookSectorName": "STW.BUIZINGEN -ALSEMBERG-ZUID VERSPREIDE BEWONING",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 3,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 7,
+          "age65Plus": 6,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 4,
+          "income": 1,
+          "lowEducation": 2,
+          "nonEuCitizen": 8,
+          "jobSeekers": 3,
+          "pre1945Housing": 8,
+          "livingArea": 5
+        }
+      }
+    },
+    "23003D00-": {
+      "sectorId": "23003D00-",
+      "sectorName": "HUIZINGEN - CENTRUM",
+      "workbookSectorName": "HUIZINGEN - CENTRUM",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 8,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 10,
+          "age65Plus": 3,
+          "primaryEducation": 7,
+          "childcare": 7,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 7,
+          "lowEducation": 6,
+          "nonEuCitizen": 9,
+          "jobSeekers": 7,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23003D01-": {
+      "sectorId": "23003D01-",
+      "sectorName": "NEERDORP",
+      "workbookSectorName": "NEERDORP",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 9,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 7,
+          "income": 9,
+          "lowEducation": 9,
+          "nonEuCitizen": 3,
+          "jobSeekers": 8,
+          "pre1945Housing": 9,
+          "livingArea": 10
+        }
+      }
+    },
+    "23003D030": {
+      "sectorId": "23003D030",
+      "sectorName": "SOLLEMBERG",
+      "workbookSectorName": "SOLLEMBERG",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 6,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 3,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 3,
+          "income": 3,
+          "lowEducation": 1,
+          "nonEuCitizen": 9,
+          "jobSeekers": 2,
+          "pre1945Housing": 10,
+          "livingArea": 9
+        }
+      }
+    },
+    "23003D042": {
+      "sectorId": "23003D042",
+      "sectorName": "DISBEEK",
+      "workbookSectorName": "DISBEEK",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 7,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 7,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 1,
+          "income": 8,
+          "lowEducation": 6,
+          "nonEuCitizen": 4,
+          "jobSeekers": 2,
+          "pre1945Housing": 8,
+          "livingArea": 9
+        }
+      }
+    },
+    "23003D091": {
+      "sectorId": "23003D091",
+      "sectorName": "AUTOSTRADE Z.O.-VERSPR.BEW.",
+      "workbookSectorName": "AUTOSTRADE Z.O.-VERSPR.BEW.",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 6,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 0,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": null,
+          "income": 9,
+          "lowEducation": 3,
+          "nonEuCitizen": 10,
+          "jobSeekers": null,
+          "pre1945Housing": 10,
+          "livingArea": 6
+        }
+      }
+    },
+    "23003D0MS": {
+      "sectorId": "23003D0MS",
+      "sectorName": "HEIDE VELDE",
+      "workbookSectorName": "HEIDE VELDE",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 10,
+          "neighborhoodGreen": 10
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23003D0NS": {
+      "sectorId": "23003D0NS",
+      "sectorName": "DE GIJZELEER-ZENNENVELD",
+      "workbookSectorName": "DE GIJZELEER-ZENNENVELD",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 5,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23003E07-": {
+      "sectorId": "23003E07-",
+      "sectorName": "INDUSTRIESEKTOR",
+      "workbookSectorName": "INDUSTRIESEKTOR",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 10,
+          "neighborhoodGreen": 10
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23003E083": {
+      "sectorId": "23003E083",
+      "sectorName": "BIEST",
+      "workbookSectorName": "BIEST",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 7,
+          "income": null,
+          "lowEducation": 3,
+          "nonEuCitizen": 10,
+          "jobSeekers": 6,
+          "pre1945Housing": 7,
+          "livingArea": 10
+        }
+      }
+    },
+    "23003E0MS": {
+      "sectorId": "23003E0MS",
+      "sectorName": "ZENNE",
+      "workbookSectorName": "ZENNE",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23003E0NS": {
+      "sectorId": "23003E0NS",
+      "sectorName": "BREEDVELD",
+      "workbookSectorName": "BREEDVELD",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23003E0PS": {
+      "sectorId": "23003E0PS",
+      "sectorName": "TUSSEN AUTOWEG EN KANAAL-ZENNE",
+      "workbookSectorName": "TUSSEN AUTOWEG EN KANAAL-ZENNE",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 6,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 10,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 7,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 5,
+          "income": 1,
+          "lowEducation": 6,
+          "nonEuCitizen": 9,
+          "jobSeekers": null,
+          "pre1945Housing": 5,
+          "livingArea": 9
+        }
+      }
+    },
+    "23003E11-": {
+      "sectorId": "23003E11-",
+      "sectorName": "KESTERBEEK",
+      "workbookSectorName": "KESTERBEEK",
+      "municipality": "Beersel",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 6,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 5,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 2,
+          "income": null,
+          "lowEducation": 4,
+          "nonEuCitizen": 2,
+          "jobSeekers": 4,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A03-": {
+      "sectorId": "23027A03-",
+      "sectorName": "STROPPEN",
+      "workbookSectorName": "STROPPEN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 8,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 3,
+          "age65Plus": 8,
+          "primaryEducation": 7,
+          "childcare": 7,
+          "residentialElderlyCare": 7,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 10,
+          "income": 7,
+          "lowEducation": 7,
+          "nonEuCitizen": 10,
+          "jobSeekers": 7,
+          "pre1945Housing": 8,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027A083": {
+      "sectorId": "23027A083",
+      "sectorName": "ALSPUT",
+      "workbookSectorName": "ALSPUT",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 4,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 6,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 5,
+          "income": 2,
+          "lowEducation": 2,
+          "nonEuCitizen": 8,
+          "jobSeekers": 0,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027A291": {
+      "sectorId": "23027A291",
+      "sectorName": "ESSENBEEK-VERSPREIDE BEWONING",
+      "workbookSectorName": "ESSENBEEK-VERSPREIDE BEWONING",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 2,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 3,
+          "age65Plus": 4,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 2,
+          "income": 3,
+          "lowEducation": 4,
+          "nonEuCitizen": 7,
+          "jobSeekers": 2,
+          "pre1945Housing": 10,
+          "livingArea": 7
+        }
+      }
+    },
+    "23027A39-": {
+      "sectorId": "23027A39-",
+      "sectorName": "HALLERBOS",
+      "workbookSectorName": "HALLERBOS",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 0,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 0,
+          "age0To9": 4,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 5,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 5,
+          "income": 1,
+          "lowEducation": 0,
+          "nonEuCitizen": 4,
+          "jobSeekers": 1,
+          "pre1945Housing": 10,
+          "livingArea": 3
+        }
+      }
+    },
+    "23027A483": {
+      "sectorId": "23027A483",
+      "sectorName": "WOLVENDRIES",
+      "workbookSectorName": "WOLVENDRIES",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 2,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 7,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 3,
+          "rentalHousing": 1,
+          "income": 2,
+          "lowEducation": 3,
+          "nonEuCitizen": 3,
+          "jobSeekers": 5,
+          "pre1945Housing": 10,
+          "livingArea": 4
+        }
+      }
+    },
+    "23027A491": {
+      "sectorId": "23027A491",
+      "sectorName": "BREEDHOUT-VERSPREIDE BEWONING",
+      "workbookSectorName": "BREEDHOUT-VERSPREIDE BEWONING",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 2,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 0,
+          "age0To9": 3,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 7,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 6,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 4,
+          "jobSeekers": null,
+          "pre1945Housing": 8,
+          "livingArea": 0
+        }
+      }
+    },
+    "23027A593": {
+      "sectorId": "23027A593",
+      "sectorName": "UILENBERG",
+      "workbookSectorName": "UILENBERG",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 5,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 7,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 4,
+          "income": 6,
+          "lowEducation": 6,
+          "nonEuCitizen": 4,
+          "jobSeekers": null,
+          "pre1945Housing": 6,
+          "livingArea": 6
+        }
+      }
+    },
+    "23027B01-": {
+      "sectorId": "23027B01-",
+      "sectorName": "DON BOSCO",
+      "workbookSectorName": "DON BOSCO",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 10,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 10,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 7,
+          "income": 8,
+          "lowEducation": 6,
+          "nonEuCitizen": 9,
+          "jobSeekers": 6,
+          "pre1945Housing": 8,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027B02-": {
+      "sectorId": "23027B02-",
+      "sectorName": "TUINWIJKEN",
+      "workbookSectorName": "TUINWIJKEN",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 9,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 10,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 6,
+          "income": 9,
+          "lowEducation": 8,
+          "nonEuCitizen": 2,
+          "jobSeekers": 6,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23027B052": {
+      "sectorId": "23027B052",
+      "sectorName": "GEYNST-BOS - HOF TEN BLOTE",
+      "workbookSectorName": "GEYNST-BOS - HOF TEN BLOTE",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 6,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 6,
+          "age65Plus": 5,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 1,
+          "income": 2,
+          "lowEducation": 1,
+          "nonEuCitizen": 2,
+          "jobSeekers": 2,
+          "pre1945Housing": 3,
+          "livingArea": 8
+        }
+      }
+    },
+    "23027B07-": {
+      "sectorId": "23027B07-",
+      "sectorName": "INDUSTRIEBUURT",
+      "workbookSectorName": "INDUSTRIEBUURT",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 9,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 1,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 9,
+          "lowEducation": 4,
+          "nonEuCitizen": 9,
+          "jobSeekers": 4,
+          "pre1945Housing": 8,
+          "livingArea": 9
+        }
+      }
+    },
+    "23027B19-": {
+      "sectorId": "23027B19-",
+      "sectorName": "KESTERBEEKBOS",
+      "workbookSectorName": "KESTERBEEKBOS",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 4,
+        "vulnerability": 3,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 9,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 1,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 3,
+          "jobSeekers": 0,
+          "pre1945Housing": 4,
+          "livingArea": 3
+        }
+      }
+    },
+    "23027C08-": {
+      "sectorId": "23027C08-",
+      "sectorName": "MALHEIDE",
+      "workbookSectorName": "MALHEIDE",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 3,
+        "vulnerability": 3,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 8,
+          "age65Plus": 1,
+          "primaryEducation": 3,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 2,
+          "income": 5,
+          "lowEducation": 4,
+          "nonEuCitizen": 0,
+          "jobSeekers": 2,
+          "pre1945Housing": 10,
+          "livingArea": 8
+        }
+      }
+    },
+    "23027C091": {
+      "sectorId": "23027C091",
+      "sectorName": "LEMBEEK - VERSPREIDE BEWONING",
+      "workbookSectorName": "LEMBEEK - VERSPREIDE BEWONING",
+      "municipality": "Halle",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 2,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 10,
+          "age65Plus": 1,
+          "primaryEducation": 3,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 4,
+          "income": 8,
+          "lowEducation": 5,
+          "nonEuCitizen": 9,
+          "jobSeekers": 8,
+          "pre1945Housing": 10,
+          "livingArea": 9
+        }
+      }
+    },
+    "23064A000": {
+      "sectorId": "23064A000",
+      "sectorName": "PEPINGEN-KERN",
+      "workbookSectorName": "PEPINGEN-KERN",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 5,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 4,
+          "age65Plus": 6,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 3,
+          "rentalHousing": 8,
+          "income": 5,
+          "lowEducation": 4,
+          "nonEuCitizen": 2,
+          "jobSeekers": 2,
+          "pre1945Housing": 8,
+          "livingArea": 7
+        }
+      }
+    },
+    "23064A090": {
+      "sectorId": "23064A090",
+      "sectorName": "PEPINGEN-VERSPREIDE BEWONING",
+      "workbookSectorName": "PEPINGEN-VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 2,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 6,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 4,
+          "income": 1,
+          "lowEducation": 6,
+          "nonEuCitizen": 2,
+          "jobSeekers": 3,
+          "pre1945Housing": 8,
+          "livingArea": 5
+        }
+      }
+    },
+    "23064A19-": {
+      "sectorId": "23064A19-",
+      "sectorName": "DE WINKEL",
+      "workbookSectorName": "DE WINKEL",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 2,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 0,
+          "age0To9": 1,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 7,
+          "income": 2,
+          "lowEducation": 1,
+          "nonEuCitizen": 5,
+          "jobSeekers": 6,
+          "pre1945Housing": 10,
+          "livingArea": 2
+        }
+      }
+    },
+    "23064A29-": {
+      "sectorId": "23064A29-",
+      "sectorName": "KASTEEL PUTTENBERG-ZUID VERSPREIDE BEWONING",
+      "workbookSectorName": "KASTEEL PUTTENBERG-ZUID VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 1,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 8,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 2,
+          "rentalHousing": null,
+          "income": 0,
+          "lowEducation": 1,
+          "nonEuCitizen": 6,
+          "jobSeekers": null,
+          "pre1945Housing": 7,
+          "livingArea": 5
+        }
+      }
+    },
+    "23064A39-": {
+      "sectorId": "23064A39-",
+      "sectorName": "TUSSEN BOGAARDEN EN BELLINGEN VERSPREIDE BEWONING",
+      "workbookSectorName": "TUSSEN BOGAARDEN EN BELLINGEN VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 1,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 4,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 0,
+          "income": 6,
+          "lowEducation": 4,
+          "nonEuCitizen": 4,
+          "jobSeekers": null,
+          "pre1945Housing": 9,
+          "livingArea": 2
+        }
+      }
+    },
+    "23064B091": {
+      "sectorId": "23064B091",
+      "sectorName": "ELINGEN-VERSPREIDE BEWONING",
+      "workbookSectorName": "ELINGEN-VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 2,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 2,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 0,
+          "income": 1,
+          "lowEducation": 2,
+          "nonEuCitizen": 3,
+          "jobSeekers": 0,
+          "pre1945Housing": 7,
+          "livingArea": 2
+        }
+      }
+    },
+    "23064C091": {
+      "sectorId": "23064C091",
+      "sectorName": "BEERT-VERSPREIDE BEWONING",
+      "workbookSectorName": "BEERT-VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 1,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 1,
+          "age65Plus": 4,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 3,
+          "rentalHousing": 1,
+          "income": 0,
+          "lowEducation": 1,
+          "nonEuCitizen": 5,
+          "jobSeekers": 3,
+          "pre1945Housing": 8,
+          "livingArea": 6
+        }
+      }
+    },
+    "23064D091": {
+      "sectorId": "23064D091",
+      "sectorName": "BELLINGEN-VERSPREIDE BEWONING",
+      "workbookSectorName": "BELLINGEN-VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 1,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 8,
+          "age65Plus": 3,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 2,
+          "income": 2,
+          "lowEducation": 1,
+          "nonEuCitizen": 8,
+          "jobSeekers": 2,
+          "pre1945Housing": 9,
+          "livingArea": 2
+        }
+      }
+    },
+    "23064F091": {
+      "sectorId": "23064F091",
+      "sectorName": "HEIKRUIS-VERSPREIDE BEWONING",
+      "workbookSectorName": "HEIKRUIS-VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 0,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 8,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 5,
+          "rentalHousing": 1,
+          "income": 2,
+          "lowEducation": 1,
+          "nonEuCitizen": 2,
+          "jobSeekers": 1,
+          "pre1945Housing": 9,
+          "livingArea": 3
+        }
+      }
+    },
+    "23077A001": {
+      "sectorId": "23077A001",
+      "sectorName": "SINT-PIETERS-LEEUW RINK-KERN",
+      "workbookSectorName": "SINT-PIETERS-LEEUW RINK-KERN",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 8,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 10,
+          "income": 3,
+          "lowEducation": 7,
+          "nonEuCitizen": 1,
+          "jobSeekers": 6,
+          "pre1945Housing": 5,
+          "livingArea": 8
+        }
+      }
+    },
+    "23077A012": {
+      "sectorId": "23077A012",
+      "sectorName": "VOLSEM",
+      "workbookSectorName": "VOLSEM",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 8,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 2,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 4,
+          "rentalHousing": 4,
+          "income": 0,
+          "lowEducation": 1,
+          "nonEuCitizen": 1,
+          "jobSeekers": 4,
+          "pre1945Housing": 2,
+          "livingArea": 5
+        }
+      }
+    },
+    "23077A09-": {
+      "sectorId": "23077A09-",
+      "sectorName": "NIEUWENHOVEN",
+      "workbookSectorName": "NIEUWENHOVEN",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 3,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 7,
+          "age65Plus": 4,
+          "primaryEducation": 10,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 7,
+          "income": 3,
+          "lowEducation": 5,
+          "nonEuCitizen": 9,
+          "jobSeekers": 6,
+          "pre1945Housing": 5,
+          "livingArea": 8
+        }
+      }
+    },
+    "23077A11-": {
+      "sectorId": "23077A11-",
+      "sectorName": "BRUKOM",
+      "workbookSectorName": "BRUKOM",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 8,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 5,
+          "age65Plus": 5,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 3,
+          "rentalHousing": 2,
+          "income": 5,
+          "lowEducation": 6,
+          "nonEuCitizen": 10,
+          "jobSeekers": 3,
+          "pre1945Housing": 5,
+          "livingArea": 9
+        }
+      }
+    },
+    "23077A20-": {
+      "sectorId": "23077A20-",
+      "sectorName": "NEGENMANNEKE -STW.OP BERGEN-W.",
+      "workbookSectorName": "NEGENMANNEKE -STW.OP BERGEN-W.",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 10,
+        "heat": 10,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 10,
+          "age65Plus": 3,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 7
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 9,
+          "income": 10,
+          "lowEducation": 9,
+          "nonEuCitizen": 10,
+          "jobSeekers": 8,
+          "pre1945Housing": 6,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077A21-": {
+      "sectorId": "23077A21-",
+      "sectorName": "NEGENMANNEKE -STW.OP BERGEN-O.",
+      "workbookSectorName": "NEGENMANNEKE -STW.OP BERGEN-O.",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 10,
+        "heat": 10,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 10,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 10
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": 10,
+          "lowEducation": 9,
+          "nonEuCitizen": 0,
+          "jobSeekers": 8,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077A291": {
+      "sectorId": "23077A291",
+      "sectorName": "NEGENMANNEKE-VERSPREIDE BEW.",
+      "workbookSectorName": "NEGENMANNEKE-VERSPREIDE BEW.",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 6,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 6,
+          "age65Plus": 5,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 4,
+          "income": 4,
+          "lowEducation": 9,
+          "nonEuCitizen": 2,
+          "jobSeekers": 1,
+          "pre1945Housing": 7,
+          "livingArea": 8
+        }
+      }
+    },
+    "23077A30-": {
+      "sectorId": "23077A30-",
+      "sectorName": "ZUUN-WEST",
+      "workbookSectorName": "ZUUN-WEST",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 9,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 5,
+          "primaryEducation": 10,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 9,
+          "income": 9,
+          "lowEducation": 9,
+          "nonEuCitizen": 10,
+          "jobSeekers": 8,
+          "pre1945Housing": 6,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077A31-": {
+      "sectorId": "23077A31-",
+      "sectorName": "ZUUN-OOST",
+      "workbookSectorName": "ZUUN-OOST",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 10,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 8,
+          "income": 9,
+          "lowEducation": 8,
+          "nonEuCitizen": 10,
+          "jobSeekers": 6,
+          "pre1945Housing": 6,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077B091": {
+      "sectorId": "23077B091",
+      "sectorName": "OUDENAKEN-VERSPREIDE BEWONING",
+      "workbookSectorName": "OUDENAKEN-VERSPREIDE BEWONING",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 3,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 1,
+          "age0To9": 1,
+          "age65Plus": 10,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 2,
+          "rentalHousing": 1,
+          "income": 1,
+          "lowEducation": 2,
+          "nonEuCitizen": 0,
+          "jobSeekers": 7,
+          "pre1945Housing": 6,
+          "livingArea": 1
+        }
+      }
+    },
+    "23077C091": {
+      "sectorId": "23077C091",
+      "sectorName": "SINT-LAUREINS-BERCHEM - VERSPREIDE BEWONING",
+      "workbookSectorName": "SINT-LAUREINS-BERCHEM - VERSPREIDE BEWONING",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 3,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 3,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 4,
+          "income": 0,
+          "lowEducation": 3,
+          "nonEuCitizen": 4,
+          "jobSeekers": 2,
+          "pre1945Housing": 6,
+          "livingArea": 4
+        }
+      }
+    },
+    "23077E00-": {
+      "sectorId": "23077E00-",
+      "sectorName": "RUISBROEK-CENTRUM",
+      "workbookSectorName": "RUISBROEK-CENTRUM",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 10,
+        "heat": 10,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 10,
+          "childcare": 3,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": null,
+          "lowEducation": 9,
+          "nonEuCitizen": 10,
+          "jobSeekers": 8,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077E01-": {
+      "sectorId": "23077E01-",
+      "sectorName": "RUISBROEK NIEUWE WIJK",
+      "workbookSectorName": "RUISBROEK NIEUWE WIJK",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 10,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": null,
+          "lowEducation": 9,
+          "nonEuCitizen": 10,
+          "jobSeekers": 8,
+          "pre1945Housing": 2,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077E02-": {
+      "sectorId": "23077E02-",
+      "sectorName": "RUISBROEK SPOORWEG-WEST",
+      "workbookSectorName": "RUISBROEK SPOORWEG-WEST",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 9,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 8,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 5,
+          "income": null,
+          "lowEducation": 7,
+          "nonEuCitizen": 1,
+          "jobSeekers": 2,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23077E09-": {
+      "sectorId": "23077E09-",
+      "sectorName": "ZENNEVALLEI",
+      "workbookSectorName": "ZENNEVALLEI",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23098A00-": {
+      "sectorId": "23098A00-",
+      "sectorName": "DROGENBOS-KERN",
+      "workbookSectorName": "DROGENBOS-KERN",
+      "municipality": "Drogenbos",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 10,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 10,
+          "lowEducation": 4,
+          "nonEuCitizen": 10,
+          "jobSeekers": 8,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23098A01-": {
+      "sectorId": "23098A01-",
+      "sectorName": "DOELEN - FRANKVELD",
+      "workbookSectorName": "DOELEN - FRANKVELD",
+      "municipality": "Drogenbos",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 10,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 10,
+          "age0To9": 7,
+          "age65Plus": 2,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": 10,
+          "lowEducation": 7,
+          "nonEuCitizen": 1,
+          "jobSeekers": 8,
+          "pre1945Housing": 8,
+          "livingArea": 10
+        }
+      }
+    },
+    "23098A02-": {
+      "sectorId": "23098A02-",
+      "sectorName": "WATERTOREN",
+      "workbookSectorName": "WATERTOREN",
+      "municipality": "Drogenbos",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 8,
+        "heat": 9,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 8,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 7,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 10,
+          "income": 8,
+          "lowEducation": 2,
+          "nonEuCitizen": 10,
+          "jobSeekers": 6,
+          "pre1945Housing": 5,
+          "livingArea": 10
+        }
+      }
+    },
+    "23098A04-": {
+      "sectorId": "23098A04-",
+      "sectorName": "KUIKENSTRAAT",
+      "workbookSectorName": "KUIKENSTRAAT",
+      "municipality": "Drogenbos",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 10,
+        "heat": 10,
+        "vulnerability": 10,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 10,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": 10,
+          "lowEducation": 7,
+          "nonEuCitizen": 10,
+          "jobSeekers": 8,
+          "pre1945Housing": 7,
+          "livingArea": 10
+        }
+      }
+    },
+    "23098A0WS": {
+      "sectorId": "23098A0WS",
+      "sectorName": "RUISBROEK",
+      "workbookSectorName": "RUISBROEK",
+      "municipality": "Drogenbos",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 10,
+        "heat": 10,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 10,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 10
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 10,
+          "income": null,
+          "lowEducation": 4,
+          "nonEuCitizen": 10,
+          "jobSeekers": null,
+          "pre1945Housing": 10,
+          "livingArea": 10
+        }
+      }
+    },
+    "23100A00-": {
+      "sectorId": "23100A00-",
+      "sectorName": "LINKEBEEK - CENTRUM",
+      "workbookSectorName": "LINKEBEEK - CENTRUM",
+      "municipality": "Linkebeek",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 8,
+          "age65Plus": 2,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 6.25,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 9,
+          "income": 7,
+          "lowEducation": 1,
+          "nonEuCitizen": 9,
+          "jobSeekers": 9,
+          "pre1945Housing": 10,
+          "livingArea": 9
+        }
+      }
+    },
+    "23100A011": {
+      "sectorId": "23100A011",
+      "sectorName": "KOEKOEKSBEEK-NOORD",
+      "workbookSectorName": "KOEKOEKSBEEK-NOORD",
+      "municipality": "Linkebeek",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 7,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 7,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 8,
+          "income": 2,
+          "lowEducation": 1,
+          "nonEuCitizen": 9,
+          "jobSeekers": 8,
+          "pre1945Housing": 6,
+          "livingArea": 9
+        }
+      }
+    },
+    "23100A022": {
+      "sectorId": "23100A022",
+      "sectorName": "WIJNBRON",
+      "workbookSectorName": "WIJNBRON",
+      "municipality": "Linkebeek",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 5,
+        "vulnerability": 4,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 7,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 4,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 7,
+          "jobSeekers": 8,
+          "pre1945Housing": 9,
+          "livingArea": 1
+        }
+      }
+    },
+    "23100A191": {
+      "sectorId": "23100A191",
+      "sectorName": "'T HOLLEKEN-VERSPR. BEWONING",
+      "workbookSectorName": "'T HOLLEKEN-VERSPR. BEWONING",
+      "municipality": "Linkebeek",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 3,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 9,
+          "age65Plus": 7,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 7,
+          "neighborhoodGreen": 2
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 4,
+          "income": null,
+          "lowEducation": 0,
+          "nonEuCitizen": 4,
+          "jobSeekers": 3,
+          "pre1945Housing": 9,
+          "livingArea": 3
+        }
+      }
+    },
+    "23100A21-": {
+      "sectorId": "23100A21-",
+      "sectorName": "DE PUT",
+      "workbookSectorName": "DE PUT",
+      "municipality": "Linkebeek",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 9,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 6,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 6,
+          "lowEducation": 3,
+          "nonEuCitizen": 9,
+          "jobSeekers": 8,
+          "pre1945Housing": 8,
+          "livingArea": 9
+        }
+      }
+    },
+    "23101A00-": {
+      "sectorId": "23101A00-",
+      "sectorName": "SINT-GENESIUS-RODE-CENTRUM",
+      "workbookSectorName": "SINT-GENESIUS-RODE-CENTRUM",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 9,
+          "age0To9": 9,
+          "age65Plus": 1,
+          "primaryEducation": 7,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 10,
+          "income": 8,
+          "lowEducation": 1,
+          "nonEuCitizen": 2,
+          "jobSeekers": 9,
+          "pre1945Housing": 8,
+          "livingArea": 9
+        }
+      }
+    },
+    "23101A01-": {
+      "sectorId": "23101A01-",
+      "sectorName": "TERMEULEN",
+      "workbookSectorName": "TERMEULEN",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 6,
+        "heat": 7,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 6,
+          "age65Plus": 3,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 5,
+          "lowEducation": 0,
+          "nonEuCitizen": 10,
+          "jobSeekers": 5,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23101A04-": {
+      "sectorId": "23101A04-",
+      "sectorName": "BOESDAAL",
+      "workbookSectorName": "BOESDAAL",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 6,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 7,
+          "age0To9": 7,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 3,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 9,
+          "jobSeekers": 3,
+          "pre1945Housing": 1,
+          "livingArea": 6
+        }
+      }
+    },
+    "23101A052": {
+      "sectorId": "23101A052",
+      "sectorName": "LEEFKERN - BOSSTRAAT",
+      "workbookSectorName": "LEEFKERN - BOSSTRAAT",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 4,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 4,
+          "age0To9": 2,
+          "age65Plus": 10,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 6,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 3,
+          "jobSeekers": 8,
+          "pre1945Housing": 1,
+          "livingArea": 7
+        }
+      }
+    },
+    "23101A091": {
+      "sectorId": "23101A091",
+      "sectorName": "ST-GENESIUS-RODE-VERSPR. BEW.",
+      "workbookSectorName": "ST-GENESIUS-RODE-VERSPR. BEW.",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23101A111": {
+      "sectorId": "23101A111",
+      "sectorName": "GROTE HUT",
+      "workbookSectorName": "GROTE HUT",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 4,
+        "vulnerability": 6,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 8,
+          "age65Plus": 6,
+          "primaryEducation": 7,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 5,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 2,
+          "pre1945Housing": 4,
+          "livingArea": 0
+        }
+      }
+    },
+    "23101A183": {
+      "sectorId": "23101A183",
+      "sectorName": "SINT-ANNA",
+      "workbookSectorName": "SINT-ANNA",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 2,
+        "vulnerability": 0,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 7,
+          "age65Plus": 1,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 7,
+          "rentalHousing": 8,
+          "income": 1,
+          "lowEducation": 1,
+          "nonEuCitizen": 4,
+          "jobSeekers": 2,
+          "pre1945Housing": 1,
+          "livingArea": 0
+        }
+      }
+    },
+    "23101A19-": {
+      "sectorId": "23101A19-",
+      "sectorName": "GOLF",
+      "workbookSectorName": "GOLF",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 2,
+        "heat": 3,
+        "vulnerability": 3,
+        "components": {
+          "populationDensity": 3,
+          "age0To9": 3,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 2.5,
+          "trees50m": 2,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 7,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 9,
+          "jobSeekers": 1,
+          "pre1945Housing": 1,
+          "livingArea": 0
+        }
+      }
+    },
+    "23101A212": {
+      "sectorId": "23101A212",
+      "sectorName": "TERKLUIZEN",
+      "workbookSectorName": "TERKLUIZEN",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 4,
+        "heat": 4,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 6,
+          "age0To9": 8,
+          "age65Plus": 8,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 2,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 2,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 9,
+          "jobSeekers": 2,
+          "pre1945Housing": 0,
+          "livingArea": 2
+        }
+      }
+    },
+    "23101A291": {
+      "sectorId": "23101A291",
+      "sectorName": "SINT-GERTRUDIS",
+      "workbookSectorName": "SINT-GERTRUDIS",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 1,
+        "vulnerability": 2,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 0,
+          "age65Plus": 9,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 5,
+          "neighborhoodGreen": 10
+        },
+        "sesComponents": {
+          "singleParentFamilies": 8,
+          "rentalHousing": 2,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 6,
+          "pre1945Housing": 0,
+          "livingArea": 1
+        }
+      }
+    },
+    "23101A31-": {
+      "sectorId": "23101A31-",
+      "sectorName": "TEN BROEK",
+      "workbookSectorName": "TEN BROEK",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 7,
+        "heat": 8,
+        "vulnerability": 9,
+        "components": {
+          "populationDensity": 8,
+          "age0To9": 8,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 3,
+          "hospitals": 0,
+          "sesIndex": 5,
+          "trees50m": 10,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 10,
+          "rentalHousing": 8,
+          "income": 10,
+          "lowEducation": 6,
+          "nonEuCitizen": 10,
+          "jobSeekers": 7,
+          "pre1945Housing": 9,
+          "livingArea": 9
+        }
+      }
+    },
+    "23101A322": {
+      "sectorId": "23101A322",
+      "sectorName": "PANORAMA",
+      "workbookSectorName": "PANORAMA",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 3,
+        "heat": 4,
+        "vulnerability": 5,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 8,
+          "age65Plus": 6,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 5,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 9,
+          "rentalHousing": 2,
+          "income": null,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 1,
+          "pre1945Housing": 5,
+          "livingArea": 1
+        }
+      }
+    },
+    "23101A391": {
+      "sectorId": "23101A391",
+      "sectorName": "ZEVENBRONNEN",
+      "workbookSectorName": "ZEVENBRONNEN",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23101A411": {
+      "sectorId": "23101A411",
+      "sectorName": "KLEINE HUT",
+      "workbookSectorName": "KLEINE HUT",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 1,
+        "heat": 5,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 5,
+          "age0To9": 7,
+          "age65Plus": 4,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 0,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 5,
+          "income": 0,
+          "lowEducation": 0,
+          "nonEuCitizen": 8,
+          "jobSeekers": 2,
+          "pre1945Housing": 5,
+          "livingArea": 0
+        }
+      }
+    },
+    "23101A483": {
+      "sectorId": "23101A483",
+      "sectorName": "LINKEBEEKSVELD",
+      "workbookSectorName": "LINKEBEEKSVELD",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 7,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23101A49-": {
+      "sectorId": "23101A49-",
+      "sectorName": "ZONIENWOUD",
+      "workbookSectorName": "ZONIENWOUD",
+      "municipality": "Sint-Genesius-Rode",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    },
+    "23064E091": {
+      "sectorId": "23064E091",
+      "sectorName": "BOGAARDEN-VERSPREIDE BEWONING",
+      "workbookSectorName": "BOGAARDEN-VERSPREIDE BEWONING",
+      "municipality": "Pepingen",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 0,
+        "heat": 1,
+        "vulnerability": 1,
+        "components": {
+          "populationDensity": 0,
+          "age0To9": 3,
+          "age65Plus": 2,
+          "primaryEducation": 0,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 1.25,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 0,
+          "rentalHousing": 0,
+          "income": null,
+          "lowEducation": 2,
+          "nonEuCitizen": 4,
+          "jobSeekers": 3,
+          "pre1945Housing": 10,
+          "livingArea": 6
+        }
+      }
+    },
+    "23077D091": {
+      "sectorId": "23077D091",
+      "sectorName": "VLEZENBEEK-VERSPREIDE BEWONING",
+      "workbookSectorName": "VLEZENBEEK-VERSPREIDE BEWONING",
+      "municipality": "Sint-Pieters-Leeuw",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 5,
+        "heat": 3,
+        "vulnerability": 8,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 3,
+          "age65Plus": 8,
+          "primaryEducation": 10,
+          "childcare": 3,
+          "residentialElderlyCare": 0,
+          "hospitals": 10,
+          "sesIndex": 0,
+          "trees50m": 10,
+          "neighborhoodGreen": 5
+        },
+        "sesComponents": {
+          "singleParentFamilies": 6,
+          "rentalHousing": 6,
+          "income": 1,
+          "lowEducation": 5,
+          "nonEuCitizen": 0,
+          "jobSeekers": 4,
+          "pre1945Housing": 6,
+          "livingArea": 4
+        }
+      }
+    },
+    "23098A0MS": {
+      "sectorId": "23098A0MS",
+      "sectorName": "KANAAL-MOZART",
+      "workbookSectorName": "KANAAL-MOZART",
+      "municipality": "Drogenbos",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "scored",
+      "sourceSentinel": null,
+      "scores": {
+        "final": 9,
+        "heat": 10,
+        "vulnerability": 7,
+        "components": {
+          "populationDensity": 2,
+          "age0To9": 9,
+          "age65Plus": 0,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": 3.75,
+          "trees50m": 10,
+          "neighborhoodGreen": 10
+        },
+        "sesComponents": {
+          "singleParentFamilies": 5,
+          "rentalHousing": 9,
+          "income": 6,
+          "lowEducation": 7,
+          "nonEuCitizen": 10,
+          "jobSeekers": 9,
+          "pre1945Housing": 8,
+          "livingArea": 10
+        }
+      }
+    },
+    "23098A0NS": {
+      "sectorId": "23098A0NS",
+      "sectorName": "DORENT-ACEC",
+      "workbookSectorName": "DORENT-ACEC",
+      "municipality": "Drogenbos",
+      "arrondissement": "Arrondissement Halle-Vilvoorde",
+      "province": "Provincie Vlaams-Brabant",
+      "primaryCareZone": "Zennevallei",
+      "healthRegion": "Gezondheidsmakers Halle-Vilvoorde",
+      "status": "insufficient-data",
+      "sourceSentinel": null,
+      "scores": {
+        "final": null,
+        "heat": null,
+        "vulnerability": null,
+        "components": {
+          "populationDensity": null,
+          "age0To9": null,
+          "age65Plus": null,
+          "primaryEducation": 0,
+          "childcare": 0,
+          "residentialElderlyCare": 0,
+          "hospitals": 0,
+          "sesIndex": null,
+          "trees50m": 0,
+          "neighborhoodGreen": 0
+        },
+        "sesComponents": {
+          "singleParentFamilies": null,
+          "rentalHousing": null,
+          "income": null,
+          "lowEducation": null,
+          "nonEuCitizen": null,
+          "jobSeekers": null,
+          "pre1945Housing": null,
+          "livingArea": null
+        }
+      }
+    }
+  }
+}

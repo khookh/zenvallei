@@ -1,0 +1,533 @@
+import { formatDate, formatNumber, t } from "./i18n.js";
+import {
+  DEFAULT_HEAT_METRIC,
+  HEAT_METRICS,
+  heatMetricStatus,
+  heatMetricValue,
+  normalizeHeatMetric,
+} from "./heat-metric.js";
+import { escapeHtml, formatScore, interpretationFor, scoreColor, scorePercentage } from "./score-utils.js";
+
+function scoreCard(labelKey, definitionKey, value, color) {
+  return `
+    <div class="summary-card score-summary-card">
+      <span>${escapeHtml(t(labelKey))}</span>
+      <strong style="--score-color:${color}">${formatScore(value)}</strong>
+      <small>${escapeHtml(t("score.outOf10"))}</small>
+      <p>${escapeHtml(t(definitionKey))}</p>
+    </div>`;
+}
+
+function panelHeatMetricSelector(activeMetric) {
+  return `
+    <div class="panel-heat-metric-control" role="group" aria-label="${escapeHtml(t("heatMetric.region"))}">
+      ${HEAT_METRICS.map((metric) => `
+        <button
+          class="panel-heat-metric-button ${metric === activeMetric ? "is-active" : ""}"
+          type="button"
+          data-panel-heat-metric="${metric}"
+          data-focus-key="panel-heat-metric-${metric}"
+          aria-pressed="${metric === activeMetric}"
+        >${escapeHtml(t(`heatMetric.${metric}`))}</button>`).join("")}
+    </div>`;
+}
+
+function metricCard(labelKey, value, color = "#0b6e69") {
+  return `
+    <div class="summary-card land-cover-metric">
+      <span>${escapeHtml(t(labelKey))}</span>
+      <strong style="--score-color:${color}">${escapeHtml(value)}</strong>
+    </div>`;
+}
+
+function indicatorRow(component, value, palette, status = "scored") {
+  const color = scoreColor(value, palette, Number.isFinite(value) ? "scored" : status);
+  const width = scorePercentage(value);
+  const weight = component.weight
+    ? `<span class="weight">${escapeHtml(t("panel.weight", { weight: formatScore(component.weight) }))}</span>`
+    : "";
+  return `
+    <div class="indicator-row">
+      <div class="indicator-label"><span>${escapeHtml(t(`component.${component.key}`))}</span>${weight}</div>
+      <div class="indicator-value">
+        <div class="score-track" aria-hidden="true"><span style="width:${width}%;--bar-color:${color}"></span></div>
+        <strong>${formatScore(value)}</strong>
+      </div>
+    </div>`;
+}
+
+function componentGroupKey(component) {
+  if (component.groupKey) return component.groupKey;
+  return {
+    Bevolking: "population",
+    "Kwetsbare voorzieningen": "facilities",
+    "Sociaal-economisch": "socioeconomic",
+    Groen: "green",
+  }[component.group] ?? component.group;
+}
+
+function sesDetails(record, methodology) {
+  return `
+    <details class="nested-details" data-section="ses">
+      <summary data-focus-key="ses-summary">${escapeHtml(t("panel.sesDetails"))}</summary>
+      <div class="nested-content">
+        ${methodology.sesComponents.map((component) => indicatorRow(
+          component,
+          record.scores.sesComponents[component.key],
+          methodology.palette,
+          record.status,
+        )).join("")}
+      </div>
+    </details>`;
+}
+
+function groupedComponents(record, methodology) {
+  const groups = new Map();
+  methodology.vulnerabilityComponents.forEach((component) => {
+    const groupKey = componentGroupKey(component);
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(component);
+  });
+  return [...groups.entries()].map(([groupKey, components]) => `
+    <section class="indicator-group">
+      <h4>${escapeHtml(t(`group.${groupKey}`))}</h4>
+      ${components.map((component) => indicatorRow(
+        component,
+        record.scores.components[component.key],
+        methodology.palette,
+        record.status,
+      )).join("")}
+      ${groupKey === "socioeconomic" ? sesDetails(record, methodology) : ""}
+    </section>`).join("");
+}
+
+const metricPresentation = Object.freeze({
+  final: { labelKey: "panel.final", definitionKey: "panel.finalDefinition" },
+  heat: { labelKey: "panel.heat", definitionKey: "panel.heatDefinition" },
+  vulnerability: { labelKey: "panel.vulnerability", definitionKey: "panel.vulnerabilityDefinition" },
+});
+
+function statusLabel(record, metric) {
+  const status = heatMetricStatus(record, metric);
+  if (status === "scored") {
+    const score = formatScore(heatMetricValue(record, metric));
+    return metric === DEFAULT_HEAT_METRIC
+      ? t("score.final", { score })
+      : t("score.metric", { metric: t(metricPresentation[metric].labelKey), score });
+  }
+  if (status === "institution-present-no-score") return t("score.institutionPresent");
+  return t("score.insufficient");
+}
+
+function heatMetricInterpretation(record, metric) {
+  const status = heatMetricStatus(record, metric);
+  if (status === "institution-present-no-score") return t("interpretation.institution");
+  if (status !== "scored") return t("interpretation.insufficient");
+  if (metric === "heat") return t("interpretation.heatSelected");
+  if (metric === "vulnerability") return t("interpretation.vulnerabilitySelected");
+  return interpretationFor(record);
+}
+
+function sourceLinks(methodology, landCover, urbanAtlas) {
+  const { scores, geometry, osm } = methodology.sources;
+  const copernicus = landCover?.source?.productUrl ? `
+      <li><a href="${escapeHtml(landCover.source.productUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.copernicus"))}</a></li>` : "";
+  const urbanAtlasLink = urbanAtlas?.source?.productUrl ? `
+      <li><a href="${escapeHtml(urbanAtlas.source.productUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.urbanAtlas"))}</a></li>` : "";
+  return `
+    <ul class="source-list">
+      <li><a href="${escapeHtml(scores.pageUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.scores"))}</a></li>
+      <li><a href="${escapeHtml(geometry.pageUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.geometry"))}</a></li>
+      ${copernicus}
+      ${urbanAtlasLink}
+      <li><a href="${escapeHtml(osm.copyrightUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.basemap"))}</a></li>
+    </ul>`;
+}
+
+function renderHeatRecord(record, methodology, landCover, urbanAtlas, heatMetric = DEFAULT_HEAT_METRIC) {
+  const selectedMetric = normalizeHeatMetric(heatMetric);
+  const selectedValue = heatMetricValue(record, selectedMetric);
+  const selectedStatus = heatMetricStatus(record, selectedMetric);
+  const selectedColor = scoreColor(selectedValue, methodology.palette, selectedStatus);
+  const isScored = selectedStatus === "scored";
+  const relatedMetrics = HEAT_METRICS.filter((metric) => metric !== selectedMetric);
+  return `
+    ${panelHeatMetricSelector(selectedMetric)}
+    <div class="panel-hero">
+      <p class="panel-eyebrow">${escapeHtml(record.municipality)} · ${escapeHtml(record.sectorId)}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+      <div class="score-hero ${isScored ? "" : "score-hero--status"}" style="--hero-color:${selectedColor}">
+        <div class="score-orb"><strong>${formatScore(isScored ? selectedValue : null)}</strong>${isScored ? "<span>/ 10</span>" : ""}</div>
+        <div><span class="score-caption">${escapeHtml(statusLabel(record, selectedMetric))}</span><p>${escapeHtml(heatMetricInterpretation(record, selectedMetric))}</p></div>
+      </div>
+      <p class="relative-note"><span aria-hidden="true">↗</span> ${escapeHtml(t("score.relativeNote"))}</p>
+    </div>
+    <div class="panel-body">
+      <section aria-labelledby="synthesis-title">
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("panel.buildKicker"))}</p><h3 id="synthesis-title">${escapeHtml(t("panel.relatedScoresTitle"))}</h3></div>
+        <p class="section-intro">${escapeHtml(t(`panel.metricIntro.${selectedMetric}`))}</p>
+        <div class="summary-grid">
+          ${relatedMetrics.map((metric) => {
+            const presentation = metricPresentation[metric];
+            const value = heatMetricValue(record, metric);
+            const status = heatMetricStatus(record, metric);
+            return scoreCard(
+              presentation.labelKey,
+              presentation.definitionKey,
+              value,
+              scoreColor(value, methodology.palette, status),
+            );
+          }).join("")}
+        </div>
+        <p class="calculation-note">${escapeHtml(t("panel.synthesisNote"))}</p>
+        <p class="provenance-note"><strong>${escapeHtml(t("provenance.officialSource"))}</strong><span>${escapeHtml(t("panel.heatSourceNote"))}</span></p>
+      </section>
+      <details class="detail-accordion" data-section="indicators">
+        <summary data-focus-key="indicators-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("panel.detailsTitle"))}</span></summary>
+        <div class="accordion-content">${groupedComponents(record, methodology)}</div>
+      </details>
+      <details class="detail-accordion methodology-accordion" data-section="methodology">
+        <summary data-focus-key="methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("panel.methodologyTitle"))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t("panel.methodologyText"))}</p>
+          <p>${escapeHtml(t("panel.heatSourceNote"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("panel.warningText"))}</p>
+          <h4>${escapeHtml(t("panel.sources"))}</h4>
+          ${sourceLinks(methodology, landCover, urbanAtlas)}
+        </div>
+      </details>
+    </div>`;
+}
+
+function landCoverDefinition(landCover, code) {
+  return landCover?.classes?.find((entry) => entry.code === code);
+}
+
+function landCoverClassRows(stats, landCover) {
+  return stats.classes.map((entry) => {
+    const definition = landCoverDefinition(landCover, entry.code);
+    if (!definition) return "";
+    return `
+      <div class="land-cover-row">
+        <span class="land-cover-swatch" style="--swatch:${escapeHtml(definition.color)}" aria-hidden="true"></span>
+        <span>${escapeHtml(t(`class.${definition.key}`))}</span>
+        <strong>${escapeHtml(t("landCover.areaValue", {
+          area: formatNumber(entry.areaHa),
+          percentage: formatNumber(entry.percentage),
+        }))}</strong>
+      </div>`;
+  }).join("");
+}
+
+function renderLandCoverRecord(record, methodology, landCover, urbanAtlas) {
+  const stats = landCover?.sectorStats?.[record.sectorId];
+  const dominant = landCoverDefinition(landCover, stats?.dominantClassCode);
+  const dominantLabel = dominant ? t(`class.${dominant.key}`) : t("landCover.noData");
+  const dominantColor = dominant?.color ?? "#b4b4b4";
+  return `
+    <div class="panel-hero land-cover-hero">
+      <p class="panel-eyebrow">${escapeHtml(record.municipality)} · ${escapeHtml(record.sectorId)}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+      <div class="score-hero" style="--hero-color:${dominantColor}">
+        <div class="land-cover-orb" style="--class-color:${dominantColor}" aria-hidden="true"></div>
+        <div><span class="score-caption">${escapeHtml(t("landCover.dominant"))}</span><p class="land-cover-dominant">${escapeHtml(dominantLabel)}</p></div>
+      </div>
+      <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("landCover.eyebrow", { year: landCover.activeYear }))}</p>
+    </div>
+    <div class="panel-body">
+      ${stats ? `
+        <section aria-labelledby="land-cover-summary-title">
+          <div class="section-heading"><p class="section-kicker">${escapeHtml(t("landCover.eyebrow", { year: landCover.activeYear }))}</p><h3 id="land-cover-summary-title">${escapeHtml(t("landCover.classBreakdown"))}</h3></div>
+          <div class="summary-grid">
+            ${metricCard("landCover.vegetation", t("unit.percentage", { value: formatNumber(stats.vegetationPercentage) }), "#006400")}
+            ${metricCard("landCover.builtUp", t("unit.percentage", { value: formatNumber(stats.builtUpPercentage) }), "#fa0000")}
+          </div>
+          <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("landCover.derivedNote"))}</span></p>
+        </section>
+        <details class="detail-accordion" data-section="land-cover-classes">
+          <summary data-focus-key="land-cover-classes-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("landCover.classBreakdown"))}</span></summary>
+          <div class="accordion-content land-cover-classes">${landCoverClassRows(stats, landCover)}</div>
+        </details>` : `<p class="panel-empty-state">${escapeHtml(t("landCover.noData"))}</p>`}
+      <details class="detail-accordion methodology-accordion" data-section="land-cover-methodology">
+        <summary data-focus-key="land-cover-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("landCover.methodologyTitle"))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t("landCover.productionText"))}</p>
+          <p>${escapeHtml(t("landCover.methodologyText"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landCover.comparisonWarning"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landCover.warningText"))}</p>
+          <p>${escapeHtml(t("landCover.attribution"))}</p>
+          ${landCover.source?.doi ? `<p><a href="${escapeHtml(landCover.source.doi)}" target="_blank" rel="noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
+          ${landCover.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(landCover.source.accessedAt) }))}</p>` : ""}
+          ${landCover.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(landCover.generatedAt) }))}</p>` : ""}
+          <h4>${escapeHtml(t("panel.sources"))}</h4>
+          ${sourceLinks(methodology, landCover, urbanAtlas)}
+        </div>
+      </details>
+    </div>`;
+}
+
+function urbanAtlasDefinition(urbanAtlas, code) {
+  return urbanAtlas?.classes?.find((entry) => String(entry.code) === String(code));
+}
+
+function urbanAtlasClassLabel(urbanAtlas, code) {
+  const definition = urbanAtlasDefinition(urbanAtlas, code);
+  return definition ? t(`urbanAtlas.class.${definition.code}`) : String(code);
+}
+
+function urbanAtlasRow(entry, urbanAtlas, { showMetricPercentage = true } = {}) {
+  const definition = urbanAtlasDefinition(urbanAtlas, entry.code);
+  if (!definition) return "";
+  return `
+    <div class="land-cover-row urban-atlas-row">
+      <span class="land-cover-swatch" style="--swatch:${escapeHtml(definition.color)}" aria-hidden="true"></span>
+      <span>${escapeHtml(urbanAtlasClassLabel(urbanAtlas, entry.code))}</span>
+      <strong>
+        ${escapeHtml(t("unit.hectares", { value: formatNumber(entry.areaHa) }))}
+        <small>${escapeHtml(t("urbanAtlas.sectorShare", { value: formatNumber(entry.sectorPercentage) }))}${showMetricPercentage ? ` · ${escapeHtml(t("urbanAtlas.metricShare", { value: formatNumber(entry.metricPercentage) }))}` : ""}</small>
+      </strong>
+    </div>`;
+}
+
+function urbanAtlasArtificialGroups(stats, urbanAtlas) {
+  const groupOrder = ["urbanFabric", "industryServices", "transport", "constructionExtraction"];
+  return groupOrder.map((groupKey) => {
+    const rows = stats.artificial.classes.filter((entry) => (
+      urbanAtlasDefinition(urbanAtlas, entry.code)?.artificialGroupKey === groupKey && entry.areaHa > 0
+    ));
+    if (!rows.length) return "";
+    return `<section class="urban-atlas-breakdown-group">
+      <h4>${escapeHtml(t(`urbanAtlas.artificialGroup.${groupKey}`))}</h4>
+      ${rows.map((entry) => urbanAtlasRow(entry, urbanAtlas)).join("")}
+    </section>`;
+  }).join("");
+}
+
+function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas) {
+  const stats = urbanAtlas?.sectorStats?.[record.sectorId];
+  const dominant = urbanAtlasDefinition(urbanAtlas, stats?.dominantClassCode);
+  const dominantLabel = dominant ? urbanAtlasClassLabel(urbanAtlas, dominant.code) : t("urbanAtlas.noData");
+  const dominantColor = dominant?.color ?? "#b4b4b4";
+  const validationKey = urbanAtlas?.source?.validationStatus === "not-yet-validated"
+    ? "urbanAtlas.validationNotYet"
+    : "urbanAtlas.validationUnknown";
+  return `
+    <div class="panel-hero land-cover-hero urban-atlas-hero">
+      <p class="panel-eyebrow">${escapeHtml(record.municipality)} · ${escapeHtml(record.sectorId)}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+      <div class="score-hero" style="--hero-color:${dominantColor}">
+        <div class="land-cover-orb" style="--class-color:${dominantColor}" aria-hidden="true"></div>
+        <div><span class="score-caption">${escapeHtml(t("urbanAtlas.dominant"))}</span><p class="land-cover-dominant">${escapeHtml(dominantLabel)}</p></div>
+      </div>
+      <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("urbanAtlas.eyebrow", { year: urbanAtlas.activeYear }))}</p>
+    </div>
+    <div class="panel-body">
+      ${stats ? `
+        <section aria-labelledby="urban-atlas-summary-title">
+          <div class="section-heading"><p class="section-kicker">${escapeHtml(t("urbanAtlas.eyebrow", { year: urbanAtlas.activeYear }))}</p><h3 id="urban-atlas-summary-title">${escapeHtml(t("urbanAtlas.summaryTitle"))}</h3></div>
+          <div class="summary-grid">
+            ${metricCard("urbanAtlas.greenCoverage", t("unit.percentage", { value: formatNumber(stats.green.percentage) }), "#008c00")}
+            ${metricCard("urbanAtlas.artificialisation", t("unit.percentage", { value: formatNumber(stats.artificial.percentage) }), "#bf0000")}
+          </div>
+          <p class="urban-atlas-valid-area">${escapeHtml(t("urbanAtlas.validArea", { area: formatNumber(stats.validAreaHa) }))}</p>
+          <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("urbanAtlas.derivedNote"))}</span></p>
+        </section>
+        <details class="detail-accordion" data-section="urban-atlas-green" open>
+          <summary data-focus-key="urban-atlas-green-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.greenBreakdown"))}</span></summary>
+          <div class="accordion-content land-cover-classes">${stats.green.classes.map((entry) => urbanAtlasRow(entry, urbanAtlas)).join("")}</div>
+        </details>
+        <details class="detail-accordion" data-section="urban-atlas-artificial" open>
+          <summary data-focus-key="urban-atlas-artificial-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.artificialBreakdown"))}</span></summary>
+          <div class="accordion-content">${urbanAtlasArtificialGroups(stats, urbanAtlas)}</div>
+        </details>
+        ${stats.otherClasses?.length ? `<details class="detail-accordion" data-section="urban-atlas-other">
+          <summary data-focus-key="urban-atlas-other-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.otherLandCover"))}</span></summary>
+          <div class="accordion-content land-cover-classes">${stats.otherClasses.map((entry) => urbanAtlasRow(entry, urbanAtlas, { showMetricPercentage: false })).join("")}</div>
+        </details>` : ""}` : `<p class="panel-empty-state">${escapeHtml(t("urbanAtlas.noData"))}</p>`}
+      <details class="detail-accordion methodology-accordion" data-section="urban-atlas-methodology">
+        <summary data-focus-key="urban-atlas-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("urbanAtlas.methodologyTitle"))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t("urbanAtlas.productionText"))}</p>
+          <p>${escapeHtml(t("urbanAtlas.methodologyText"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("urbanAtlas.comparisonWarning"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("urbanAtlas.accessWarning"))}</p>
+          <p>${escapeHtml(t("urbanAtlas.classificationWarning"))}</p>
+          <p>${escapeHtml(t(validationKey, { date: formatDate(urbanAtlas?.source?.validationStatusCheckedAt) }))}</p>
+          <p>${escapeHtml(t("landCover.attribution"))}</p>
+          ${urbanAtlas?.source?.doi ? `<p><a href="${escapeHtml(urbanAtlas.source.doi)}" target="_blank" rel="noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
+          ${urbanAtlas?.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(urbanAtlas.source.accessedAt) }))}</p>` : ""}
+          ${urbanAtlas?.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(urbanAtlas.generatedAt) }))}</p>` : ""}
+          <h4>${escapeHtml(t("panel.sources"))}</h4>
+          ${sourceLinks(methodology, landCover, urbanAtlas)}
+        </div>
+      </details>
+    </div>`;
+}
+
+function renderAbout(methodology, landCover, urbanAtlas, provenance) {
+  const sectorCount = provenance?.output?.sectorCount ?? 154;
+  return `
+    <div class="panel-hero panel-hero--about">
+      <p class="panel-eyebrow">${escapeHtml(t("about.eyebrow", { count: sectorCount }))}</p>
+      <h2 id="panel-title">${escapeHtml(t("about.title"))}</h2>
+      <p class="about-intro">${escapeHtml(t("about.intro"))}</p>
+    </div>
+    <div class="panel-body about-body">
+      <section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.startKicker"))}</p><h3>${escapeHtml(t("about.howTo"))}</h3></div>
+        <ol class="about-steps">
+          <li><span>1</span><p>${escapeHtml(t("about.step1"))}</p></li>
+          <li><span>2</span><p>${escapeHtml(t("about.step2"))}</p></li>
+          <li><span>3</span><p>${escapeHtml(t("about.step3"))}</p></li>
+        </ol>
+      </section>
+      <section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.layersKicker"))}</p><h3>${escapeHtml(t("about.layersTitle"))}</h3></div>
+        <div class="about-layer-list">
+          <article><span class="about-layer-tag">${escapeHtml(t("layers.heat"))}</span><h4>${escapeHtml(t("about.heatQuestion"))}</h4><p>${escapeHtml(t("about.heatText"))}</p></article>
+          <article><span class="about-layer-tag">${escapeHtml(t("layers.landCover", { year: landCover?.activeYear ?? 2020 }))}</span><h4>${escapeHtml(t("about.landCoverQuestion"))}</h4><p>${escapeHtml(t("about.landCoverText"))}</p></article>
+          <article><span class="about-layer-tag">${escapeHtml(t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}</span><h4>${escapeHtml(t("about.urbanAtlasQuestion"))}</h4><p>${escapeHtml(t("about.urbanAtlasText"))}</p></article>
+        </div>
+        <p class="comparison-caveat">${escapeHtml(t("about.compareCaveat"))}</p>
+      </section>
+      <section class="about-note about-sectors">
+        <p class="section-kicker">${escapeHtml(t("about.sectorsKicker"))}</p>
+        <h3>${escapeHtml(t("about.sectorsTitle"))}</h3>
+        <p>${escapeHtml(t("about.sectorsText", { count: sectorCount }))}</p>
+        <p>${escapeHtml(t("about.sectorsCompatibility"))}</p>
+      </section>
+      <section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.provenanceKicker"))}</p><h3>${escapeHtml(t("about.provenanceTitle"))}</h3></div>
+        <ul class="provenance-list">
+          <li>${escapeHtml(t("about.provenanceHeat"))}</li>
+          <li>${escapeHtml(t("about.provenanceGeometry"))}</li>
+          <li>${escapeHtml(t("about.provenanceLandCover"))}</li>
+          <li>${escapeHtml(t("about.provenanceUrbanAtlas"))}</li>
+          <li>${escapeHtml(t("about.provenanceBasemap"))}</li>
+        </ul>
+      </section>
+      <section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.methodologyKicker"))}</p><h3>${escapeHtml(t("about.methodologyTitle"))}</h3></div>
+        <details class="detail-accordion about-method" data-section="about-heat-methodology">
+          <summary data-focus-key="about-heat-methodology-summary"><span>${escapeHtml(t("about.heatMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("about.heatMethodText"))}</p><p>${escapeHtml(t("about.noDataText"))}</p></div>
+        </details>
+        <details class="detail-accordion about-method" data-section="about-land-cover-methodology">
+          <summary data-focus-key="about-land-cover-methodology-summary"><span>${escapeHtml(t("about.landCoverMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("landCover.productionText"))}</p><p>${escapeHtml(t("landCover.methodologyText"))}</p><p>${escapeHtml(t("landCover.comparisonWarning"))}</p></div>
+        </details>
+        <details class="detail-accordion about-method" data-section="about-urban-atlas-methodology">
+          <summary data-focus-key="about-urban-atlas-methodology-summary"><span>${escapeHtml(t("about.urbanAtlasMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("urbanAtlas.productionText"))}</p><p>${escapeHtml(t("urbanAtlas.methodologyText"))}</p><p>${escapeHtml(t("urbanAtlas.accessWarning"))}</p><p>${escapeHtml(t("urbanAtlas.comparisonWarning"))}</p></div>
+        </details>
+      </section>
+      <section class="about-sources">
+        <h3>${escapeHtml(t("about.sourcesTitle"))}</h3>
+        ${sourceLinks(methodology, landCover, urbanAtlas)}
+        <p class="about-caveat">${escapeHtml(t("about.caveat"))}</p>
+      </section>
+    </div>`;
+}
+
+export function createDetailPanel({ panel, content, closeButton, methodology, landCover, urbanAtlas, provenance, heatMetric = DEFAULT_HEAT_METRIC, onHeatMetricChange, onClose }) {
+  let returnFocusElement = null;
+  let currentView = null;
+  let activeHeatMetric = normalizeHeatMetric(heatMetric);
+
+  const captureRenderState = () => ({
+    openSections: [...content.querySelectorAll("details[open][data-section]")].map((element) => element.dataset.section),
+    hadExpandedSection: Boolean(content.querySelector("details[open]")),
+    focusKey: content.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null,
+  });
+
+  const renderCurrentView = ({ preserveState = true, focusPanel = false } = {}) => {
+    if (!currentView) return;
+    const renderState = preserveState ? captureRenderState() : { openSections: [], hadExpandedSection: false, focusKey: null };
+    if (currentView.type === "about") {
+      content.innerHTML = renderAbout(methodology, landCover, urbanAtlas, provenance);
+    } else if (currentView.layerId === "land-cover") {
+      content.innerHTML = renderLandCoverRecord(currentView.record, methodology, landCover, urbanAtlas);
+    } else if (currentView.layerId === "urban-atlas") {
+      content.innerHTML = renderUrbanAtlasRecord(currentView.record, methodology, landCover, urbanAtlas);
+    } else {
+      content.innerHTML = renderHeatRecord(currentView.record, methodology, landCover, urbanAtlas, activeHeatMetric);
+    }
+    let restoredSection = false;
+    renderState.openSections.forEach((sectionId) => {
+      const matchingSection = [...content.querySelectorAll("details[data-section]")]
+        .find((element) => element.dataset.section === sectionId);
+      if (matchingSection) {
+        matchingSection.setAttribute("open", "");
+        restoredSection = true;
+      }
+    });
+    if (renderState.hadExpandedSection && !restoredSection) content.querySelector("details[data-section]")?.setAttribute("open", "");
+    if (renderState.focusKey) {
+      [...content.querySelectorAll("[data-focus-key]")]
+        .find((element) => element.dataset.focusKey === renderState.focusKey)
+        ?.focus({ preventScroll: true });
+    } else if (focusPanel) {
+      requestAnimationFrame(() => panel.focus({ preventScroll: true }));
+    }
+  };
+
+  const close = ({ restoreFocus = true } = {}) => {
+    panel.classList.remove("is-open");
+    panel.setAttribute("aria-hidden", "true");
+    onClose?.();
+    if (restoreFocus && returnFocusElement instanceof HTMLElement) returnFocusElement.focus();
+  };
+
+  const show = (view, triggerElement) => {
+    returnFocusElement = triggerElement instanceof HTMLElement ? triggerElement : document.activeElement;
+    currentView = view;
+    renderCurrentView({ preserveState: false, focusPanel: true });
+    panel.classList.add("is-open");
+    panel.setAttribute("aria-hidden", "false");
+  };
+
+  const open = (record, triggerElement = null, layerId = "heat") => show({ type: "record", record, layerId }, triggerElement);
+  const openAbout = (triggerElement = null) => show({ type: "about" }, triggerElement);
+  const setPanelLanguage = () => {
+    if (currentView && panel.classList.contains("is-open")) renderCurrentView({ preserveState: true });
+  };
+  const setActiveLayer = (layerId) => {
+    if (currentView?.type !== "record") return;
+    currentView.layerId = layerId;
+    if (panel.classList.contains("is-open")) renderCurrentView({ preserveState: true });
+  };
+  const setHeatMetric = (metric) => {
+    activeHeatMetric = normalizeHeatMetric(metric);
+    if (currentView?.type === "record" && currentView.layerId === "heat" && panel.classList.contains("is-open")) {
+      renderCurrentView({ preserveState: true });
+    }
+  };
+
+  closeButton.addEventListener("click", () => close());
+  panel.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+  content.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-panel-heat-metric]");
+    if (!button) return;
+    onHeatMetricChange?.(button.dataset.panelHeatMetric, button);
+  });
+  content.addEventListener("keydown", (event) => {
+    const button = event.target.closest("[data-panel-heat-metric]");
+    if (!button || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [...content.querySelectorAll("[data-panel-heat-metric]")];
+    const currentIndex = buttons.indexOf(button);
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    buttons[(currentIndex + direction + buttons.length) % buttons.length].focus();
+  });
+  return {
+    open,
+    openAbout,
+    close,
+    setLanguage: setPanelLanguage,
+    setActiveLayer,
+    setHeatMetric,
+    isOpen: () => panel.classList.contains("is-open"),
+  };
+}
