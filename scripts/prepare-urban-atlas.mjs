@@ -26,7 +26,7 @@ import {
   subsetIndexedMultiPolygon,
   toMultiPolygonCoordinates,
   validateOfficialStyle,
-} from "./urban-atlas-core.mjs";
+} from "./lib/urban-atlas-core.mjs";
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "..");
 const DEFAULT_OUTPUT = path.join(PROJECT_ROOT, "public", "data");

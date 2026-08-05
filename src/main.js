@@ -4,6 +4,7 @@ import { MAP_CONFIG } from "./config.js";
 import { findSectorFromQuery, loadApplicationData, sectorSearchLabel, sectorsForMunicipality } from "./data.js";
 import { DEFAULT_HEAT_METRIC } from "./heat-metric.js";
 import { DEFAULT_LANGUAGE, applyDocumentTranslations, getLanguage, setLanguage, t } from "./i18n.js";
+import { buildLayerRegistry } from "./layers/registry.js";
 import { createMapController } from "./map-controller.js";
 import { createDetailPanel } from "./panel.js";
 
@@ -23,6 +24,7 @@ const elements = {
   legendNote: document.querySelector("#legend-note"),
   layerButtons: [...document.querySelectorAll("[data-layer]")],
   heatMetricControl: document.querySelector("#heat-metric-control"),
+  heatMetricSwitch: document.querySelector(".heat-metric-switch"),
   heatMetricButtons: [...document.querySelectorAll("[data-heat-metric]")],
   layerContextMeta: document.querySelector("#layer-context-meta"),
   layerContextCopy: document.querySelector("#layer-context-copy"),
@@ -37,12 +39,10 @@ const elements = {
   aboutButton: document.querySelector("#about-button"),
 };
 
+/** @type {{activeLayer: string, activeHeatMetric: string, datasetState: string, [key: string]: any}} */
 const application = {
-  scores: null,
-  methodology: null,
-  landCover: null,
-  urbanAtlas: null,
-  provenance: null,
+  data: null,
+  layers: null,
   panel: null,
   mapController: null,
   datasetState: "loading",
@@ -52,6 +52,8 @@ const application = {
   activeLayer: "heat",
   activeHeatMetric: DEFAULT_HEAT_METRIC,
 };
+
+const activeLayer = () => application.layers?.get(application.activeLayer);
 
 function updateLanguageButton() {
   const targetLanguage = getLanguage() === "nl" ? "en" : "nl";
@@ -65,47 +67,38 @@ function updateLanguageButton() {
 function updateDatasetStatus() {
   if (application.datasetState === "error") {
     elements.datasetStatus.textContent = t("dataset.unavailable");
-  } else if (application.datasetState === "ready" && application.basemapUnavailable) {
-    elements.datasetStatus.textContent = t("dataset.basemapUnavailable");
-  } else if (application.datasetState === "ready") {
-    if (application.activeLayer === "land-cover") {
-      elements.datasetStatus.textContent = t("dataset.readyLandCover", {
-        year: application.landCover?.activeYear ?? 2020,
-      });
-    } else if (application.activeLayer === "urban-atlas") {
-      elements.datasetStatus.textContent = t("dataset.readyUrbanAtlas", {
-        year: application.urbanAtlas?.activeYear ?? 2021,
-      });
-    } else {
-      const count = application.provenance?.output.sectorCount ?? 154;
-      elements.datasetStatus.textContent = application.activeHeatMetric === DEFAULT_HEAT_METRIC
-        ? t("dataset.readyHeat", { count })
-        : t("dataset.readyHeatMetric", {
-          count,
-          metric: t(`heatMetric.scoreName.${application.activeHeatMetric}`),
-        });
-    }
-  } else {
-    elements.datasetStatus.textContent = t("loading.data");
+    return;
   }
+  if (application.datasetState === "ready" && application.basemapUnavailable) {
+    elements.datasetStatus.textContent = t("dataset.basemapUnavailable");
+    return;
+  }
+  if (application.datasetState === "ready") {
+    elements.datasetStatus.textContent = activeLayer().getDatasetStatus({
+      sectorCount: application.data.provenance?.output?.sectorCount ?? 154,
+    });
+    return;
+  }
+  elements.datasetStatus.textContent = t("loading.data");
 }
 
 function updateAnnouncement() {
-  if (!application.announcement) return;
-  if (application.announcement.type === "opened") {
-    elements.announcement.textContent = t("announcement.opened", application.announcement.record);
-  } else if (application.announcement.type === "layer") {
+  const announcement = application.announcement;
+  if (!announcement) return;
+  if (announcement.type === "opened") {
+    elements.announcement.textContent = t("announcement.opened", announcement.record);
+  } else if (announcement.type === "layer") {
     elements.announcement.textContent = t("announcement.layerChanged", {
-      layer: layerLabel(application.announcement.layerId),
+      layer: application.layers.get(announcement.layerId)?.getLabel() ?? announcement.layerId,
     });
-  } else if (application.announcement.type === "heatMetric") {
+  } else if (announcement.type === "heatMetric") {
     elements.announcement.textContent = t("announcement.heatMetricChanged", {
-      metric: heatMetricLabel(application.announcement.metric),
+      metric: t(`heatMetric.${announcement.metric}`),
     });
-  } else if (application.announcement.type === "unavailable") {
+  } else if (announcement.type === "unavailable") {
     elements.announcement.textContent = t("announcement.layerUnavailable", {
-      layer: layerLabel(application.announcement.layerId),
-      reason: t(application.announcement.reasonKey),
+      layer: application.layers.get(announcement.layerId)?.getLabel() ?? announcement.layerId,
+      reason: t(announcement.reasonKey),
     });
   } else {
     elements.announcement.textContent = t("announcement.closed");
@@ -127,125 +120,99 @@ function showFatalError(error) {
   console.error(error);
 }
 
-function layerLabel(layerId) {
-  if (layerId === "land-cover") return t("layers.landCover", { year: application.landCover?.activeYear ?? 2020 });
-  if (layerId === "urban-atlas") return t("layers.urbanAtlas", { year: application.urbanAtlas?.activeYear ?? 2021 });
-  return t("layers.heat");
-}
-
-function heatMetricLabel(metric = application.activeHeatMetric) {
-  return t(`heatMetric.${metric}`);
-}
-
-function activeLayerPresentationLabel() {
-  if (application.activeLayer !== "heat" || application.activeHeatMetric === DEFAULT_HEAT_METRIC) {
-    return layerLabel(application.activeLayer);
-  }
-  return t("layers.heatWithMetric", { metric: heatMetricLabel() });
-}
-
 function updateLayerControls() {
+  if (!application.layers) return;
   elements.layerButtons.forEach((button) => {
-    const layerId = button.dataset.layer;
-    const available = layerId === "heat"
-      || (layerId === "land-cover" && application.landCover?.raster?.available)
-      || (layerId === "urban-atlas" && application.urbanAtlas?.available && application.urbanAtlas?.geojsonUrl);
-    button.textContent = layerLabel(layerId);
+    const layer = application.layers.get(button.dataset.layer);
+    const available = Boolean(layer?.isAvailable());
+    button.textContent = layer?.getLabel() ?? button.dataset.layer;
     button.setAttribute("aria-disabled", String(!available));
-    button.setAttribute("aria-pressed", String(application.activeLayer === layerId));
-    button.classList.toggle("is-active", application.activeLayer === layerId);
+    button.setAttribute("aria-pressed", String(application.activeLayer === layer?.id));
+    button.classList.toggle("is-active", application.activeLayer === layer?.id);
   });
 }
 
-function updateHeatMetricControls() {
-  elements.heatMetricControl.hidden = application.activeLayer !== "heat";
+function updateSecondaryControls() {
+  const control = activeLayer()?.getSecondaryControl?.() ?? null;
+  elements.heatMetricControl.hidden = !control;
+  if (!control) return;
+  elements.heatMetricSwitch.setAttribute("aria-label", control.ariaLabel);
   elements.heatMetricButtons.forEach((button) => {
-    const active = button.dataset.heatMetric === application.activeHeatMetric;
-    button.textContent = heatMetricLabel(button.dataset.heatMetric);
-    button.setAttribute("aria-pressed", String(active));
-    button.classList.toggle("is-active", active);
+    const option = control.options.find((entry) => entry.id === button.dataset.heatMetric);
+    if (!option) return;
+    button.textContent = option.label;
+    button.setAttribute("aria-pressed", String(option.active));
+    button.classList.toggle("is-active", option.active);
   });
 }
 
 function updateLayerContext() {
-  const count = application.provenance?.output.sectorCount ?? 154;
-  const context = application.activeLayer === "land-cover"
-    ? {
-      metaKey: "layers.context.landCoverMeta",
-      textKey: "layers.context.landCoverText",
-      parameters: { year: application.landCover?.activeYear ?? 2020 },
-    }
-    : application.activeLayer === "urban-atlas"
-      ? {
-        metaKey: "layers.context.urbanAtlasMeta",
-        textKey: "layers.context.urbanAtlasText",
-        parameters: { year: application.urbanAtlas?.activeYear ?? 2021 },
-      }
-      : {
-        metaKey: application.activeHeatMetric === "heat"
-          ? "layers.context.heatScoreMeta"
-          : application.activeHeatMetric === "vulnerability"
-            ? "layers.context.vulnerabilityMeta"
-            : "layers.context.heatMeta",
-        textKey: application.activeHeatMetric === "heat"
-          ? "layers.context.heatScoreText"
-          : application.activeHeatMetric === "vulnerability"
-            ? "layers.context.vulnerabilityText"
-            : "layers.context.heatText",
-        parameters: { count },
-      };
-  const label = activeLayerPresentationLabel();
-  elements.activeLayerTitle.textContent = label;
-  elements.layerContextMeta.textContent = t(context.metaKey, context.parameters);
-  elements.layerContextCopy.textContent = t(context.textKey, context.parameters);
-  elements.map.setAttribute("aria-label", t("map.regionForLayer", { layer: label }));
+  if (!application.layers) return;
+  const layer = activeLayer();
+  const context = layer.getContext({ sectorCount: application.data?.provenance?.output?.sectorCount ?? 154 });
+  elements.activeLayerTitle.textContent = layer.getLabel();
+  elements.layerContextMeta.textContent = context.meta;
+  elements.layerContextCopy.textContent = context.text;
+  elements.map.setAttribute("aria-label", t("map.regionForLayer", { layer: layer.getLabel() }));
 }
 
-function renderLegend(methodology, layerId = application.activeLayer) {
-  if (layerId === "land-cover") {
-    elements.legendTitle.textContent = t("legend.landCoverTitle", { year: application.landCover.activeYear });
-    elements.legendNote.textContent = "LCM-10";
-    const classes = application.landCover.classes.filter((entry) => entry.present);
-    elements.legend.innerHTML = `<div class="land-cover-legend">${classes.map((entry) => `
-      <span><i style="--swatch:${entry.color}"></i>${t(`class.${entry.key}`)}</span>`).join("")}</div>`;
+function createLegendItem(item, { score = false } = {}) {
+  const container = document.createElement(score ? "div" : "span");
+  if (score) container.className = "legend-item legend-score";
+  const swatch = document.createElement(score ? "span" : "i");
+  swatch.style.setProperty("--swatch", item.color);
+  const label = document.createElement(score ? "b" : "span");
+  label.textContent = item.label;
+  container.append(swatch, label);
+  return container;
+}
+
+function renderLegend() {
+  if (!application.layers) return;
+  const model = activeLayer().getLegendModel();
+  elements.legendTitle.textContent = model.title;
+  elements.legendNote.textContent = model.note ?? "";
+
+  if (model.layout === "scale") {
+    const scale = document.createElement("div");
+    scale.className = "legend-scale";
+    scale.append(...model.groups[0].items.map((item) => createLegendItem(item, { score: true })));
+    const statuses = document.createElement("div");
+    statuses.className = "legend-statuses";
+    statuses.append(...(model.groups[1]?.items ?? []).map((item) => createLegendItem(item)));
+    elements.legend.replaceChildren(scale, statuses);
     return;
   }
-  if (layerId === "urban-atlas") {
-    const groupOrder = ["artificialSurfaces", "greenUrbanAreas", "agricultureSemiNatural", "wetlands", "water", "noData"];
-    const presentClasses = application.urbanAtlas.classes.filter((entry) => entry.present);
-    elements.legendTitle.textContent = t("legend.urbanAtlasTitle", { year: application.urbanAtlas.activeYear });
-    elements.legendNote.textContent = `UA ${application.urbanAtlas.activeYear}`;
-    elements.legend.innerHTML = `<div class="urban-atlas-legend">${groupOrder.map((groupKey) => {
-      const entries = presentClasses.filter((entry) => entry.groupKey === groupKey);
-      if (!entries.length) return "";
-      return `<section><h3>${t(`urbanAtlas.group.${groupKey}`)}</h3><div>${entries.map((entry) => `
-        <span><i style="--swatch:${entry.color}"></i>${t(`urbanAtlas.class.${entry.code}`)}</span>`).join("")}</div></section>`;
-    }).join("")}</div>`;
-    return;
-  }
-  elements.legendTitle.textContent = application.activeHeatMetric === "heat"
-    ? t("legend.heatTitle")
-    : application.activeHeatMetric === "vulnerability"
-      ? t("legend.vulnerabilityTitle")
-      : t("legend.title");
-  elements.legendNote.textContent = "0–10";
-  const scores = Array.from({ length: 11 }, (_, score) => `
-    <div class="legend-item legend-score"><span style="--swatch:${methodology.palette[`score-${score}`]}"></span><b>${score}</b></div>`).join("");
-  elements.legend.innerHTML = `
-    <div class="legend-scale">${scores}</div>
-    <div class="legend-statuses">
-      <span><i style="--swatch:${methodology.palette["no-data"]}"></i>${t("legend.noData")}</span>
-      <span><i style="--swatch:${methodology.palette["institution-present-no-score"]}"></i>${t("legend.institution")}</span>
-    </div>`;
+
+  const hasGroups = model.groups.some((group) => group.title);
+  const wrapper = document.createElement("div");
+  wrapper.className = hasGroups ? "urban-atlas-legend" : "land-cover-legend";
+  model.groups.forEach((group) => {
+    if (!group.items.length) return;
+    if (hasGroups) {
+      const section = document.createElement("section");
+      const heading = document.createElement("h3");
+      heading.textContent = group.title;
+      const items = document.createElement("div");
+      items.append(...group.items.map((item) => createLegendItem(item)));
+      section.append(heading, items);
+      wrapper.append(section);
+    } else {
+      wrapper.append(...group.items.map((item) => createLegendItem(item)));
+    }
+  });
+  elements.legend.replaceChildren(wrapper);
 }
 
 function populateMunicipalities(provenance) {
-  Object.keys(provenance.output.municipalityCounts).sort((a, b) => a.localeCompare(b, "nl")).forEach((municipality) => {
-    const option = document.createElement("option");
-    option.value = municipality;
-    option.textContent = municipality;
-    elements.municipality.append(option);
-  });
+  Object.keys(provenance.output.municipalityCounts)
+    .sort((left, right) => left.localeCompare(right, "nl"))
+    .forEach((municipality) => {
+      const option = document.createElement("option");
+      option.value = municipality;
+      option.textContent = municipality;
+      elements.municipality.append(option);
+    });
 }
 
 function populateSectorOptions(scores, municipality = "") {
@@ -264,11 +231,13 @@ function applyLanguage(language) {
   applyDocumentTranslations();
   updateLanguageButton();
   updateDatasetStatus();
-  updateLayerControls();
-  updateHeatMetricControls();
-  updateLayerContext();
-  if (application.methodology) renderLegend(application.methodology, application.activeLayer);
-  if (application.scores) populateSectorOptions(application.scores, elements.municipality.value);
+  if (application.layers) {
+    updateLayerControls();
+    updateSecondaryControls();
+    updateLayerContext();
+    renderLegend();
+  }
+  if (application.data?.scores) populateSectorOptions(application.data.scores, elements.municipality.value);
   if (elements.sectorSearch.validity.customError) elements.sectorSearch.setCustomValidity(t("search.invalid"));
   if (application.fatalError) elements.errorMessage.textContent = errorMessageFor(application.fatalError);
   if (application.announcement?.type === "unavailable") {
@@ -287,30 +256,31 @@ elements.languageToggle.addEventListener("click", () => {
 
 async function start() {
   performance.mark("heat-map-start");
-  const { geojson, scores, methodology, provenance, landCover, urbanAtlas } = await loadApplicationData();
-  application.scores = scores;
-  application.methodology = methodology;
-  application.landCover = landCover;
-  application.urbanAtlas = urbanAtlas;
-  application.provenance = provenance;
+  const data = await loadApplicationData();
+  application.data = data;
+  application.layers = buildLayerRegistry(data, { initialHeatMetric: application.activeHeatMetric });
   updateLayerControls();
-  updateHeatMetricControls();
+  updateSecondaryControls();
   updateLayerContext();
-  renderLegend(methodology, application.activeLayer);
-  populateMunicipalities(provenance);
-  populateSectorOptions(scores);
+  renderLegend();
+  populateMunicipalities(data.provenance);
+  populateSectorOptions(data.scores);
 
   let selectedSectorId = "";
+  const sharedPanelData = {
+    methodology: data.methodology,
+    landCover: data.landCover,
+    urbanAtlas: data.urbanAtlas,
+  };
   const panel = createDetailPanel({
     panel: elements.detailPanel,
     content: elements.panelContent,
     closeButton: elements.panelClose,
-    methodology,
-    landCover,
-    urbanAtlas,
-    provenance,
-    heatMetric: application.activeHeatMetric,
-    onHeatMetricChange: (metric) => activateHeatMetric(metric),
+    getPanelModel: (layerId, record) => application.layers.get(layerId).getPanelModel(record, sharedPanelData),
+    getAboutModel: () => ({ ...sharedPanelData, provenance: data.provenance }),
+    onLayerOptionChange: (name, value) => {
+      if (name === "metric") activateHeatMetric(value);
+    },
     onClose: () => {
       selectedSectorId = "";
       application.mapController?.setSelected("");
@@ -322,29 +292,25 @@ async function start() {
 
   function activateHeatMetric(metric) {
     if (application.activeLayer !== "heat" || metric === application.activeHeatMetric) return false;
-    if (!application.mapController?.setHeatMetric(metric)) return false;
+    if (!application.mapController?.setLayerOption("heat", "metric", metric)) return false;
     application.activeHeatMetric = metric;
-    updateHeatMetricControls();
+    updateSecondaryControls();
     updateLayerContext();
     updateDatasetStatus();
-    renderLegend(methodology, "heat");
-    panel.setHeatMetric(metric);
+    renderLegend();
+    panel.refresh();
     application.announcement = { type: "heatMetric", metric };
     updateAnnouncement();
     return true;
   }
 
   const selectSector = (sectorId, { source = "search", trigger = null, focus = source !== "map" } = {}) => {
-    const record = scores[sectorId];
+    const record = data.scores[sectorId];
     if (!record) return;
     selectedSectorId = sectorId;
     application.mapController.setSelected(sectorId, { focus });
     elements.sectorSearch.value = sectorSearchLabel(record);
-    panel.open(
-      record,
-      trigger ?? (source === "search" ? elements.sectorSearch : document.activeElement),
-      application.activeLayer,
-    );
+    panel.open(record, trigger ?? (source === "search" ? elements.sectorSearch : document.activeElement), application.activeLayer);
     application.announcement = {
       type: "opened",
       record: { sector: record.sectorName, municipality: record.municipality },
@@ -354,20 +320,19 @@ async function start() {
 
   application.mapController = createMapController({
     container: elements.map,
-    geojson,
-    scores,
-    methodology,
-    landCover,
-    urbanAtlas,
+    geojson: data.geojson,
+    scores: data.scores,
+    layers: application.layers,
     config: MAP_CONFIG,
     onSectorSelect: selectSector,
     onBasemapError: () => {
       application.basemapUnavailable = true;
       updateDatasetStatus();
     },
-    onUrbanAtlasError: () => {
-      if (application.urbanAtlas) application.urbanAtlas.available = false;
-      elements.layerHelp.textContent = t("layers.urbanAtlasLoadError");
+    onLayerError: (layerId, error) => {
+      console.error(error);
+      const layer = application.layers.get(layerId);
+      elements.layerHelp.textContent = t(layer?.getUnavailableReasonKey?.() ?? "error.default");
       updateLayerControls();
     },
   });
@@ -383,16 +348,16 @@ async function start() {
 
   elements.municipality.addEventListener("change", () => {
     const municipality = elements.municipality.value;
-    populateSectorOptions(scores, municipality);
+    populateSectorOptions(data.scores, municipality);
     elements.sectorSearch.value = "";
-    if (selectedSectorId && scores[selectedSectorId]?.municipality !== municipality && municipality) {
+    if (selectedSectorId && data.scores[selectedSectorId]?.municipality !== municipality && municipality) {
       panel.close({ restoreFocus: false });
     }
     application.mapController.setMunicipality(municipality);
   });
 
   const search = () => {
-    const record = findSectorFromQuery(scores, elements.sectorSearch.value);
+    const record = findSectorFromQuery(data.scores, elements.sectorSearch.value);
     if (!record) {
       elements.sectorSearch.setCustomValidity(t("search.invalid"));
       elements.sectorSearch.reportValidity();
@@ -401,7 +366,7 @@ async function start() {
     elements.sectorSearch.setCustomValidity("");
     if (elements.municipality.value && record.municipality !== elements.municipality.value) {
       elements.municipality.value = "";
-      populateSectorOptions(scores);
+      populateSectorOptions(data.scores);
       application.mapController.setMunicipality("");
     }
     selectSector(record.sectorId, { source: "search", trigger: elements.sectorSearch, focus: true });
@@ -418,40 +383,29 @@ async function start() {
   elements.resetView.addEventListener("click", () => application.mapController.resetView());
   elements.aboutButton.addEventListener("click", () => panel.openAbout(elements.aboutButton));
   elements.heatMetricButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      activateHeatMetric(button.dataset.heatMetric);
-    });
-    button.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-      event.preventDefault();
-      const currentIndex = elements.heatMetricButtons.indexOf(button);
-      const direction = event.key === "ArrowRight" ? 1 : -1;
-      elements.heatMetricButtons[
-        (currentIndex + direction + elements.heatMetricButtons.length) % elements.heatMetricButtons.length
-      ].focus();
-    });
+    button.addEventListener("click", () => activateHeatMetric(button.dataset.heatMetric));
+    button.addEventListener("keydown", (event) => moveSegmentFocus(event, elements.heatMetricButtons, button));
   });
   elements.layerButtons.forEach((button) => {
     button.addEventListener("click", async () => {
       const layerId = button.dataset.layer;
-      if (button.getAttribute("aria-disabled") === "true") {
-        const reasonKey = layerId === "urban-atlas"
-          ? (application.urbanAtlas?.loadError ? "layers.urbanAtlasLoadError" : "layers.urbanAtlasUnavailable")
-          : "layers.landCoverUnavailable";
+      const layer = application.layers.get(layerId);
+      if (!layer?.isAvailable()) {
+        const reasonKey = layer?.getUnavailableReasonKey?.() ?? "error.default";
         elements.layerHelp.textContent = t(reasonKey);
         application.announcement = { type: "unavailable", layerId, reasonKey };
         updateAnnouncement();
         return;
       }
       button.setAttribute("aria-busy", "true");
-      let activated = false;
+      let activated;
       try {
         activated = await application.mapController.setLayer(layerId);
       } finally {
         button.removeAttribute("aria-busy");
       }
       if (!activated) {
-        const reasonKey = layerId === "urban-atlas" ? "layers.urbanAtlasLoadError" : "layers.landCoverUnavailable";
+        const reasonKey = layer.getUnavailableReasonKey?.() ?? "error.default";
         elements.layerHelp.textContent = t(reasonKey);
         application.announcement = { type: "unavailable", layerId, reasonKey };
         updateAnnouncement();
@@ -460,26 +414,28 @@ async function start() {
       application.activeLayer = layerId;
       elements.layerHelp.textContent = "";
       updateLayerControls();
-      updateHeatMetricControls();
+      updateSecondaryControls();
       updateLayerContext();
       updateDatasetStatus();
-      renderLegend(methodology, layerId);
+      renderLegend();
       panel.setActiveLayer(layerId);
       application.announcement = { type: "layer", layerId };
       updateAnnouncement();
     });
-    button.addEventListener("keydown", (event) => {
-      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-      event.preventDefault();
-      const currentIndex = elements.layerButtons.indexOf(button);
-      const direction = event.key === 'ArrowRight' ? 1 : -1;
-      elements.layerButtons[(currentIndex + direction + elements.layerButtons.length) % elements.layerButtons.length].focus();
-    });
+    button.addEventListener("keydown", (event) => moveSegmentFocus(event, elements.layerButtons, button));
   });
 
   elements.mapLoading.hidden = true;
   application.datasetState = "ready";
   updateDatasetStatus();
+}
+
+function moveSegmentFocus(event, buttons, currentButton) {
+  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  event.preventDefault();
+  const currentIndex = buttons.indexOf(currentButton);
+  const direction = event.key === "ArrowRight" ? 1 : -1;
+  buttons[(currentIndex + direction + buttons.length) % buttons.length].focus();
 }
 
 start().catch(showFatalError);

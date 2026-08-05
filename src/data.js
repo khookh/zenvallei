@@ -1,3 +1,5 @@
+import { validateApplicationData } from "./data-validation.js";
+
 export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
   const prefix = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const loadJson = async (fileName) => {
@@ -31,6 +33,7 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
   if (landCover?.raster) landCover.raster.imageUrl = resolveAssetUrl(landCover.raster.imageUrl);
   if (landCover?.change) landCover.change.imageUrl = resolveAssetUrl(landCover.change.imageUrl);
   if (urbanAtlas?.geojsonUrl) urbanAtlas.geojsonUrl = resolveAssetUrl(urbanAtlas.geojsonUrl);
+  validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas });
   return { geojson, scores: scorePayload.sectors, methodology, provenance, landCover, urbanAtlas };
 }
 

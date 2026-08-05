@@ -7,6 +7,9 @@ import {
   normalizeHeatMetric,
 } from "./heat-metric.js";
 import { escapeHtml, formatScore, interpretationFor, scoreColor, scorePercentage } from "./score-utils.js";
+import { safeExternalUrl } from "./security.js";
+
+const safeHref = (value) => escapeHtml(safeExternalUrl(value));
 
 function scoreCard(labelKey, definitionKey, value, color) {
   return `
@@ -131,16 +134,16 @@ function heatMetricInterpretation(record, metric) {
 function sourceLinks(methodology, landCover, urbanAtlas) {
   const { scores, geometry, osm } = methodology.sources;
   const copernicus = landCover?.source?.productUrl ? `
-      <li><a href="${escapeHtml(landCover.source.productUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.copernicus"))}</a></li>` : "";
+      <li><a href="${safeHref(landCover.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.copernicus"))}</a></li>` : "";
   const urbanAtlasLink = urbanAtlas?.source?.productUrl ? `
-      <li><a href="${escapeHtml(urbanAtlas.source.productUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.urbanAtlas"))}</a></li>` : "";
+      <li><a href="${safeHref(urbanAtlas.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.urbanAtlas"))}</a></li>` : "";
   return `
     <ul class="source-list">
-      <li><a href="${escapeHtml(scores.pageUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.scores"))}</a></li>
-      <li><a href="${escapeHtml(geometry.pageUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.geometry"))}</a></li>
+      <li><a href="${safeHref(scores.pageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.scores"))}</a></li>
+      <li><a href="${safeHref(geometry.pageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.geometry"))}</a></li>
       ${copernicus}
       ${urbanAtlasLink}
-      <li><a href="${escapeHtml(osm.copyrightUrl)}" target="_blank" rel="noreferrer">${escapeHtml(t("source.basemap"))}</a></li>
+      <li><a href="${safeHref(osm.copyrightUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.basemap"))}</a></li>
     </ul>`;
 }
 
@@ -256,7 +259,7 @@ function renderLandCoverRecord(record, methodology, landCover, urbanAtlas) {
           <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landCover.comparisonWarning"))}</p>
           <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landCover.warningText"))}</p>
           <p>${escapeHtml(t("landCover.attribution"))}</p>
-          ${landCover.source?.doi ? `<p><a href="${escapeHtml(landCover.source.doi)}" target="_blank" rel="noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
+          ${landCover.source?.doi ? `<p><a href="${safeHref(landCover.source.doi)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
           ${landCover.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(landCover.source.accessedAt) }))}</p>` : ""}
           ${landCover.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(landCover.generatedAt) }))}</p>` : ""}
           <h4>${escapeHtml(t("panel.sources"))}</h4>
@@ -354,7 +357,7 @@ function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas) {
           <p>${escapeHtml(t("urbanAtlas.classificationWarning"))}</p>
           <p>${escapeHtml(t(validationKey, { date: formatDate(urbanAtlas?.source?.validationStatusCheckedAt) }))}</p>
           <p>${escapeHtml(t("landCover.attribution"))}</p>
-          ${urbanAtlas?.source?.doi ? `<p><a href="${escapeHtml(urbanAtlas.source.doi)}" target="_blank" rel="noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
+          ${urbanAtlas?.source?.doi ? `<p><a href="${safeHref(urbanAtlas.source.doi)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
           ${urbanAtlas?.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(urbanAtlas.source.accessedAt) }))}</p>` : ""}
           ${urbanAtlas?.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(urbanAtlas.generatedAt) }))}</p>` : ""}
           <h4>${escapeHtml(t("panel.sources"))}</h4>
@@ -429,7 +432,51 @@ function renderAbout(methodology, landCover, urbanAtlas, provenance) {
     </div>`;
 }
 
-export function createDetailPanel({ panel, content, closeButton, methodology, landCover, urbanAtlas, provenance, heatMetric = DEFAULT_HEAT_METRIC, onHeatMetricChange, onClose }) {
+function renderMetricSummary(model) {
+  const value = Number.isFinite(model.value) ? formatNumber(model.value) : t("value.notAvailable");
+  const unit = model.unit ?? "%";
+  const color = model.color ?? "#0b6e69";
+  return `
+    <div class="panel-hero land-cover-hero">
+      <p class="panel-eyebrow">${escapeHtml(model.record.municipality)} · ${escapeHtml(model.record.sectorId)}</p>
+      <h2 id="panel-title">${escapeHtml(model.record.sectorName)}</h2>
+      <div class="score-hero" style="--hero-color:${escapeHtml(color)}">
+        <div class="score-orb"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(unit)}</span></div>
+        <div><span class="score-caption">${escapeHtml(model.title)}</span>${model.description ? `<p>${escapeHtml(model.description)}</p>` : ""}</div>
+      </div>
+    </div>
+    ${model.notes?.length ? `<div class="panel-body methodology-copy">${model.notes.map((note) => `<p>${escapeHtml(note)}</p>`).join("")}</div>` : ""}`;
+}
+
+/** Render a plain panel model supplied by a layer module. */
+export function renderSectorPanelModel(model) {
+  if (model.template === "heat") {
+    return renderHeatRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.heatMetric);
+  }
+  if (model.template === "land-cover") {
+    return renderLandCoverRecord(model.record, model.methodology, model.landCover, model.urbanAtlas);
+  }
+  if (model.template === "urban-atlas") {
+    return renderUrbanAtlasRecord(model.record, model.methodology, model.landCover, model.urbanAtlas);
+  }
+  if (model.template === "metric-summary") return renderMetricSummary(model);
+  throw new Error(`Unknown sector panel template '${model.template}'.`);
+}
+
+export function createDetailPanel({
+  panel,
+  content,
+  closeButton,
+  getPanelModel,
+  getAboutModel,
+  heatMetric = DEFAULT_HEAT_METRIC,
+  onLayerOptionChange,
+  onClose,
+}) {
+  if (typeof getPanelModel !== "function" || typeof getAboutModel !== "function") {
+    throw new TypeError("The detail panel requires layer-owned panel and about model providers.");
+  }
+
   let returnFocusElement = null;
   let currentView = null;
   let activeHeatMetric = normalizeHeatMetric(heatMetric);
@@ -444,13 +491,12 @@ export function createDetailPanel({ panel, content, closeButton, methodology, la
     if (!currentView) return;
     const renderState = preserveState ? captureRenderState() : { openSections: [], hadExpandedSection: false, focusKey: null };
     if (currentView.type === "about") {
-      content.innerHTML = renderAbout(methodology, landCover, urbanAtlas, provenance);
-    } else if (currentView.layerId === "land-cover") {
-      content.innerHTML = renderLandCoverRecord(currentView.record, methodology, landCover, urbanAtlas);
-    } else if (currentView.layerId === "urban-atlas") {
-      content.innerHTML = renderUrbanAtlasRecord(currentView.record, methodology, landCover, urbanAtlas);
+      const model = getAboutModel();
+      content.innerHTML = renderAbout(model.methodology, model.landCover, model.urbanAtlas, model.provenance);
     } else {
-      content.innerHTML = renderHeatRecord(currentView.record, methodology, landCover, urbanAtlas, activeHeatMetric);
+      content.innerHTML = renderSectorPanelModel(getPanelModel(currentView.layerId, currentView.record, {
+        heatMetric: activeHeatMetric,
+      }));
     }
     let restoredSection = false;
     renderState.openSections.forEach((sectionId) => {
@@ -510,7 +556,7 @@ export function createDetailPanel({ panel, content, closeButton, methodology, la
   content.addEventListener("click", (event) => {
     const button = event.target.closest("[data-panel-heat-metric]");
     if (!button) return;
-    onHeatMetricChange?.(button.dataset.panelHeatMetric, button);
+    onLayerOptionChange?.("metric", button.dataset.panelHeatMetric, button);
   });
   content.addEventListener("keydown", (event) => {
     const button = event.target.closest("[data-panel-heat-metric]");
@@ -528,6 +574,7 @@ export function createDetailPanel({ panel, content, closeButton, methodology, la
     setLanguage: setPanelLanguage,
     setActiveLayer,
     setHeatMetric,
+    refresh: () => renderCurrentView({ preserveState: true }),
     isOpen: () => panel.classList.contains("is-open"),
   };
 }

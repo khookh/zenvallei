@@ -20,7 +20,7 @@ import {
   rasterizeSectorMask,
   resampleClasses,
   summarizeVegetationChange,
-} from "./landcover-core.mjs";
+} from "./lib/landcover-core.mjs";
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "..");
 const DEFAULT_CACHE = path.join(PROJECT_ROOT, ".cache", "land-cover");

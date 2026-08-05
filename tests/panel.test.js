@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setLanguage } from "../src/i18n.js";
-import { createDetailPanel } from "../src/panel.js";
+import { createDetailPanel, renderSectorPanelModel } from "../src/panel.js";
 
 const dataDir = path.resolve(import.meta.dirname, "..", "public", "data");
 let methodology;
@@ -126,16 +126,42 @@ function fixture(options = {}) {
     panel: document.querySelector("#panel"),
     content: document.querySelector("#content"),
     closeButton: document.querySelector("#close"),
-    methodology,
-    landCover: options.landCover,
-    urbanAtlas: options.urbanAtlas,
-    provenance: options.provenance,
+    getPanelModel: (layerId, record, panelState) => {
+      const sharedData = {
+        record,
+        methodology,
+        landCover: options.landCover,
+        urbanAtlas: options.urbanAtlas,
+      };
+      if (layerId === "land-cover") return { template: "land-cover", ...sharedData };
+      if (layerId === "urban-atlas") return { template: "urban-atlas", ...sharedData };
+      return { template: "heat", ...sharedData, heatMetric: panelState.heatMetric };
+    },
+    getAboutModel: () => ({
+      methodology,
+      landCover: options.landCover,
+      urbanAtlas: options.urbanAtlas,
+      provenance: options.provenance,
+    }),
     onClose,
   });
   return { api, onClose };
 }
 
 describe("progressive detail panel", () => {
+  it("renders the generic metric model used by simple future layers", () => {
+    const html = renderSectorPanelModel({
+      template: "metric-summary",
+      record: { sectorId: "A", sectorName: "Testsector", municipality: "Halle" },
+      title: "Tree canopy",
+      value: 28.4,
+      unit: "%",
+      notes: ["Prepared outside the browser."],
+    });
+    expect(html).toContain("Testsector");
+    expect(html).toContain("28,4");
+    expect(html).toContain("Prepared outside the browser.");
+  });
   it("shows public summary and policy-level component details", () => {
     const { api } = fixture();
     api.open(records["23003A001"], document.querySelector("#trigger"));

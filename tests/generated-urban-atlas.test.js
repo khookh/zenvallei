@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ARTIFICIAL_CODES, GREEN_CODES, URBAN_ATLAS_CLASSES } from "../scripts/urban-atlas-core.mjs";
+import { ARTIFICIAL_CODES, GREEN_CODES, URBAN_ATLAS_CLASSES } from "../scripts/lib/urban-atlas-core.mjs";
 import { URBAN_ATLAS_ARTIFACTS } from "../scripts/prepare-urban-atlas.mjs";
 
 const dataDir = path.resolve(import.meta.dirname, "..", "public", "data");

@@ -1,6 +1,8 @@
 import { formatScore, t } from "./i18n.js";
+import { escapeHtml } from "./security.js";
 
 export { formatScore };
+export { escapeHtml };
 
 export function scoreClass(value, status = "scored") {
   if (value === 9999 || status === "institution-present-no-score") return "institution-present-no-score";
@@ -25,15 +27,6 @@ export function interpretationFor(record, translate = t) {
   if (score <= 6) return translate("interpretation.medium");
   if (score <= 8) return translate("interpretation.high");
   return translate("interpretation.veryHigh");
-}
-
-export function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 export function scorePercentage(value) {

@@ -11,7 +11,7 @@ import {
   parseUrbanAtlasStyle,
   subsetIndexedMultiPolygon,
   validateOfficialStyle,
-} from "../scripts/urban-atlas-core.mjs";
+} from "../scripts/lib/urban-atlas-core.mjs";
 import {
   URBAN_ATLAS_SOURCE,
   URBAN_ATLAS_ARTIFACTS,

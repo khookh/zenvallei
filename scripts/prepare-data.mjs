@@ -15,7 +15,12 @@ import {
   SES_COMPONENTS,
   SOURCES,
   VULNERABILITY_COMPONENTS,
-} from "./methodology.mjs";
+} from "./lib/methodology.mjs";
+
+// SheetJS 0.20+ keeps its browser and Node builds separate. Supplying Node's
+// filesystem adapter makes readFile explicit and prevents browser APIs from
+// leaking into the preparation pipeline.
+XLSX.set_fs(fs);
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "..");
 const DEFAULT_CACHE = path.join(PROJECT_ROOT, ".cache", "data");
@@ -297,6 +302,7 @@ async function main() {
 
   const generatedAt = new Date().toISOString();
   const methodology = {
+    schemaVersion: 1,
     title: "Hittekwetsbaarheid Zennevallei",
     locale: "nl-BE",
     scoreScale: { minimum: 0, maximum: 10, relativeTo: "Vlaanderen" },
@@ -313,6 +319,7 @@ async function main() {
     sources: SOURCES,
   };
   const provenance = {
+    schemaVersion: 1,
     generatedAt,
     inputs: {
       scores: { path: path.basename(scoresPath), sha256: scoresHash, sourceUrl: SOURCES.scores.downloadUrl, retrievedAt: generatedAt },
@@ -335,7 +342,7 @@ async function main() {
   await fsp.mkdir(options.outputDir, { recursive: true });
   await Promise.all([
     fsp.writeFile(path.join(options.outputDir, "sectors.geojson"), JSON.stringify(geometryResult.featureCollection)),
-    fsp.writeFile(path.join(options.outputDir, "scores.json"), JSON.stringify({ generatedAt, sectors: scoreRecords }, null, 2)),
+    fsp.writeFile(path.join(options.outputDir, "scores.json"), JSON.stringify({ schemaVersion: 1, generatedAt, sectors: scoreRecords }, null, 2)),
     fsp.writeFile(path.join(options.outputDir, "methodology.json"), JSON.stringify(methodology, null, 2)),
     fsp.writeFile(path.join(options.outputDir, "provenance.json"), JSON.stringify(provenance, null, 2)),
   ]);

@@ -1,92 +1,68 @@
 import * as maplibregl from "maplibre-gl";
 import mapLibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { collectionBounds, geometryBounds } from "./data.js";
-import {
-  DEFAULT_HEAT_METRIC,
-  HEAT_METRICS,
-  heatMetricColorExpression,
-  heatMetricStatus,
-  heatMetricValue,
-} from "./heat-metric.js";
-import { formatNumber, formatScore, t } from "./i18n.js";
+import { t } from "./i18n.js";
 
 maplibregl.setWorkerUrl(mapLibreWorkerUrl);
 
-const LAYER_IDS = Object.freeze({
-  fill: "heat-sectors-fill",
-  landCover: "land-cover-raster",
-  urbanAtlas: "urban-atlas-fill",
+// These IDs are intentionally stable because browser diagnostics and saved
+// tests use them to query rendered sector geometry.
+const SECTOR_SOURCE_ID = "heat-sectors";
+const COMMON_LAYER_IDS = Object.freeze({
   hit: "heat-sectors-hit-area",
   outline: "heat-sectors-outline",
   selected: "heat-sector-selected",
 });
 
-function classDefinition(landCover, code) {
-  return landCover?.classes?.find((entry) => entry.code === code);
-}
-
-function urbanAtlasDefinition(urbanAtlas, code) {
-  return urbanAtlas?.classes?.find((entry) => String(entry.code) === String(code));
-}
-
-function derivativeAttribution(landCover, urbanAtlas) {
-  if (!landCover?.raster?.available && !urbanAtlas?.available) return undefined;
-  const parts = [
-    '<a href="https://land.copernicus.eu/en/data-policy" target="_blank" rel="noreferrer">Generated using European Union\'s Copernicus Land Monitoring Service information</a>',
-  ];
-  if (landCover?.source?.doi) {
-    parts.push(`<a href="${landCover.source.doi}" target="_blank" rel="noreferrer">DOI</a>`);
-  }
-  if (urbanAtlas?.source?.doi) {
-    parts.push(`<a href="${urbanAtlas.source.doi}" target="_blank" rel="noreferrer">Urban Atlas DOI</a>`);
-  }
-  return parts.join(" · ");
-}
-
-function popupContent(feature, scoreRecord, landCover, urbanAtlas, activeLayer, activeHeatMetric) {
+function renderPopup(model) {
   const wrapper = document.createElement("div");
   wrapper.className = "sector-tooltip";
+
   const title = document.createElement("strong");
-  title.textContent = feature.properties.sectorName;
-  const location = document.createElement("span");
-  location.textContent = feature.properties.municipality;
-  const score = document.createElement("b");
-  if (activeLayer === "land-cover") {
-    const stats = landCover?.sectorStats?.[feature.properties.sectorId];
-    const dominant = classDefinition(landCover, stats?.dominantClassCode);
-    score.textContent = dominant
-      ? `${t(`class.${dominant.key}`)} · ${t("landCover.vegetation")}: ${t("unit.percentage", { value: formatNumber(stats.vegetationPercentage) })}`
-      : t("landCover.noData");
-  } else if (activeLayer === "urban-atlas") {
-    const stats = urbanAtlas?.sectorStats?.[feature.properties.sectorId];
-    score.textContent = stats
-      ? `${t("urbanAtlas.greenCoverage")}: ${t("unit.percentage", { value: formatNumber(stats.green.percentage) })} · ${t("urbanAtlas.artificialisation")}: ${t("unit.percentage", { value: formatNumber(stats.artificial.percentage) })}`
-      : t("urbanAtlas.noData");
-  } else {
-    const metricStatus = heatMetricStatus(scoreRecord, activeHeatMetric);
-    score.textContent = metricStatus === "scored"
-      ? t("popup.metricScore", {
-        metric: t(`heatMetric.${activeHeatMetric}`),
-        score: formatScore(heatMetricValue(scoreRecord, activeHeatMetric)),
-      })
-      : metricStatus === "institution-present-no-score"
-        ? t("popup.institution")
-        : t("popup.metricNoScore", { metric: t(`heatMetric.${activeHeatMetric}`) });
+  title.textContent = model.title;
+  wrapper.append(title);
+
+  if (model.subtitle) {
+    const subtitle = document.createElement("span");
+    subtitle.textContent = model.subtitle;
+    wrapper.append(subtitle);
   }
-  wrapper.append(title, location, score);
+
+  model.lines.forEach((line) => {
+    const value = document.createElement("b");
+    value.textContent = line;
+    wrapper.append(value);
+  });
   return wrapper;
 }
 
-export function createMapController({ container, geojson, scores, methodology, landCover, urbanAtlas, config, onSectorSelect, onBasemapError, onUrbanAtlasError }) {
+/**
+ * Create the shared MapLibre shell. Dataset-specific sources, styles and popup
+ * meanings are delegated to the registered layer modules.
+ */
+export function createMapController({
+  container,
+  geojson,
+  scores,
+  layers,
+  config,
+  initialLayerId = "heat",
+  onSectorSelect,
+  onBasemapError,
+  onLayerError,
+}) {
   const fullBounds = collectionBounds(geojson);
   const featureById = new Map(geojson.features.map((feature) => [feature.properties.sectorId, feature]));
   let activeMunicipality = "";
-  let activeLayer = "heat";
-  let activeHeatMetric = DEFAULT_HEAT_METRIC;
+  let activeLayerId = initialLayerId;
   let selectedSectorId = "";
-  let urbanAtlasLoadPromise = null;
   let basemapErrorReported = false;
+  let hoveredId = null;
   const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, maxWidth: "260px" });
+
+  const attributions = [...new Set(
+    [...layers.values()].flatMap((layer) => layer.getAttributions?.() ?? []),
+  )];
   const map = new maplibregl.Map({
     container,
     style: {
@@ -111,18 +87,14 @@ export function createMapController({ container, geojson, scores, methodology, l
     touchPitch: false,
     attributionControl: false,
   });
+
   map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), "bottom-right");
   map.addControl(new maplibregl.AttributionControl({
     compact: true,
-    customAttribution: derivativeAttribution(landCover, urbanAtlas),
+    customAttribution: attributions.length ? attributions.join(" · ") : undefined,
   }), "bottom-right");
 
-  const activeLayerLabel = () => {
-    if (activeLayer === "land-cover") return t("layers.landCover", { year: landCover?.activeYear ?? 2020 });
-    if (activeLayer === "urban-atlas") return t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 });
-    if (activeHeatMetric === DEFAULT_HEAT_METRIC) return t("layers.heat");
-    return t("layers.heatWithMetric", { metric: t(`heatMetric.${activeHeatMetric}`) });
-  };
+  const currentLayer = () => layers.get(activeLayerId);
 
   const updateMapAccessibility = () => {
     const translatedControls = [
@@ -137,96 +109,106 @@ export function createMapController({ container, geojson, scores, methodology, l
       element.setAttribute("title", label);
     });
     const canvas = map.getCanvas();
-    canvas.setAttribute("aria-label", t("map.regionForLayer", { layer: activeLayerLabel() }));
+    canvas.setAttribute("aria-label", t("map.regionForLayer", { layer: currentLayer()?.getLabel() ?? "" }));
     canvas.setAttribute("title", t("maplibre.mapTitle"));
   };
   updateMapAccessibility();
 
-  const ready = new Promise((resolve, reject) => {
-    map.once("load", () => {
-      let sourceReady = false;
-      const finishReady = () => {
-        if (sourceReady) return;
-        sourceReady = true;
-        performance.mark("heat-overlay-ready");
-        performance.measure("heat-overlay-first-render", "heat-overlay-start", "heat-overlay-ready");
-        resolve();
-      };
-      performance.mark("heat-overlay-start");
-      map.addSource("heat-sectors", { type: "geojson", data: geojson, promoteId: "sectorId" });
-      map.addLayer({
-        id: LAYER_IDS.fill,
-        type: "fill",
-        source: "heat-sectors",
-        paint: {
-          "fill-color": heatMetricColorExpression(scores, activeHeatMetric, methodology.palette),
-          "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.82, 0.68],
-        },
-      });
-      map.addLayer({
-        id: LAYER_IDS.outline,
-        type: "line",
-        source: "heat-sectors",
-        paint: { "line-color": "rgba(255,255,255,0.92)", "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.55, 14, 1.2] },
-      });
-      map.addLayer({
-        id: LAYER_IDS.hit,
-        type: "fill",
-        source: "heat-sectors",
-        paint: {
-          "fill-color": "#ffffff",
-          "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.12, 0],
-        },
-      }, LAYER_IDS.outline);
-      map.addLayer({
-        id: LAYER_IDS.selected,
-        type: "line",
-        source: "heat-sectors",
-        filter: ["==", ["get", "sectorId"], ""],
-        paint: { "line-color": "#0B2F3A", "line-width": 4, "line-blur": 0.25 },
-      });
+  const activeFilter = () => activeMunicipality
+    ? ["==", ["get", "municipality"], activeMunicipality]
+    : null;
 
-      let hoveredId = null;
-      map.on("mousemove", LAYER_IDS.hit, (event) => {
-        const feature = event.features?.[0];
-        if (!feature) return;
-        map.getCanvas().style.cursor = "pointer";
-        if (hoveredId && hoveredId !== feature.id) map.setFeatureState({ source: "heat-sectors", id: hoveredId }, { hover: false });
-        hoveredId = feature.id;
-        map.setFeatureState({ source: "heat-sectors", id: hoveredId }, { hover: true });
-        popup.setLngLat(event.lngLat).setDOMContent(popupContent(
-          feature,
-          scores[feature.properties.sectorId],
-          landCover,
-          urbanAtlas,
-          activeLayer,
-          activeHeatMetric,
-        )).addTo(map);
-      });
-      map.on("mouseleave", LAYER_IDS.hit, () => {
-        map.getCanvas().style.cursor = "";
-        if (hoveredId) map.setFeatureState({ source: "heat-sectors", id: hoveredId }, { hover: false });
-        hoveredId = null;
-        popup.remove();
-      });
-      map.on("click", LAYER_IDS.hit, (event) => {
-        const feature = event.features?.[0];
-        if (feature) onSectorSelect(feature.properties.sectorId, { source: "map" });
-      });
-      const sourceDeadline = performance.now() + 10_000;
-      const waitForSource = () => {
-        if (map.getSource("heat-sectors")?.loaded?.()) {
-          map.triggerRepaint();
-          requestAnimationFrame(finishReady);
-        } else if (performance.now() >= sourceDeadline) {
-          const error = new Error("overlay-timeout");
-          error.code = "overlay-timeout";
-          reject(error);
-        } else {
-          window.setTimeout(waitForSource, 16);
+  const applyLayerFilter = () => {
+    const filter = activeFilter();
+    [COMMON_LAYER_IDS.hit, COMMON_LAYER_IDS.outline].forEach((layerId) => {
+      if (map.getLayer(layerId)) map.setFilter(layerId, filter);
+    });
+    layers.forEach((layer) => layer.applyFilter(map, filter));
+  };
+
+  const ready = new Promise((resolve, reject) => {
+    map.once("load", async () => {
+      try {
+        performance.mark("heat-overlay-start");
+        map.addSource(SECTOR_SOURCE_ID, { type: "geojson", data: geojson, promoteId: "sectorId" });
+
+        const initialLayer = currentLayer();
+        if (!initialLayer || !await initialLayer.mount(map, { sectorSourceId: SECTOR_SOURCE_ID })) {
+          throw new Error(`Initial layer '${activeLayerId}' is unavailable.`);
         }
-      };
-      waitForSource();
+        initialLayer.setVisible(map, true);
+
+        map.addLayer({
+          id: COMMON_LAYER_IDS.outline,
+          type: "line",
+          source: SECTOR_SOURCE_ID,
+          paint: {
+            "line-color": "rgba(255,255,255,0.92)",
+            "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.55, 14, 1.2],
+          },
+        });
+        map.addLayer({
+          id: COMMON_LAYER_IDS.hit,
+          type: "fill",
+          source: SECTOR_SOURCE_ID,
+          paint: {
+            "fill-color": "#ffffff",
+            "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.12, 0],
+          },
+        }, COMMON_LAYER_IDS.outline);
+        map.addLayer({
+          id: COMMON_LAYER_IDS.selected,
+          type: "line",
+          source: SECTOR_SOURCE_ID,
+          filter: ["==", ["get", "sectorId"], ""],
+          paint: { "line-color": "#0B2F3A", "line-width": 4, "line-blur": 0.25 },
+        });
+
+        map.on("mousemove", COMMON_LAYER_IDS.hit, (event) => {
+          const feature = event.features?.[0];
+          if (!feature) return;
+          map.getCanvas().style.cursor = "pointer";
+          if (hoveredId && hoveredId !== feature.id) {
+            map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
+          }
+          hoveredId = feature.id;
+          map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: true });
+          const record = scores[feature.properties.sectorId];
+          const model = currentLayer().getPopupModel(feature, record);
+          popup.setLngLat(event.lngLat).setDOMContent(renderPopup(model)).addTo(map);
+        });
+        map.on("mouseleave", COMMON_LAYER_IDS.hit, () => {
+          map.getCanvas().style.cursor = "";
+          if (hoveredId) map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
+          hoveredId = null;
+          popup.remove();
+        });
+        map.on("click", COMMON_LAYER_IDS.hit, (event) => {
+          const feature = event.features?.[0];
+          if (feature) onSectorSelect(feature.properties.sectorId, { source: "map" });
+        });
+
+        const sourceDeadline = performance.now() + 10_000;
+        const waitForSource = () => {
+          if (map.getSource(SECTOR_SOURCE_ID)?.loaded?.()) {
+            map.triggerRepaint();
+            requestAnimationFrame(() => {
+              performance.mark("heat-overlay-ready");
+              performance.measure("heat-overlay-first-render", "heat-overlay-start", "heat-overlay-ready");
+              resolve();
+            });
+          } else if (performance.now() >= sourceDeadline) {
+            const error = new Error("overlay-timeout");
+            error.code = "overlay-timeout";
+            reject(error);
+          } else {
+            window.setTimeout(waitForSource, 16);
+          }
+        };
+        waitForSource();
+      } catch (error) {
+        reject(error);
+      }
     });
     map.once("error", (event) => {
       if (!map.loaded() && /webgl|context/i.test(event.error?.message ?? "")) reject(event.error);
@@ -239,90 +221,6 @@ export function createMapController({ container, geojson, scores, methodology, l
       onBasemapError?.(event.error);
     }
   });
-
-  const applyLayerFilter = () => {
-    const filter = activeMunicipality ? ["==", ["get", "municipality"], activeMunicipality] : null;
-    map.setFilter(LAYER_IDS.fill, filter);
-    map.setFilter(LAYER_IDS.hit, filter);
-    map.setFilter(LAYER_IDS.outline, filter);
-    if (map.getLayer(LAYER_IDS.urbanAtlas)) map.setFilter(LAYER_IDS.urbanAtlas, filter);
-  };
-
-  const ensureRasterLayer = (layerId, sourceId, raster) => {
-    if (map.getLayer(layerId)) return;
-    map.addSource(sourceId, {
-      type: "image",
-      url: raster.imageUrl,
-      coordinates: raster.coordinates,
-    });
-    map.addLayer({
-      id: layerId,
-      type: "raster",
-      source: sourceId,
-      layout: { visibility: "none" },
-      paint: {
-        "raster-opacity": landCover.opacity ?? 0.68,
-        "raster-resampling": "nearest",
-      },
-    }, LAYER_IDS.hit);
-  };
-
-  const setLayerVisibility = (layerId, visible) => {
-    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
-  };
-
-  const ensureUrbanAtlasLayer = async () => {
-    if (map.getLayer(LAYER_IDS.urbanAtlas)) return true;
-    if (urbanAtlasLoadPromise) return urbanAtlasLoadPromise;
-    if (!urbanAtlas?.available || !urbanAtlas.geojsonUrl) return false;
-    urbanAtlasLoadPromise = (async () => {
-      performance.clearMarks("urban-atlas-load-start");
-      performance.clearMarks("urban-atlas-load-ready");
-      performance.mark("urban-atlas-load-start");
-      const response = await fetch(urbanAtlas.geojsonUrl);
-      if (!response.ok) throw new Error(`urban-atlas.geojson: HTTP ${response.status}`);
-      const data = await response.json();
-      if (data?.type !== "FeatureCollection" || !Array.isArray(data.features) || !data.features.length) {
-        throw new Error("urban-atlas.geojson bevat geen geldige FeatureCollection.");
-      }
-      if (data.features.some((feature) => feature.geometry?.type !== "MultiPolygon"
-        || !feature.properties?.sectorId || !feature.properties?.classCode)) {
-        throw new Error("urban-atlas.geojson bevat een ongeldig sectorfragment.");
-      }
-      const matchColors = urbanAtlas.classes.flatMap((entry) => [String(entry.code), entry.color]);
-      map.addSource("urban-atlas", { type: "geojson", data });
-      map.addLayer({
-        id: LAYER_IDS.urbanAtlas,
-        type: "fill",
-        source: "urban-atlas",
-        layout: { visibility: "none" },
-        paint: {
-          "fill-color": ["match", ["to-string", ["get", "classCode"]], ...matchColors, "#000000"],
-          "fill-opacity": urbanAtlas.opacity ?? 0.68,
-        },
-      }, LAYER_IDS.hit);
-      applyLayerFilter();
-      await new Promise((resolve, reject) => {
-        const deadline = performance.now() + 10_000;
-        const poll = () => {
-          if (map.getSource("urban-atlas")?.loaded?.()) return requestAnimationFrame(resolve);
-          if (performance.now() >= deadline) return reject(new Error("Urban Atlas-overlay kon niet tijdig worden gerenderd."));
-          window.setTimeout(poll, 16);
-        };
-        poll();
-      });
-      performance.mark("urban-atlas-load-ready");
-      performance.measure("urban-atlas-first-render", "urban-atlas-load-start", "urban-atlas-load-ready");
-      return true;
-    })().catch((error) => {
-      if (map.getLayer(LAYER_IDS.urbanAtlas)) map.removeLayer(LAYER_IDS.urbanAtlas);
-      if (map.getSource("urban-atlas")) map.removeSource("urban-atlas");
-      urbanAtlasLoadPromise = null;
-      onUrbanAtlasError?.(error);
-      return false;
-    });
-    return urbanAtlasLoadPromise;
-  };
 
   const viewportPadding = () => {
     if (window.innerWidth > 760) {
@@ -346,6 +244,14 @@ export function createMapController({ container, geojson, scores, methodology, l
     });
   };
 
+  const setLayerOption = (layerId, name, value) => {
+    const layer = layers.get(layerId);
+    if (!layer?.setOption?.(map, name, value)) return false;
+    popup.remove();
+    updateMapAccessibility();
+    return true;
+  };
+
   return {
     map,
     ready,
@@ -356,7 +262,7 @@ export function createMapController({ container, geojson, scores, methodology, l
     },
     setSelected(sectorId, { focus = false } = {}) {
       selectedSectorId = sectorId ?? "";
-      map.setFilter(LAYER_IDS.selected, ["==", ["get", "sectorId"], selectedSectorId]);
+      map.setFilter(COMMON_LAYER_IDS.selected, ["==", ["get", "sectorId"], selectedSectorId]);
       if (focus && featureById.has(selectedSectorId)) {
         const bounds = geometryBounds(featureById.get(selectedSectorId).geometry);
         const [southwest, northeast] = bounds.map((coordinate) => map.project(coordinate));
@@ -373,39 +279,37 @@ export function createMapController({ container, geojson, scores, methodology, l
       fit(collectionBounds(geojson, activeMunicipality), { maxZoom: activeMunicipality ? 13.5 : 12 });
     },
     async setLayer(layerId) {
-      if (layerId === "land-cover") {
-        if (!landCover?.raster?.available) return false;
-        ensureRasterLayer(LAYER_IDS.landCover, "land-cover-image", landCover.raster);
+      const requestedLayer = layers.get(layerId);
+      if (!requestedLayer?.isAvailable()) return false;
+      try {
+        if (!await requestedLayer.mount(map, {
+          sectorSourceId: SECTOR_SOURCE_ID,
+          beforeLayerId: COMMON_LAYER_IDS.hit,
+        })) return false;
+      } catch (error) {
+        onLayerError?.(layerId, error);
+        return false;
       }
-      if (layerId === "urban-atlas" && !await ensureUrbanAtlasLayer()) return false;
-      activeLayer = layerId;
+      activeLayerId = layerId;
       popup.remove();
-      updateMapAccessibility();
-      setLayerVisibility(LAYER_IDS.fill, layerId === "heat");
-      setLayerVisibility(LAYER_IDS.landCover, layerId === "land-cover");
-      setLayerVisibility(LAYER_IDS.urbanAtlas, layerId === "urban-atlas");
-      return true;
-    },
-    getActiveLayer() { return activeLayer; },
-    setHeatMetric(metric) {
-      if (!HEAT_METRICS.includes(metric)) return false;
-      activeHeatMetric = metric;
-      popup.remove();
-      if (map.getLayer(LAYER_IDS.fill)) {
-        map.setPaintProperty(
-          LAYER_IDS.fill,
-          "fill-color",
-          heatMetricColorExpression(scores, activeHeatMetric, methodology.palette),
-        );
-      }
+      layers.forEach((layer) => layer.setVisible(map, layer.id === activeLayerId));
+      applyLayerFilter();
       updateMapAccessibility();
       return true;
     },
-    getHeatMetric() { return activeHeatMetric; },
+    getActiveLayer() { return activeLayerId; },
+    setLayerOption,
+    getLayerOption(layerId, name) { return layers.get(layerId)?.getOption?.(name) ?? null; },
+    // Kept as a compatibility convenience for existing diagnostics and tests.
+    setHeatMetric(metric) { return setLayerOption("heat", "metric", metric); },
+    getHeatMetric() { return layers.get("heat")?.getOption?.("metric") ?? null; },
     setLanguage() {
       popup.remove();
       updateMapAccessibility();
     },
-    destroy() { popup.remove(); map.remove(); },
+    destroy() {
+      popup.remove();
+      map.remove();
+    },
   };
 }

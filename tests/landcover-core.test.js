@@ -12,7 +12,7 @@ import {
   rasterizeSectorMask,
   resampleClasses,
   summarizeVegetationChange,
-} from "../scripts/landcover-core.mjs";
+} from "../scripts/lib/landcover-core.mjs";
 
 function fixtureGrid() {
   const [minX, minY] = lonLatToMercator([4, 50]);

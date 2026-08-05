@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { createGrid } from "../scripts/landcover-core.mjs";
+import { createGrid } from "../scripts/lib/landcover-core.mjs";
 
 const dataDir = path.resolve(import.meta.dirname, "..", "public", "data");
 const readJson = async (file) => JSON.parse(await fs.readFile(path.join(dataDir, file), "utf8"));
