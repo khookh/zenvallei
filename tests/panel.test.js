@@ -110,6 +110,48 @@ const urbanAtlas = {
   },
 };
 
+const vegetation = {
+  available: true,
+  activeYear: 2023,
+  generatedAt: "2026-08-05T20:00:00.000Z",
+  palette: { likelyVegetated: "#238B45", belowThreshold: "#D9DEDA" },
+  source: {
+    productUrl: "https://dataspace.copernicus.eu/sentinel-2",
+    accessedAt: "2026-08-05T19:00:00.000Z",
+    attribution: "Derived using European Union Copernicus Sentinel-2 information.",
+    products: [{ id: "S2A_TEST_UFS" }, { id: "S2A_TEST_UES" }],
+  },
+  years: {
+    2023: {
+      acquisitionDate: "2023-06-24",
+      threshold: 0.66,
+      calibration: {
+        sensitivity: 0.881,
+        specificity: 0.797,
+        balancedAccuracy: 0.839,
+        auc: 0.911,
+        positive: { count: 342627 },
+        negative: { count: 20847 },
+      },
+      sectorStats: {
+        "23003A001": {
+          validAreaHa: 51.4,
+          likelyVegetatedAreaHa: 27.06,
+          likelyVegetatedPercentage: 52.64,
+          belowThresholdAreaHa: 24.34,
+          belowThresholdPercentage: 47.36,
+          excludedArableAreaHa: 0,
+          excludedArablePercentage: 0,
+          excludedWaterAreaHa: 0,
+          excludedWaterPercentage: 0,
+          missingObservationAreaHa: 0,
+          medianNdvi: 0.681,
+        },
+      },
+    },
+  },
+};
+
 beforeAll(async () => {
   methodology = JSON.parse(await fs.readFile(path.join(dataDir, "methodology.json"), "utf8"));
   records = JSON.parse(await fs.readFile(path.join(dataDir, "scores.json"), "utf8")).sectors;
@@ -132,15 +174,18 @@ function fixture(options = {}) {
         methodology,
         landCover: options.landCover,
         urbanAtlas: options.urbanAtlas,
+        vegetation: options.vegetation,
       };
       if (layerId === "land-cover") return { template: "land-cover", ...sharedData };
       if (layerId === "urban-atlas") return { template: "urban-atlas", ...sharedData };
+      if (layerId === "vegetation") return { template: "vegetation", ...sharedData };
       return { template: "heat", ...sharedData, heatMetric: panelState.heatMetric };
     },
     getAboutModel: () => ({
       methodology,
       landCover: options.landCover,
       urbanAtlas: options.urbanAtlas,
+      vegetation: options.vegetation,
       provenance: options.provenance,
     }),
     onClose,
@@ -324,27 +369,50 @@ describe("progressive detail panel", () => {
     expect(document.querySelector('[data-section="urban-atlas-methodology"]').open).toBe(true);
   });
 
-  it("explains the three layers, Statbel sectors and calculation responsibility", () => {
+  it("shows Sentinel-2 vegetation statistics and calibration in both languages", () => {
+    const { api } = fixture({ landCover, urbanAtlas, vegetation });
+    api.open(records["23003A001"], document.querySelector("#trigger"), "vegetation");
+    const panel = document.querySelector("#panel");
+    expect(panel.textContent).toContain("Waarschijnlijk begroeid");
+    expect(panel.textContent).toContain("52,64");
+    expect(panel.textContent).toContain("27,06 ha");
+    expect(panel.textContent).toContain("Mediane NDVI");
+    expect(panel.textContent).toContain("0,681");
+    expect(panel.textContent).toContain("Uitgesloten akkerland");
+    expect(panel.textContent).toContain("Berekende NDVI-drempel: 0,66");
+    expect(panel.textContent).toContain("ROC AUC 0,911");
+    document.querySelector('[data-section="vegetation-methodology"]').open = true;
+    setLanguage("en");
+    api.setLanguage();
+    expect(panel.textContent).toContain("Likely vegetated");
+    expect(panel.textContent).toContain("52.64");
+    expect(panel.textContent).toContain("Median NDVI");
+    expect(panel.textContent).toContain("Calculated NDVI threshold: 0.66");
+    expect(document.querySelector('[data-section="vegetation-methodology"]').open).toBe(true);
+  });
+
+  it("explains the four layers, Statbel sectors and calculation responsibility", () => {
     const provenance = {
       output: {
         sectorCount: 154,
         municipalityCounts: { Beersel: 39, Drogenbos: 7, Halle: 41, Linkebeek: 7, Pepingen: 15, "Sint-Genesius-Rode": 22, "Sint-Pieters-Leeuw": 23 },
       },
     };
-    const { api } = fixture({ landCover, urbanAtlas, provenance });
+    const { api } = fixture({ landCover, urbanAtlas, vegetation, provenance });
     api.openAbout(document.querySelector("#trigger"));
     const panel = document.querySelector("#panel");
-    expect(panel.textContent).toContain("Drie lagen, drie vragen");
+    expect(panel.textContent).toContain("Vier lagen, vier vragen");
     expect(panel.textContent).toContain("10 m-pixels");
     expect(panel.textContent).toContain("semi-automatische verwerking en visuele interpretatie");
     expect(panel.textContent).toContain("Waarom 154 sectoren?");
     expect(panel.textContent).toContain("Statbel bepaalt hun codes en grenzen");
     expect(panel.textContent).toContain("Wie berekende wat?");
     expect(panel.textContent).toContain("OpenStreetMap is alleen de achtergrondkaart");
+    expect(panel.textContent).toContain("Waar nam Sentinel-2 een sterk vegetatiesignaal waar?");
 
     setLanguage("en");
     api.setLanguage();
-    expect(panel.textContent).toContain("Three layers, three questions");
+    expect(panel.textContent).toContain("Four layers, four questions");
     expect(panel.textContent).toContain("Why 154 sectors?");
     expect(panel.textContent).toContain("Statbel defines their codes and boundaries");
     expect(panel.textContent).toContain("Who calculated what?");

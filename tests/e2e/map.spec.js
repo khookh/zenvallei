@@ -9,6 +9,7 @@ const TRANSPARENT_PNG = Buffer.from(
 );
 
 const runtimeErrors = new WeakMap();
+const vegetationRasterRequests = new WeakMap();
 
 async function findUnobstructedSectorPoint(page, layerId) {
   return page.evaluate((layer) => {
@@ -159,10 +160,15 @@ const URBAN_ATLAS_FIXTURE = {
     validationStatusCheckedAt: "2026-08-05T10:00:00.000Z",
   },
 };
+const VEGETATION_FIXTURE = JSON.parse(fs.readFileSync(
+  path.resolve(import.meta.dirname, "..", "..", "public", "data", "vegetation.json"),
+  "utf8",
+));
 
 test.beforeEach(async ({ page }) => {
   const errors = [];
   runtimeErrors.set(page, errors);
+  vegetationRasterRequests.set(page, 0);
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
@@ -172,6 +178,11 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/data/land-cover/land-cover-2020.png", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
   await page.route("**/data/urban-atlas.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(URBAN_ATLAS_FIXTURE) }));
   await page.route("**/data/urban-atlas.geojson", (route) => route.fulfill({ status: 200, contentType: "application/geo+json", body: JSON.stringify(URBAN_ATLAS_GEOJSON) }));
+  await page.route("**/data/vegetation.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VEGETATION_FIXTURE) }));
+  await page.route("**/data/vegetation/likely-vegetation-2023.png", (route) => {
+    vegetationRasterRequests.set(page, vegetationRasterRequests.get(page) + 1);
+    return route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG });
+  });
   await page.goto("/");
   await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
   await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
@@ -263,7 +274,7 @@ test("discloses map controls without changing exploration state", async ({ page 
   expect(collapsedResults.violations).toEqual([]);
 
   await page.locator("#language-toggle").click();
-  await expect(page.locator("#map-controls-title")).toHaveText("Where would you like to look?");
+  await expect(page.locator("#map-controls-title")).toHaveText("What would you like to look at?");
   await expect(controlsToggle).toHaveAttribute("aria-label", "Expand map controls");
   await controlsToggle.click();
   await expect(controlsBody).toBeVisible();
@@ -298,12 +309,14 @@ test.afterEach(async ({ page }) => {
 });
 
 test("loads all sectors and opens a complete score breakdown from search", async ({ page }) => {
-  await expect(page.locator("[data-layer]")).toHaveCount(3);
+  await expect(page.locator("[data-layer]")).toHaveCount(4);
   await expect(page.locator("[data-heat-metric]")).toHaveCount(3);
   await expect(page.locator("#heat-metric-control")).toBeVisible();
   await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('[data-layer="change"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveText("Urban Atlas 2021");
+  await expect(page.locator('[data-layer="vegetation"]')).toHaveText("Vegetatie-indicatie 2023");
+  expect(vegetationRasterRequests.get(page)).toBe(0);
   await expect(page.locator("#dataset-status")).toContainText("154 Statbel-sectoren · scores 2026");
   await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
   await expect(page.locator("#about-button")).toContainText("Uitleg");
@@ -652,6 +665,84 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   }
 });
 
+test("loads likely vegetation lazily and presents calibrated NDVI statistics", async ({ page }) => {
+  expect(vegetationRasterRequests.get(page)).toBe(0);
+  await page.locator("#municipality-select").selectOption("Beersel");
+  const search = page.locator("#sector-search");
+  await search.fill("23003A001");
+  await search.press("Enter");
+  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
+  const panel = page.locator("#detail-panel");
+  const mapStateBefore = await page.evaluate(() => ({
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }));
+
+  const vegetationButton = page.locator('[data-layer="vegetation"]');
+  await expect(vegetationButton).toHaveAttribute("aria-disabled", "false");
+  const switchStarted = await page.evaluate(() => performance.now());
+  await vegetationButton.click();
+  await page.waitForFunction(() => window.__heatMap.map.getLayer("likely-vegetation-raster")
+    && window.__heatMap.map.getLayoutProperty("likely-vegetation-raster", "visibility") === "visible");
+  expect(await page.evaluate((start) => performance.now() - start, switchStarted)).toBeLessThan(1_000);
+  expect(vegetationRasterRequests.get(page)).toBe(1);
+  await expect(vegetationButton).toBeFocused();
+  await expect(vegetationButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#active-layer-title")).toHaveText("Vegetatie-indicatie 2023");
+  await expect(page.locator("#legend-title")).toHaveText("Vegetatie-indicatie 2023");
+  await expect(page.locator("#legend-note")).toHaveText("NDVI ≥ 0,66");
+  await expect(page.locator("#legend-content")).toContainText("Waarschijnlijk begroeid");
+  await expect(page.locator("#legend-content")).toContainText("Onder de NDVI-drempel");
+  await expect(page.locator("#legend-content")).toContainText("Uitgesloten of geen waarneming");
+  await expect(page.locator("#layer-context-meta")).toContainText("24 juni 2023");
+  await expect(page.locator("#layer-context-copy")).toContainText("geen definitieve landbedekkingskaart");
+  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Vegetatie-indicatie 2023 in de Zennevallei");
+  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-opacity"))).toBe(0.68);
+  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-resampling"))).toBe("nearest");
+
+  await expect(panel).toContainText("Waarschijnlijk begroeid");
+  await expect(panel).toContainText("52,64");
+  await expect(panel).toContainText("27,06 ha");
+  await expect(panel).toContainText("Mediane NDVI");
+  await expect(panel).toContainText("0,681");
+  await expect(panel).toContainText("Uitgesloten akkerland");
+  await expect(panel.locator('[data-section="vegetation-methodology"]')).not.toHaveAttribute("open", "");
+  await panel.locator('[data-section="vegetation-methodology"] > summary').click();
+  await expect(panel).toContainText("Berekende NDVI-drempel: 0,66");
+  await expect(panel).toContainText("ROC AUC 0,911");
+  await expect(panel).toContainText("S2A_MSIL2A_20230624T104621");
+  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Copernicus Sentinel-2 information");
+  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
+  expect(await page.evaluate(() => ({
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }))).toEqual(mapStateBefore);
+
+  await page.locator("#language-toggle").click();
+  await expect(vegetationButton).toHaveText("Likely vegetation 2023");
+  await expect(page.locator("#map-controls-title")).toHaveText("What would you like to look at?");
+  await expect(page.locator("#legend-title")).toHaveText("Likely vegetation 2023");
+  await expect(panel).toContainText("Likely vegetated");
+  await expect(panel).toContainText("Median NDVI");
+  await expect(panel).toContainText("Calculated NDVI threshold: 0.66");
+  await expect(panel.locator('[data-section="vegetation-methodology"]')).toHaveAttribute("open", "");
+
+  const subsequentSwitch = await page.evaluate(async () => {
+    await window.__heatMap.setLayer("heat");
+    const started = performance.now();
+    await window.__heatMap.setLayer("vegetation");
+    return performance.now() - started;
+  });
+  expect(subsequentSwitch).toBeLessThan(100);
+  expect(vegetationRasterRequests.get(page)).toBe(1);
+
+  const accessibilityResults = await new AxeBuilder({ page })
+    .exclude("#map")
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze();
+  expect(accessibilityResults.violations).toEqual([]);
+});
+
 test("filters the map and exposes no-data sectors honestly", async ({ page }) => {
   await page.locator("#municipality-select").selectOption("Halle");
   await expect(page.locator("#visible-count")).toHaveText("41 sectoren");
@@ -697,11 +788,12 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   const panel = page.locator("#detail-panel");
   await expect(panel).toContainText("About this map");
   await expect(panel).toContainText("How to use the map");
-  await expect(panel).toContainText("Three layers, three questions");
+  await expect(panel).toContainText("Four layers, four questions");
   await expect(panel).toContainText("Why 154 sectors?");
   await expect(panel).toContainText("Statbel defines their codes and boundaries");
   await expect(panel).toContainText("Who calculated what?");
   await expect(panel).toContainText("OpenStreetMap is only the background map");
+  await expect(panel).toContainText("Where did Sentinel-2 observe a strong vegetation signal?");
   await expect(panel).toContainText("Sources and reference dates");
   await panel.press("Escape");
   await expect(page.locator("#about-button")).toBeFocused();

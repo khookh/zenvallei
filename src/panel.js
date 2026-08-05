@@ -131,23 +131,26 @@ function heatMetricInterpretation(record, metric) {
   return interpretationFor(record);
 }
 
-function sourceLinks(methodology, landCover, urbanAtlas) {
+function sourceLinks(methodology, landCover, urbanAtlas, vegetation) {
   const { scores, geometry, osm } = methodology.sources;
   const copernicus = landCover?.source?.productUrl ? `
       <li><a href="${safeHref(landCover.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.copernicus"))}</a></li>` : "";
   const urbanAtlasLink = urbanAtlas?.source?.productUrl ? `
       <li><a href="${safeHref(urbanAtlas.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.urbanAtlas"))}</a></li>` : "";
+  const vegetationLink = vegetation?.source?.productUrl ? `
+      <li><a href="${safeHref(vegetation.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.vegetation"))}</a></li>` : "";
   return `
     <ul class="source-list">
       <li><a href="${safeHref(scores.pageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.scores"))}</a></li>
       <li><a href="${safeHref(geometry.pageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.geometry"))}</a></li>
       ${copernicus}
       ${urbanAtlasLink}
+      ${vegetationLink}
       <li><a href="${safeHref(osm.copyrightUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.basemap"))}</a></li>
     </ul>`;
 }
 
-function renderHeatRecord(record, methodology, landCover, urbanAtlas, heatMetric = DEFAULT_HEAT_METRIC) {
+function renderHeatRecord(record, methodology, landCover, urbanAtlas, vegetation, heatMetric = DEFAULT_HEAT_METRIC) {
   const selectedMetric = normalizeHeatMetric(heatMetric);
   const selectedValue = heatMetricValue(record, selectedMetric);
   const selectedStatus = heatMetricStatus(record, selectedMetric);
@@ -196,7 +199,7 @@ function renderHeatRecord(record, methodology, landCover, urbanAtlas, heatMetric
           <p>${escapeHtml(t("panel.heatSourceNote"))}</p>
           <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("panel.warningText"))}</p>
           <h4>${escapeHtml(t("panel.sources"))}</h4>
-          ${sourceLinks(methodology, landCover, urbanAtlas)}
+          ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
         </div>
       </details>
     </div>`;
@@ -222,7 +225,7 @@ function landCoverClassRows(stats, landCover) {
   }).join("");
 }
 
-function renderLandCoverRecord(record, methodology, landCover, urbanAtlas) {
+function renderLandCoverRecord(record, methodology, landCover, urbanAtlas, vegetation) {
   const stats = landCover?.sectorStats?.[record.sectorId];
   const dominant = landCoverDefinition(landCover, stats?.dominantClassCode);
   const dominantLabel = dominant ? t(`class.${dominant.key}`) : t("landCover.noData");
@@ -263,7 +266,7 @@ function renderLandCoverRecord(record, methodology, landCover, urbanAtlas) {
           ${landCover.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(landCover.source.accessedAt) }))}</p>` : ""}
           ${landCover.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(landCover.generatedAt) }))}</p>` : ""}
           <h4>${escapeHtml(t("panel.sources"))}</h4>
-          ${sourceLinks(methodology, landCover, urbanAtlas)}
+          ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
         </div>
       </details>
     </div>`;
@@ -306,7 +309,7 @@ function urbanAtlasArtificialGroups(stats, urbanAtlas) {
   }).join("");
 }
 
-function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas) {
+function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas, vegetation) {
   const stats = urbanAtlas?.sectorStats?.[record.sectorId];
   const dominant = urbanAtlasDefinition(urbanAtlas, stats?.dominantClassCode);
   const dominantLabel = dominant ? urbanAtlasClassLabel(urbanAtlas, dominant.code) : t("urbanAtlas.noData");
@@ -361,13 +364,82 @@ function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas) {
           ${urbanAtlas?.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(urbanAtlas.source.accessedAt) }))}</p>` : ""}
           ${urbanAtlas?.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(urbanAtlas.generatedAt) }))}</p>` : ""}
           <h4>${escapeHtml(t("panel.sources"))}</h4>
-          ${sourceLinks(methodology, landCover, urbanAtlas)}
+          ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
         </div>
       </details>
     </div>`;
 }
 
-function renderAbout(methodology, landCover, urbanAtlas, provenance) {
+function vegetationAreaValue(areaHa, percentage) {
+  return t("vegetation.areaAndPercentage", {
+    area: formatNumber(areaHa),
+    percentage: formatNumber(percentage),
+  });
+}
+
+function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vegetation) {
+  const year = vegetation?.activeYear ?? 2023;
+  const yearData = vegetation?.years?.[year];
+  const stats = yearData?.sectorStats?.[record.sectorId];
+  const calibration = yearData?.calibration;
+  return `
+    <div class="panel-hero land-cover-hero vegetation-hero">
+      <p class="panel-eyebrow">${escapeHtml(record.municipality)} · ${escapeHtml(record.sectorId)}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+      ${stats ? `<div class="score-hero" style="--hero-color:${escapeHtml(vegetation.palette.likelyVegetated)}">
+        <div class="score-orb"><strong>${escapeHtml(formatNumber(stats.likelyVegetatedPercentage))}</strong><span>%</span></div>
+        <div><span class="score-caption">${escapeHtml(t("vegetation.likelyVegetated"))}</span><p>${escapeHtml(t("vegetation.headlineArea", { area: formatNumber(stats.likelyVegetatedAreaHa) }))}</p></div>
+      </div>` : `<p class="panel-empty-state">${escapeHtml(t("vegetation.noData"))}</p>`}
+      <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("vegetation.eyebrow", { year }))}</p>
+    </div>
+    <div class="panel-body">
+      ${stats ? `<section aria-labelledby="vegetation-summary-title">
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("vegetation.eyebrow", { year }))}</p><h3 id="vegetation-summary-title">${escapeHtml(t("vegetation.summaryTitle"))}</h3></div>
+        <div class="summary-grid vegetation-summary-grid">
+          ${metricCard("vegetation.medianNdvi", formatNumber(stats.medianNdvi, 3), "#238B45")}
+          ${metricCard("vegetation.belowThreshold", vegetationAreaValue(stats.belowThresholdAreaHa, stats.belowThresholdPercentage), "#52615C")}
+          ${metricCard("vegetation.excludedArable", vegetationAreaValue(stats.excludedArableAreaHa, stats.excludedArablePercentage), "#6F5D1C")}
+          ${metricCard("vegetation.excludedWater", vegetationAreaValue(stats.excludedWaterAreaHa, stats.excludedWaterPercentage), "#24658F")}
+          ${metricCard("vegetation.missingObservation", t("unit.hectares", { value: formatNumber(stats.missingObservationAreaHa) }), "#52615C")}
+        </div>
+        <p class="urban-atlas-valid-area vegetation-valid-area">${escapeHtml(t("vegetation.validArea", { area: formatNumber(stats.validAreaHa) }))}</p>
+        <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("vegetation.derivedNote"))}</span></p>
+      </section>` : ""}
+      <details class="detail-accordion methodology-accordion" data-section="vegetation-methodology">
+        <summary data-focus-key="vegetation-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("vegetation.methodologyTitle"))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t("vegetation.observation", {
+            date: formatDate(yearData?.acquisitionDate),
+            threshold: formatNumber(yearData?.threshold, 3),
+          }))}</p>
+          <p>${escapeHtml(t("vegetation.methodologyText"))}</p>
+          ${calibration ? `<h4>${escapeHtml(t("vegetation.calibrationTitle"))}</h4>
+            <ul>
+              <li>${escapeHtml(t("vegetation.calibrationSamples", {
+                positive: formatNumber(calibration.positive.count, 0),
+                negative: formatNumber(calibration.negative.count, 0),
+              }))}</li>
+              <li>${escapeHtml(t("vegetation.calibrationPerformance", {
+                sensitivity: formatNumber(calibration.sensitivity * 100, 1),
+                specificity: formatNumber(calibration.specificity * 100, 1),
+                balanced: formatNumber(calibration.balancedAccuracy * 100, 1),
+                auc: formatNumber(calibration.auc, 3),
+              }))}</li>
+            </ul>` : ""}
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("vegetation.calibrationCaveat"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("vegetation.classificationCaveat"))}</p>
+          <p>${escapeHtml(vegetation?.source?.attribution ?? t("vegetation.attribution"))}</p>
+          ${vegetation?.source?.products?.length ? `<h4>${escapeHtml(t("vegetation.sourceProducts"))}</h4><ul>${vegetation.source.products.map((product) => `<li>${escapeHtml(product.id)}</li>`).join("")}</ul>` : ""}
+          ${vegetation?.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(vegetation.source.accessedAt) }))}</p>` : ""}
+          ${vegetation?.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(vegetation.generatedAt) }))}</p>` : ""}
+          <h4>${escapeHtml(t("panel.sources"))}</h4>
+          ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
+        </div>
+      </details>
+    </div>`;
+}
+
+function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance) {
   const sectorCount = provenance?.output?.sectorCount ?? 154;
   return `
     <div class="panel-hero panel-hero--about">
@@ -390,6 +462,7 @@ function renderAbout(methodology, landCover, urbanAtlas, provenance) {
           <article><span class="about-layer-tag">${escapeHtml(t("layers.heat"))}</span><h4>${escapeHtml(t("about.heatQuestion"))}</h4><p>${escapeHtml(t("about.heatText"))}</p></article>
           <article><span class="about-layer-tag">${escapeHtml(t("layers.landCover", { year: landCover?.activeYear ?? 2020 }))}</span><h4>${escapeHtml(t("about.landCoverQuestion"))}</h4><p>${escapeHtml(t("about.landCoverText"))}</p></article>
           <article><span class="about-layer-tag">${escapeHtml(t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}</span><h4>${escapeHtml(t("about.urbanAtlasQuestion"))}</h4><p>${escapeHtml(t("about.urbanAtlasText"))}</p></article>
+          <article><span class="about-layer-tag">${escapeHtml(t("layers.vegetation", { year: vegetation?.activeYear ?? 2023 }))}</span><h4>${escapeHtml(t("about.vegetationQuestion"))}</h4><p>${escapeHtml(t("about.vegetationText"))}</p></article>
         </div>
         <p class="comparison-caveat">${escapeHtml(t("about.compareCaveat"))}</p>
       </section>
@@ -406,6 +479,7 @@ function renderAbout(methodology, landCover, urbanAtlas, provenance) {
           <li>${escapeHtml(t("about.provenanceGeometry"))}</li>
           <li>${escapeHtml(t("about.provenanceLandCover"))}</li>
           <li>${escapeHtml(t("about.provenanceUrbanAtlas"))}</li>
+          <li>${escapeHtml(t("about.provenanceVegetation"))}</li>
           <li>${escapeHtml(t("about.provenanceBasemap"))}</li>
         </ul>
       </section>
@@ -423,10 +497,14 @@ function renderAbout(methodology, landCover, urbanAtlas, provenance) {
           <summary data-focus-key="about-urban-atlas-methodology-summary"><span>${escapeHtml(t("about.urbanAtlasMethodTitle"))}</span></summary>
           <div class="accordion-content methodology-copy"><p>${escapeHtml(t("urbanAtlas.productionText"))}</p><p>${escapeHtml(t("urbanAtlas.methodologyText"))}</p><p>${escapeHtml(t("urbanAtlas.accessWarning"))}</p><p>${escapeHtml(t("urbanAtlas.comparisonWarning"))}</p></div>
         </details>
+        <details class="detail-accordion about-method" data-section="about-vegetation-methodology">
+          <summary data-focus-key="about-vegetation-methodology-summary"><span>${escapeHtml(t("about.vegetationMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("vegetation.methodologyText"))}</p><p>${escapeHtml(t("vegetation.calibrationCaveat"))}</p><p>${escapeHtml(t("vegetation.classificationCaveat"))}</p></div>
+        </details>
       </section>
       <section class="about-sources">
         <h3>${escapeHtml(t("about.sourcesTitle"))}</h3>
-        ${sourceLinks(methodology, landCover, urbanAtlas)}
+        ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
         <p class="about-caveat">${escapeHtml(t("about.caveat"))}</p>
       </section>
     </div>`;
@@ -451,13 +529,16 @@ function renderMetricSummary(model) {
 /** Render a plain panel model supplied by a layer module. */
 export function renderSectorPanelModel(model) {
   if (model.template === "heat") {
-    return renderHeatRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.heatMetric);
+    return renderHeatRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation, model.heatMetric);
   }
   if (model.template === "land-cover") {
-    return renderLandCoverRecord(model.record, model.methodology, model.landCover, model.urbanAtlas);
+    return renderLandCoverRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
   }
   if (model.template === "urban-atlas") {
-    return renderUrbanAtlasRecord(model.record, model.methodology, model.landCover, model.urbanAtlas);
+    return renderUrbanAtlasRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
+  }
+  if (model.template === "vegetation") {
+    return renderVegetationRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
   }
   if (model.template === "metric-summary") return renderMetricSummary(model);
   throw new Error(`Unknown sector panel template '${model.template}'.`);
@@ -492,7 +573,7 @@ export function createDetailPanel({
     const renderState = preserveState ? captureRenderState() : { openSections: [], hadExpandedSection: false, focusKey: null };
     if (currentView.type === "about") {
       const model = getAboutModel();
-      content.innerHTML = renderAbout(model.methodology, model.landCover, model.urbanAtlas, model.provenance);
+      content.innerHTML = renderAbout(model.methodology, model.landCover, model.urbanAtlas, model.vegetation, model.provenance);
     } else {
       content.innerHTML = renderSectorPanelModel(getPanelModel(currentView.layerId, currentView.record, {
         heatMetric: activeHeatMetric,

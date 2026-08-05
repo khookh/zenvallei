@@ -86,6 +86,7 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
       methodology,
       landCover: shared.landCover,
       urbanAtlas: shared.urbanAtlas,
+      vegetation: shared.vegetation,
       heatMetric: activeMetric,
     }),
     mount(map, { sectorSourceId }) {

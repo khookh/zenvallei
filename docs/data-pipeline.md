@@ -58,6 +58,35 @@ The command verifies the official product variant, EPSG:3035, FUA, reference yea
 
 Outputs: `urban-atlas.geojson` and `urban-atlas.json`.
 
+## Sentinel-2 likely vegetation 2023
+
+Create a non-SPA OAuth client in the Copernicus Sentinel Hub account settings. Supply its values only for the download process:
+
+```powershell
+$env:CDSE_SH_CLIENT_ID = Read-Host "Sentinel Hub OAuth client ID"
+$secureSecret = Read-Host "Sentinel Hub OAuth client secret" -AsSecureString
+$env:CDSE_SH_CLIENT_SECRET = [System.Net.NetworkCredential]::new("", $secureSecret).Password
+try {
+  pnpm vegetation:download -- --date 2023-06-24
+} finally {
+  Remove-Item Env:CDSE_SH_CLIENT_ID -ErrorAction SilentlyContinue
+  Remove-Item Env:CDSE_SH_CLIENT_SECRET -ErrorAction SilentlyContinue
+  Remove-Variable secureSecret -ErrorAction SilentlyContinue
+}
+```
+
+The download command requests one stitched Sentinel-2 L2A GeoTIFF in EPSG:32631. It contains NDVI and a validity band at 10 m. The cache is accepted only when its CRS, resolution, dimensions, bands, NDVI range and valid-pixel coverage pass validation.
+
+Create the browser asset and sector statistics from the verified cache:
+
+```powershell
+pnpm vegetation:prepare -- --date 2023-06-24
+```
+
+The preparation command rasterises Urban Atlas on a 3 × 3 subpixel grid. Calibration pixels require at least eight of nine samples in one reference class. The threshold maximises Youden's J statistic. Urban Atlas arable land and water remain in the sector denominator but are transparent in the output image.
+
+Outputs: `vegetation/likely-vegetation-2023.png` and `vegetation.json`. Raw GeoTIFFs and OAuth credentials remain outside the browser assets and repository.
+
 ## Contracts and provenance
 
 - Every JSON manifest declares `schemaVersion`.

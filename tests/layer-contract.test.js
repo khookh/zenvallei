@@ -30,7 +30,7 @@ describe("layer module contract", () => {
       .toThrow("Duplicate layer id 'same'");
   });
 
-  it("registers the three application layers without frontend-specific setup", () => {
+  it("registers the four application layers without frontend-specific setup", () => {
     const registry = buildLayerRegistry({
       scores: {
         A: { sectorId: "A", status: "scored", scores: { final: 6, heat: 7, vulnerability: 8 } },
@@ -44,10 +44,12 @@ describe("layer module contract", () => {
       },
       landCover: null,
       urbanAtlas: null,
+      vegetation: null,
     });
-    expect([...registry.keys()]).toEqual(["heat", "land-cover", "urban-atlas"]);
+    expect([...registry.keys()]).toEqual(["heat", "land-cover", "urban-atlas", "vegetation"]);
     expect(registry.get("heat").isAvailable()).toBe(true);
     expect(registry.get("land-cover").isAvailable()).toBe(false);
     expect(registry.get("urban-atlas").isAvailable()).toBe(false);
+    expect(registry.get("vegetation").isAvailable()).toBe(false);
   });
 });

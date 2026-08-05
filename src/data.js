@@ -18,13 +18,14 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       return { available: false, loadError: error.message };
     }
   };
-  const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas] = await Promise.all([
+  const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation] = await Promise.all([
     loadJson("sectors.geojson"),
     loadJson("scores.json"),
     loadJson("methodology.json"),
     loadJson("provenance.json"),
     loadOptionalJson("land-cover.json"),
     loadOptionalJson("urban-atlas.json", { tolerateErrors: true }),
+    loadOptionalJson("vegetation.json", { tolerateErrors: true }),
   ]);
   const resolveAssetUrl = (assetUrl) => {
     if (!assetUrl || /^(?:https?:)?\/\//.test(assetUrl)) return assetUrl;
@@ -33,8 +34,11 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
   if (landCover?.raster) landCover.raster.imageUrl = resolveAssetUrl(landCover.raster.imageUrl);
   if (landCover?.change) landCover.change.imageUrl = resolveAssetUrl(landCover.change.imageUrl);
   if (urbanAtlas?.geojsonUrl) urbanAtlas.geojsonUrl = resolveAssetUrl(urbanAtlas.geojsonUrl);
-  validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas });
-  return { geojson, scores: scorePayload.sectors, methodology, provenance, landCover, urbanAtlas };
+  Object.values(vegetation?.years ?? {}).forEach((year) => {
+    if (year?.imageUrl) year.imageUrl = resolveAssetUrl(year.imageUrl);
+  });
+  validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation });
+  return { geojson, scores: scorePayload.sectors, methodology, provenance, landCover, urbanAtlas, vegetation };
 }
 
 export function sectorsForMunicipality(scores, municipality = "") {

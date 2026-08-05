@@ -6,6 +6,7 @@ const SUPPORTED_SCHEMA_VERSIONS = Object.freeze({
   provenance: [1],
   landCover: [1, 2],
   urbanAtlas: [1],
+  vegetation: [1],
 });
 
 export function schemaVersionOf(payload) {
@@ -40,12 +41,13 @@ function assertFeatureCollection(geojson) {
 }
 
 /** Validate contracts at the browser boundary before MapLibre receives data. */
-export function validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas }) {
+export function validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation }) {
   assertSupportedSchema("scores", scorePayload);
   assertSupportedSchema("methodology", methodology);
   assertSupportedSchema("provenance", provenance);
   if (landCover) assertSupportedSchema("landCover", landCover);
   if (urbanAtlas && !urbanAtlas.loadError) assertSupportedSchema("urbanAtlas", urbanAtlas);
+  if (vegetation && !vegetation.loadError) assertSupportedSchema("vegetation", vegetation);
 
   const sectorIds = assertFeatureCollection(geojson);
   const scores = scorePayload?.sectors;
@@ -67,6 +69,15 @@ export function validateApplicationData({ geojson, scorePayload, methodology, pr
   }
   if (urbanAtlas?.available && (!urbanAtlas.geojsonUrl || !urbanAtlas.sectorStats)) {
     throw new Error("urban-atlas.json marks the layer available but lacks its GeoJSON URL or sector statistics.");
+  }
+  if (vegetation?.available) {
+    const activeYear = vegetation.years?.[vegetation.activeYear];
+    if (!activeYear?.imageUrl || !Array.isArray(activeYear.coordinates) || !Number.isFinite(activeYear.threshold)) {
+      throw new Error("vegetation.json marks the layer available but lacks its image, coordinates or threshold.");
+    }
+    if (Object.keys(activeYear.sectorStats ?? {}).length !== sectorIds.size) {
+      throw new Error(`vegetation.json contains ${Object.keys(activeYear.sectorStats ?? {}).length} sector records; expected ${sectorIds.size}.`);
+    }
   }
   return { sectorIds, scores };
 }

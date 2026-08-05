@@ -16,13 +16,14 @@ function browserAssetPath(assetUrl) {
   return path.join(publicRoot, assetUrl.replace(/^\//, ""));
 }
 
-const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas] = await Promise.all([
+const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation] = await Promise.all([
   readJson("sectors.geojson"),
   readJson("scores.json"),
   readJson("methodology.json"),
   readJson("provenance.json"),
   readJson("land-cover.json"),
   readJson("urban-atlas.json"),
+  readJson("vegetation.json"),
 ]);
 
 const { sectorIds } = validateApplicationData({
@@ -32,6 +33,7 @@ const { sectorIds } = validateApplicationData({
   provenance,
   landCover,
   urbanAtlas,
+  vegetation,
 });
 
 if (sectorIds.size !== 154) throw new Error(`Expected 154 Zennevallei sectors, received ${sectorIds.size}.`);
@@ -42,6 +44,13 @@ for (const [name, stats] of [["land cover", landCover.sectorStats], ["Urban Atla
   }
 }
 
+const vegetationYear = vegetation.years?.[vegetation.activeYear];
+const vegetationIds = Object.keys(vegetationYear?.sectorStats ?? {});
+if (vegetationIds.length !== sectorIds.size || vegetationIds.some((sectorId) => !sectorIds.has(sectorId))) {
+  throw new Error("Likely-vegetation statistics do not match the 154 sector identifiers.");
+}
+
 await fs.access(browserAssetPath(landCover.raster.imageUrl));
 await fs.access(browserAssetPath(urbanAtlas.geojsonUrl));
+await fs.access(browserAssetPath(vegetationYear.imageUrl));
 console.log(`Validated ${sectorIds.size} sectors and all prepared browser assets.`);

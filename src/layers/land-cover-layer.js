@@ -50,6 +50,7 @@ export function createLandCoverLayer({ landCover }) {
       methodology: shared.methodology,
       landCover,
       urbanAtlas: shared.urbanAtlas,
+      vegetation: shared.vegetation,
     }),
     mount(map, { beforeLayerId }) {
       if (map.getLayer(MAP_LAYER_ID)) return true;

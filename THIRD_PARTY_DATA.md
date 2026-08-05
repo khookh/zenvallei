@@ -38,6 +38,17 @@ CLMS provides full, open and free access, requires source attribution, requires 
 
 See the [CLMS data policy](https://land.copernicus.eu/en/data-policy). The provenance manifests record DOIs, product identifiers, access dates and processing details.
 
+## Copernicus Sentinel-2
+
+Used for the 24 June 2023 L2A NDVI observation and the derived likely-vegetation indication.
+
+- Source collection: Sentinel-2 L2A through the Copernicus Data Space Sentinel Hub Process API.
+- Input products: `S2A_MSIL2A_20230624T104621_N0510_R051_T31UFS_20240912T071700` and `S2A_MSIL2A_20230624T104621_N0510_R051_T31UES_20240912T071700`.
+- Generated assets: `vegetation/likely-vegetation-2023.png` and `vegetation.json`.
+- Application attribution: Derived using European Union Copernicus Sentinel-2 information.
+
+Greenwave calculates NDVI, applies the Sentinel scene-classification mask, calibrates a threshold against Urban Atlas reference classes and aggregates areas by Statbel sector. The result is identified as a derived, single-date vegetation indication and not as an official Copernicus land-cover product.
+
 ## OpenStreetMap
 
 Used only as the configurable runtime basemap. Greenwave does not package OSM tiles.

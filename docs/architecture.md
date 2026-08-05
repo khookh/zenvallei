@@ -3,7 +3,7 @@
 Greenwave is a static application. Data preparation runs before deployment and the browser never receives source credentials.
 
 ```text
-Official workbook / geometry / raster / polygons
+Official workbook / geometry / raster / polygons / satellite observation
                   |
                   v
         scripts/prepare-*.mjs
@@ -28,7 +28,7 @@ Official workbook / geometry / raster / polygons
 - `panel.js` and the legend renderer turn plain presentation models into accessible UI.
 - `i18n.js` is the stable translation API; the Dutch and English catalogues are separate files with identical keys.
 
-The map controller deliberately does not decide what an Urban Atlas, LCM or heat value means. It asks the active layer module to load, display, filter and describe itself.
+The map controller deliberately does not decide what an Urban Atlas, LCM, Sentinel-2 or heat value means. It asks the active layer module to load, display, filter and describe itself.
 
 ## Preparation boundary
 

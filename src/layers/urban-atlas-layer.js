@@ -54,6 +54,7 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
       methodology: shared.methodology,
       landCover: shared.landCover,
       urbanAtlas,
+      vegetation: shared.vegetation,
     }),
     async mount(map, { beforeLayerId }) {
       if (map.getLayer(MAP_LAYER_ID)) return true;

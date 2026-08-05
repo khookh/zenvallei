@@ -25,7 +25,7 @@ Validate identifiers, coordinate system, class codes and sector coverage during 
 
 ## 2. Create the layer module
 
-Use the existing heat, LCM and Urban Atlas modules as working examples. A polygon module follows this shape:
+Use the existing heat, LCM, Urban Atlas and Sentinel-2 vegetation modules as working examples. A polygon module follows this shape:
 
 ```js
 import { t } from "../i18n.js";

@@ -298,6 +298,7 @@ async function start() {
     methodology: data.methodology,
     landCover: data.landCover,
     urbanAtlas: data.urbanAtlas,
+    vegetation: data.vegetation,
   };
   const panel = createDetailPanel({
     panel: elements.detailPanel,

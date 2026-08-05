@@ -16,6 +16,7 @@ function validPayload() {
     provenance: { schemaVersion: 1, output: { sectorCount: 1 } },
     landCover: null,
     urbanAtlas: null,
+    vegetation: null,
   };
 }
 
@@ -39,5 +40,25 @@ describe("browser data contracts", () => {
     const payload = validPayload();
     payload.scorePayload.sectors.B = { sectorId: "B" };
     expect(() => validateApplicationData(payload)).toThrow("Score and geometry sector identifiers differ");
+  });
+
+  it("validates the active vegetation year and sector statistics", () => {
+    const payload = validPayload();
+    payload.vegetation = {
+      schemaVersion: 1,
+      available: true,
+      activeYear: 2023,
+      years: {
+        2023: {
+          imageUrl: "data/vegetation/test.png",
+          coordinates: [[4, 51], [5, 51], [5, 50], [4, 50]],
+          threshold: 0.66,
+          sectorStats: { A: {} },
+        },
+      },
+    };
+    expect(() => validateApplicationData(payload)).not.toThrow();
+    delete payload.vegetation.years[2023].sectorStats.A;
+    expect(() => validateApplicationData(payload)).toThrow("contains 0 sector records");
   });
 });

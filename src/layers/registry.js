@@ -2,6 +2,7 @@ import { createLayerRegistry } from "./layer-contract.js";
 import { createHeatLayer } from "./heat-layer.js";
 import { createLandCoverLayer } from "./land-cover-layer.js";
 import { createUrbanAtlasLayer } from "./urban-atlas-layer.js";
+import { createVegetationLayer } from "./vegetation-layer.js";
 
 /**
  * This is the only registration point for map datasets. A new layer should not
@@ -16,5 +17,6 @@ export function buildLayerRegistry(data, options = {}) {
     }),
     createLandCoverLayer({ landCover: data.landCover }),
     createUrbanAtlasLayer({ urbanAtlas: data.urbanAtlas }),
+    createVegetationLayer({ vegetation: data.vegetation }),
   ]);
 }

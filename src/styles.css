@@ -3,7 +3,7 @@
   font-family: "Aptos", "Segoe UI", system-ui, -apple-system, sans-serif;
   --ink: #0b2f3a;
   --ink-soft: #38545c;
-  --muted: #6b7e82;
+  --muted: #5d7175;
   --paper: #fffefb;
   --paper-soft: #f5f6f2;
   --line: #dce4e2;
@@ -194,7 +194,7 @@ a:focus-visible {
 .map-controls.is-collapsed .info-button { display: none; }
 .control-kicker, .section-kicker { margin: 0; color: var(--teal); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.13em; }
 
-.layer-switch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 2px 0 8px; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: #edf3f1; }
+.layer-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin: 2px 0 8px; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: #edf3f1; }
 .layer-button { min-height: 44px; padding: 5px 7px; border: 0; border-radius: 9px; color: #456168; background: transparent; font-size: 0.65rem; font-weight: 760; line-height: 1.2; }
 .layer-button:hover:not([aria-disabled="true"]) { color: var(--ink); background: rgba(255, 255, 255, 0.72); }
 .layer-button.is-active { color: white; background: var(--teal); box-shadow: 0 3px 10px rgba(11, 110, 105, 0.2); }
@@ -419,6 +419,8 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .urban-atlas-breakdown-group + .urban-atlas-breakdown-group { margin-top: 8px; border-top: 1px solid #edf0ee; }
 .urban-atlas-breakdown-group h4 { margin: 0 0 5px; color: var(--teal); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.07em; }
 .urban-atlas-valid-area { margin: 10px 2px 0; color: var(--muted); font-size: 0.67rem; }
+.vegetation-summary-grid .summary-card > span,
+.vegetation-valid-area { color: #536a70; }
 .land-cover-swatch { width: 13px; height: 13px; border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 3px; background: var(--swatch); }
 .panel-empty-state, .panel-warning { margin: 0; padding: 14px; border-radius: 12px; color: #496267; background: #eef5f3; font-size: 0.76rem; line-height: 1.5; }
 .panel-warning { margin-top: 14px; color: #6b451e; background: #fff4df; }
@@ -548,7 +550,7 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
     right: 0;
     bottom: 0;
     width: 100%;
-    max-height: 76vh;
+    max-height: 64vh;
     border-radius: 24px 24px 0 0;
     transform: translateY(calc(100% + 20px));
   }

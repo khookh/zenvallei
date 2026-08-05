@@ -1,6 +1,6 @@
 # Greenwave
 
-Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. It combines official heat-vulnerability scores from the Government of Flanders with Statbel boundaries, Copernicus LCM-10, Copernicus Urban Atlas and an OpenStreetMap background.
+Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. It combines official heat-vulnerability scores from the Government of Flanders with Statbel boundaries, Copernicus LCM-10, Copernicus Urban Atlas, a Sentinel-2 vegetation indication and an OpenStreetMap background.
 
 The application uses vanilla JavaScript, Vite and MapLibre GL JS. It has no backend, accounts, cookies, browser storage, analytics or live score calculation.
 
@@ -45,9 +45,11 @@ Prepared assets are committed under `public/data`, so a clone can build and run 
 pnpm data:prepare -- --scores "C:\path\Cijfers_hittekwetsbaarheid_2026.xlsx" --sectors "C:\path\statbel-sectors.zip"
 pnpm landcover:prepare
 pnpm urban-atlas:prepare -- --source "C:\path\official-urban-atlas-product"
+pnpm vegetation:download -- --date 2023-06-24
+pnpm vegetation:prepare -- --date 2023-06-24
 ```
 
-Copernicus downloads read `CDSE_ACCESS_TOKEN` only during preparation. Never place a token in `.env`, source code, generated manifests or documentation.
+LCM-10 and Urban Atlas downloads read `CDSE_ACCESS_TOKEN` only during preparation. Sentinel Hub uses temporary `CDSE_SH_CLIENT_ID` and `CDSE_SH_CLIENT_SECRET` environment variables. Never place credentials in `.env`, source code, generated manifests or documentation.
 
 See [Data pipeline](docs/data-pipeline.md) for complete examples and validation rules.
 
