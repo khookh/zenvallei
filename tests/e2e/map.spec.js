@@ -194,6 +194,9 @@ test("keeps complete map attribution collapsed until requested", async ({ page }
   await expect(attributionButton).toHaveAttribute("aria-expanded", "false");
   await expect(attributionButton).toHaveCSS("width", "44px");
   await expect(attributionButton).toHaveCSS("height", "44px");
+  await expect(attributionButton).toHaveCSS("background-repeat", "no-repeat");
+  await expect(attributionButton).toHaveCSS("background-position", "50% 50%");
+  await expect(attributionButton).toHaveCSS("background-size", "24px 24px");
   await expect(attributionDetails).toBeHidden();
 
   await attributionButton.click();
@@ -209,19 +212,12 @@ test("keeps complete map attribution collapsed until requested", async ({ page }
   await expect(attributionDetails).toBeHidden();
 });
 
-test("discloses mobile map controls without changing exploration state", async ({ page }, testInfo) => {
-  const isMobileProject = testInfo.project.name === "mobile-chromium";
+test("discloses map controls without changing exploration state", async ({ page }) => {
   const controls = page.locator("#map-controls");
   const controlsBody = page.locator("#map-controls-body");
   const controlsToggle = page.locator("#map-controls-toggle");
 
   await expect(controlsBody).toBeVisible();
-  if (!isMobileProject) {
-    await expect(controlsToggle).toBeHidden();
-    await expect(controls).not.toHaveClass(/is-collapsed/);
-    return;
-  }
-
   await expect(controlsToggle).toBeVisible();
   await expect(controlsToggle).toHaveCSS("width", "44px");
   await expect(controlsToggle).toHaveCSS("height", "44px");

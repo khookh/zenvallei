@@ -55,18 +55,16 @@ const application = {
   announcement: null,
   activeLayer: "heat",
   activeHeatMetric: DEFAULT_HEAT_METRIC,
-  mobileControlsCollapsed: false,
+  mapControlsCollapsed: false,
 };
 
-const mobileControlsMedia = window.matchMedia("(max-width: 760px)");
 const activeLayer = () => application.layers?.get(application.activeLayer);
 
 function updateMapControlsDisclosure({ refreshMap = true } = {}) {
-  const isMobile = mobileControlsMedia.matches;
-  const collapsed = isMobile && application.mobileControlsCollapsed;
+  const collapsed = application.mapControlsCollapsed;
   const label = t(collapsed ? "controls.expand" : "controls.collapse");
 
-  elements.mapControlsToggle.hidden = !isMobile;
+  elements.mapControlsToggle.hidden = false;
   elements.mapControlsToggle.setAttribute("aria-expanded", String(!collapsed));
   elements.mapControlsToggle.setAttribute("aria-label", label);
   elements.mapControlsToggle.title = label;
@@ -279,10 +277,9 @@ elements.languageToggle.addEventListener("click", () => {
   applyLanguage(getLanguage() === "nl" ? "en" : "nl");
 });
 elements.mapControlsToggle.addEventListener("click", () => {
-  application.mobileControlsCollapsed = !application.mobileControlsCollapsed;
+  application.mapControlsCollapsed = !application.mapControlsCollapsed;
   updateMapControlsDisclosure();
 });
-mobileControlsMedia.addEventListener("change", () => updateMapControlsDisclosure());
 
 async function start() {
   performance.mark("heat-map-start");
