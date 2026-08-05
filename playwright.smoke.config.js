@@ -2,10 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: "cross-browser.smoke.js",
+  testMatch: "cross-browser.smoke.js",
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  timeout: 60_000,
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:4174",
@@ -19,7 +20,8 @@ export default defineConfig({
     timeout: 120_000,
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile-chromium", use: { ...devices["Pixel 7"] } },
+    { name: "chromium-smoke", use: { ...devices["Desktop Chrome"] } },
+    { name: "firefox-smoke", use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit-smoke", use: { ...devices["Desktop Safari"] } },
   ],
 });

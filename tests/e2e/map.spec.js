@@ -177,6 +177,13 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
 });
 
+test("serves provider-neutral security headers", async ({ page }) => {
+  const response = await page.goto("/");
+  expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true");
+});
+
 test.afterEach(async ({ page }) => {
   expect(runtimeErrors.get(page), "De app mag geen browserfouten loggen").toEqual([]);
 });

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [ValidateSet("Install", "Remove", "Status")]
     [string]$Action = "Status",
@@ -32,6 +32,11 @@ if ($Action -eq "Status") {
 
     Write-Host "The Greenwave LAN firewall rule is not installed."
     exit 1
+}
+
+if ($WhatIfPreference) {
+    Write-Host "Would $($Action.ToLowerInvariant()) '$ruleName', restricted to TCP $Port from LocalSubnet."
+    exit 0
 }
 
 if (-not (Test-IsAdministrator)) {

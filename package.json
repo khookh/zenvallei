@@ -2,6 +2,8 @@
   "name": "zennevallei-hittekwetsbaarheid",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.0.9",
   "type": "module",
   "description": "Lokale, interactieve hittekwetsbaarheidskaart voor de Zennevallei.",
   "scripts": {
@@ -13,13 +15,23 @@
     "data:prepare": "node scripts/prepare-data.mjs",
     "landcover:prepare": "node scripts/prepare-landcover.mjs",
     "urban-atlas:prepare": "node scripts/prepare-urban-atlas.mjs",
+    "data:validate": "node scripts/validate-generated-data.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc -p jsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:all": "pnpm test && pnpm test:e2e && pnpm build"
+    "test:e2e:cross-browser": "playwright test --config playwright.smoke.config.js",
+    "test:lan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-lan.ps1",
+    "dist:check": "node scripts/check-dist.mjs",
+    "build:subpath": "vite build --base=/greenwave/ --outDir .cache/subpath-build && node scripts/check-subpath-build.mjs",
+    "security:check": "pnpm audit --audit-level high && node scripts/check-repository-secrets.mjs",
+    "verify:quick": "pnpm lint && pnpm typecheck && pnpm test && pnpm data:validate && pnpm build && pnpm dist:check",
+    "verify": "pnpm verify:quick && pnpm test:e2e && pnpm build:subpath && pnpm security:check",
+    "test:all": "pnpm verify"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0 <21 || >=22.12.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -27,20 +39,24 @@
     ]
   },
   "dependencies": {
-    "flatgeobuf": "4.4.0",
-    "maplibre-gl": "^6.1.0",
-    "polygon-clipping": "0.15.7",
-    "proj4": "^2.21.0",
-    "unzipper": "^0.12.5",
-    "xlsx": "^0.18.5"
+    "maplibre-gl": "^6.1.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
+    "eslint": "^10.8.0",
+    "flatgeobuf": "4.4.0",
     "geotiff": "^2.1.4-beta.1",
+    "globals": "^17.9.0",
     "jsdom": "^30.0.1",
-    "sharp": "^0.34.4",
+    "polygon-clipping": "0.15.7",
+    "proj4": "^2.21.0",
+    "sharp": "^0.35.3",
+    "typescript": "^7.0.2",
+    "unzipper": "^0.12.5",
     "vite": "^8.2.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }
 }

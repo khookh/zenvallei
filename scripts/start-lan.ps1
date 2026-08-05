@@ -74,8 +74,11 @@ try {
     $nodeVersionText = (& $nodeCommand --version).TrimStart("v")
     $nodeVersion = [System.Version]::Parse($nodeVersionText)
 
-    if ($nodeVersion.Major -lt 20) {
-        throw "Node.js $nodeVersionText is too old. Greenwave requires Node.js 20 or newer; Node.js 24 LTS is recommended."
+    $supportedNode = ($nodeVersion.Major -eq 20 -and $nodeVersion.Minor -ge 19) -or
+        ($nodeVersion.Major -eq 22 -and $nodeVersion.Minor -ge 12) -or
+        $nodeVersion.Major -ge 23
+    if (-not $supportedNode) {
+        throw "Node.js $nodeVersionText is not supported. Install Node.js 24 LTS, then reopen this launcher."
     }
 
     Assert-PortAvailable $Port
