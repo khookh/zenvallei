@@ -15,6 +15,8 @@ export const en = Object.freeze({
   "controls.title": "Where would you like to look?",
   "controls.about": "Open an explanation of this map",
   "controls.aboutShort": "About",
+  "controls.collapse": "Collapse map controls",
+  "controls.expand": "Expand map controls",
   "controls.municipality": "Municipality",
   "controls.allMunicipalities": "Entire Zennevallei",
   "controls.sectorSearch": "Search for a statistical sector",

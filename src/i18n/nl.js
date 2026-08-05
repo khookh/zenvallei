@@ -15,6 +15,8 @@ export const nl = Object.freeze({
   "controls.title": "Waar wil je kijken?",
   "controls.about": "Open uitleg over deze kaart",
   "controls.aboutShort": "Uitleg",
+  "controls.collapse": "Kaartbediening inklappen",
+  "controls.expand": "Kaartbediening uitklappen",
   "controls.municipality": "Gemeente",
   "controls.allMunicipalities": "Hele Zennevallei",
   "controls.sectorSearch": "Zoek een statistische sector",

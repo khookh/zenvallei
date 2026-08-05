@@ -10,6 +10,10 @@ import { createDetailPanel } from "./panel.js";
 
 const elements = {
   map: document.querySelector("#map"),
+  mapControls: document.querySelector("#map-controls"),
+  mapControlsBody: document.querySelector("#map-controls-body"),
+  mapControlsToggle: document.querySelector("#map-controls-toggle"),
+  mapControlsToggleIcon: document.querySelector("#map-controls-toggle-icon"),
   activeLayerTitle: document.querySelector("#active-layer-title"),
   datasetStatus: document.querySelector("#dataset-status span:last-child"),
   languageToggle: document.querySelector("#language-toggle"),
@@ -51,9 +55,29 @@ const application = {
   announcement: null,
   activeLayer: "heat",
   activeHeatMetric: DEFAULT_HEAT_METRIC,
+  mobileControlsCollapsed: false,
 };
 
+const mobileControlsMedia = window.matchMedia("(max-width: 760px)");
 const activeLayer = () => application.layers?.get(application.activeLayer);
+
+function updateMapControlsDisclosure({ refreshMap = true } = {}) {
+  const isMobile = mobileControlsMedia.matches;
+  const collapsed = isMobile && application.mobileControlsCollapsed;
+  const label = t(collapsed ? "controls.expand" : "controls.collapse");
+
+  elements.mapControlsToggle.hidden = !isMobile;
+  elements.mapControlsToggle.setAttribute("aria-expanded", String(!collapsed));
+  elements.mapControlsToggle.setAttribute("aria-label", label);
+  elements.mapControlsToggle.title = label;
+  elements.mapControlsToggleIcon.textContent = collapsed ? "+" : "\u2212";
+  elements.mapControlsBody.hidden = collapsed;
+  elements.mapControls.classList.toggle("is-collapsed", collapsed);
+
+  if (refreshMap) {
+    requestAnimationFrame(() => application.mapController?.refreshLayout());
+  }
+}
 
 function updateLanguageButton() {
   const targetLanguage = getLanguage() === "nl" ? "en" : "nl";
@@ -230,6 +254,7 @@ function applyLanguage(language) {
   setLanguage(language);
   applyDocumentTranslations();
   updateLanguageButton();
+  updateMapControlsDisclosure({ refreshMap: false });
   updateDatasetStatus();
   if (application.layers) {
     updateLayerControls();
@@ -253,6 +278,11 @@ applyLanguage(DEFAULT_LANGUAGE);
 elements.languageToggle.addEventListener("click", () => {
   applyLanguage(getLanguage() === "nl" ? "en" : "nl");
 });
+elements.mapControlsToggle.addEventListener("click", () => {
+  application.mobileControlsCollapsed = !application.mobileControlsCollapsed;
+  updateMapControlsDisclosure();
+});
+mobileControlsMedia.addEventListener("change", () => updateMapControlsDisclosure());
 
 async function start() {
   performance.mark("heat-map-start");

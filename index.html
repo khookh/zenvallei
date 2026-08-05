@@ -48,14 +48,29 @@
           <div class="control-heading">
             <div>
               <p class="control-kicker" data-i18n="controls.kicker">Verken de buurt</p>
-              <h2 data-i18n="controls.title">Waar wil je kijken?</h2>
+              <h2 id="map-controls-title" data-i18n="controls.title">Waar wil je kijken?</h2>
             </div>
-            <button class="info-button" id="about-button" type="button" aria-label="Open uitleg over deze kaart" data-i18n-aria-label="controls.about">
-              <span class="info-glyph" aria-hidden="true">i</span>
-              <span data-i18n="controls.aboutShort">Uitleg</span>
-            </button>
+            <div class="control-heading-actions">
+              <button class="info-button" id="about-button" type="button" aria-label="Open uitleg over deze kaart" data-i18n-aria-label="controls.about">
+                <span class="info-glyph" aria-hidden="true">i</span>
+                <span data-i18n="controls.aboutShort">Uitleg</span>
+              </button>
+              <button
+                class="controls-disclosure"
+                id="map-controls-toggle"
+                type="button"
+                aria-expanded="true"
+                aria-controls="map-controls-body"
+                aria-label="Kaartbediening inklappen"
+                title="Kaartbediening inklappen"
+                hidden
+              >
+                <span id="map-controls-toggle-icon" aria-hidden="true">−</span>
+              </button>
+            </div>
           </div>
 
+          <div class="map-controls-body" id="map-controls-body">
           <div class="layer-switch" role="group" aria-label="Kaartlaag" data-i18n-aria-label="layers.region">
             <button class="layer-button is-active" type="button" data-layer="heat" aria-pressed="true" data-i18n="layers.heat">Hittekwetsbaarheid</button>
             <button class="layer-button" type="button" data-layer="land-cover" aria-pressed="false" aria-disabled="true">Landbedekking 2020</button>
@@ -113,6 +128,7 @@
             <span aria-hidden="true">·</span>
             <a href="https://land.copernicus.eu/en/products/global-dynamic-land-cover/land-cover-2020-raster-10-m-global-annual" target="_blank" rel="noopener noreferrer">Copernicus CLMS</a>
           </p>
+          </div>
         </section>
 
         <details class="legend" id="legend" open>

@@ -167,6 +167,23 @@ a:focus-visible {
 
 .control-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
 .control-heading h2 { margin: 2px 0 0; font-size: 1.22rem; letter-spacing: -0.025em; }
+.control-heading-actions { display: flex; align-items: center; gap: 7px; }
+.controls-disclosure {
+  display: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--teal);
+  background: white;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.controls-disclosure:hover { background: #edf7f5; border-color: #9ccac6; }
+.map-controls-body[hidden] { display: none; }
 .control-kicker, .section-kicker { margin: 0; color: var(--teal); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.13em; }
 
 .layer-switch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 2px 0 8px; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: #edf3f1; }
@@ -467,6 +484,17 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .maplibregl-ctrl-group { border-radius: 11px; overflow: hidden; box-shadow: 0 4px 16px rgba(10, 43, 52, 0.15); }
 .maplibregl-ctrl button { width: 42px; height: 42px; }
 .maplibregl-ctrl-attrib { font-size: 10px; }
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  min-height: 40px;
+  padding-right: 44px;
+  border-radius: 22px;
+}
+.maplibregl-ctrl-attrib.maplibregl-compact-show { padding-right: 48px; }
+.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+}
 
 @media (max-width: 760px) {
   .app-shell { grid-template-rows: 70px 1fr; }
@@ -480,6 +508,10 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
   .map-controls { top: 10px; left: 10px; width: calc(100vw - 20px); padding: 13px 14px; border-radius: 16px; }
   .control-heading { margin-bottom: 7px; }
   .control-heading h2 { font-size: 1rem; }
+  .controls-disclosure:not([hidden]) { display: inline-grid; }
+  .map-controls.is-collapsed .control-heading { align-items: center; margin-bottom: 0; }
+  .map-controls.is-collapsed .control-kicker,
+  .map-controls.is-collapsed .info-button { display: none; }
   .control-kicker { display: none; }
   .info-button { width: 44px; min-width: 44px; height: 44px; padding: 0; justify-content: center; }
   .info-button > span:last-child { display: none; }

@@ -94,6 +94,26 @@ export function createMapController({
     customAttribution: attributions.length ? attributions.join(" · ") : undefined,
   }), "bottom-right");
 
+  const attributionDisclosure = container.querySelector(".maplibregl-ctrl-attrib");
+  const attributionButton = container.querySelector(".maplibregl-ctrl-attrib-button");
+  const syncAttributionState = () => attributionButton?.setAttribute(
+    "aria-expanded",
+    String(attributionDisclosure?.classList.contains("maplibregl-compact-show") ?? false),
+  );
+  // MapLibre deliberately opens compact attribution on first render. Greenwave
+  // keeps the complete source list available, but starts with the compact
+  // information button so the map is not obscured.
+  attributionDisclosure?.removeAttribute("open");
+  attributionDisclosure?.classList.remove("maplibregl-compact-show");
+  syncAttributionState();
+  const attributionObserver = new MutationObserver(syncAttributionState);
+  if (attributionDisclosure) {
+    attributionObserver.observe(attributionDisclosure, {
+      attributes: true,
+      attributeFilter: ["class", "open"],
+    });
+  }
+
   const currentLayer = () => layers.get(activeLayerId);
 
   const updateMapAccessibility = () => {
@@ -280,6 +300,9 @@ export function createMapController({
     resetView() {
       fit(collectionBounds(geojson, activeMunicipality), { maxZoom: activeMunicipality ? 13.5 : 12 });
     },
+    refreshLayout() {
+      map.resize();
+    },
     async setLayer(layerId) {
       const requestedLayer = layers.get(layerId);
       if (!requestedLayer?.isAvailable()) return false;
@@ -310,6 +333,7 @@ export function createMapController({
       updateMapAccessibility();
     },
     destroy() {
+      attributionObserver.disconnect();
       popup.remove();
       map.remove();
     },

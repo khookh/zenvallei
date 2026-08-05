@@ -184,6 +184,106 @@ test("serves provider-neutral security headers", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true");
 });
 
+test("keeps complete map attribution collapsed until requested", async ({ page }) => {
+  const attribution = page.locator(".maplibregl-ctrl-attrib");
+  const attributionButton = page.locator(".maplibregl-ctrl-attrib-button");
+  const attributionDetails = page.locator(".maplibregl-ctrl-attrib-inner");
+
+  await expect(attribution).not.toHaveAttribute("open", "");
+  await expect(attribution).not.toHaveClass(/maplibregl-compact-show/);
+  await expect(attributionButton).toHaveAttribute("aria-expanded", "false");
+  await expect(attributionButton).toHaveCSS("width", "44px");
+  await expect(attributionButton).toHaveCSS("height", "44px");
+  await expect(attributionDetails).toBeHidden();
+
+  await attributionButton.click();
+  await expect(attribution).toHaveClass(/maplibregl-compact-show/);
+  await expect(attributionButton).toHaveAttribute("aria-expanded", "true");
+  await expect(attributionDetails).toBeVisible();
+  await expect(attributionDetails).toContainText("DOI");
+  await expect(attributionDetails).toContainText("Urban Atlas DOI");
+
+  await attributionButton.click();
+  await expect(attribution).not.toHaveClass(/maplibregl-compact-show/);
+  await expect(attributionButton).toHaveAttribute("aria-expanded", "false");
+  await expect(attributionDetails).toBeHidden();
+});
+
+test("discloses mobile map controls without changing exploration state", async ({ page }, testInfo) => {
+  const isMobileProject = testInfo.project.name === "mobile-chromium";
+  const controls = page.locator("#map-controls");
+  const controlsBody = page.locator("#map-controls-body");
+  const controlsToggle = page.locator("#map-controls-toggle");
+
+  await expect(controlsBody).toBeVisible();
+  if (!isMobileProject) {
+    await expect(controlsToggle).toBeHidden();
+    await expect(controls).not.toHaveClass(/is-collapsed/);
+    return;
+  }
+
+  await expect(controlsToggle).toBeVisible();
+  await expect(controlsToggle).toHaveCSS("width", "44px");
+  await expect(controlsToggle).toHaveCSS("height", "44px");
+  await expect(controlsToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(controlsToggle).toHaveAttribute("aria-label", "Kaartbediening inklappen");
+
+  await page.locator('[data-heat-metric="vulnerability"]').click();
+  await page.locator("#municipality-select").selectOption("Beersel");
+  const search = page.locator("#sector-search");
+  await search.fill("23003A001");
+  await search.press("Enter");
+  await page.locator('[data-layer="land-cover"]').click();
+  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
+  const stateBeforeCollapse = await page.evaluate(() => ({
+    activeLayer: window.__heatMap.getActiveLayer(),
+    heatMetric: window.__heatMap.getHeatMetric(),
+    selectedFilter: window.__heatMap.map.getFilter("heat-sector-selected"),
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }));
+
+  await controlsToggle.click();
+  await expect(controls).toHaveClass(/is-collapsed/);
+  await expect(controlsBody).toBeHidden();
+  await expect(page.locator("#map-controls-title")).toBeVisible();
+  await expect(page.locator("#about-button")).toBeHidden();
+  await expect(controlsToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(controlsToggle).toHaveAttribute("aria-label", "Kaartbediening uitklappen");
+  await expect(page.locator("#map-controls-toggle-icon")).toHaveText("+");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
+  expect(await page.evaluate(() => ({
+    activeLayer: window.__heatMap.getActiveLayer(),
+    heatMetric: window.__heatMap.getHeatMetric(),
+    selectedFilter: window.__heatMap.map.getFilter("heat-sector-selected"),
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }))).toEqual(stateBeforeCollapse);
+
+  const collapsedResults = await new AxeBuilder({ page })
+    .include("#map-controls")
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze();
+  expect(collapsedResults.violations).toEqual([]);
+
+  await page.locator("#language-toggle").click();
+  await expect(page.locator("#map-controls-title")).toHaveText("Where would you like to look?");
+  await expect(controlsToggle).toHaveAttribute("aria-label", "Expand map controls");
+  await controlsToggle.click();
+  await expect(controlsBody).toBeVisible();
+  await expect(controlsToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(controlsToggle).toHaveAttribute("aria-label", "Collapse map controls");
+  await expect(page.locator('[data-layer="land-cover"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
+  await expect(search).toHaveValue(/23003A001/);
+
+  const expandedResults = await new AxeBuilder({ page })
+    .include("#map-controls")
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze();
+  expect(expandedResults.violations).toEqual([]);
+});
+
 test("keeps local sectors usable when basemap tiles are unavailable", async ({ page }) => {
   await page.route("**/__test-tile.png", (route) => route.abort("failed"));
   await page.reload();
