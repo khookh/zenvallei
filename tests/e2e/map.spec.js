@@ -203,7 +203,7 @@ test("introduces the personal V0.1 project on every load", async ({ page }) => {
   await expect(page.locator("#project-intro-primary")).toBeFocused();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("#project-intro-language")).toHaveText("NL");
-  await expect(dialog).toContainText("Personal project · V0.1");
+  await expect(dialog).toContainText("Heat Resilience");
   await expect(dialog).toContainText("urban heat-island effect");
   await expect(dialog).toContainText("Flemish Government’s Department of Care");
   await expect(dialog).toContainText("large language models (LLMs)");
@@ -220,7 +220,7 @@ test("introduces the personal V0.1 project on every load", async ({ page }) => {
 
   await page.locator("#project-intro-language").click();
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(dialog).toContainText("Persoonlijk project · V0.1");
+  await expect(dialog).toContainText("Heat Resilience");
   await expect(dialog).toContainText("stedelijk hitte-eilandeffect");
   await expect(dialog).toContainText("grote taalmodellen (LLM’s)");
   await dialog.press("Escape");

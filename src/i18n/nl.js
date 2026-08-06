@@ -6,7 +6,7 @@ export const nl = Object.freeze({
   "brand.title": "Hittekwetsbaarheid",
   "language.switchEnglish": "Schakel naar Engels",
   "language.switchDutch": "Schakel naar Nederlands",
-  "intro.kicker": "Persoonlijk project · V0.1",
+  "intro.kicker": "Heat Resilience",
   "intro.title": "Over dit project",
   "intro.body1": "Dit is versie 0.1 van mijn persoonlijke project, dat hittekwetsbaarheid in de Zennevallei visualiseert en onderzoekt hoe die samenhangt met nabij groen en bodemverharding, twee factoren die het stedelijk hitte-eilandeffect beïnvloeden.",
   "intro.body2": "De hitte-indicatoren komen voorlopig uitsluitend van het Departement Zorg van de Vlaamse overheid; voor landbedekking, landgebruik en vegetatie experimenteer ik met Copernicus-gegevens, en ik werk aan de integratie van meer relevante gegevens uit Copernicus en andere bronnen.",

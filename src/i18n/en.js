@@ -6,7 +6,7 @@ export const en = Object.freeze({
   "brand.title": "Heat vulnerability",
   "language.switchEnglish": "Switch to English",
   "language.switchDutch": "Switch to Dutch",
-  "intro.kicker": "Personal project · V0.1",
+  "intro.kicker": "Heat Resilience",
   "intro.title": "About this project",
   "intro.body1": "This is version 0.1 of my personal project, which visualises heat vulnerability in Zennevallei and explores how it relates to nearby green space and soil sealing, two factors that influence the urban heat-island effect.",
   "intro.body2": "For now, the heat indicators come exclusively from the Flemish Government’s Department of Care; for land cover, land use and vegetation, I am experimenting with Copernicus data and working to incorporate more relevant data from Copernicus and other sources.",
