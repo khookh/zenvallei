@@ -355,13 +355,13 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveText("Urban Atlas 2021");
   await expect(page.locator('[data-layer="vegetation"]')).toHaveText("Vegetatie-indicatie 2020");
   expect(vegetationRasterRequests.get(page)).toBe(0);
-  await expect(page.locator("#dataset-status")).toContainText("154 Statbel-sectoren Â· scores 2026");
+  await expect(page.locator("#dataset-status")).toContainText("154 Statbel-sectoren · scores 2026");
   await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
   await expect(page.locator("#about-button")).toContainText("Uitleg");
-  await expect(page.locator("#layer-context-meta")).toHaveText("OfficiÃ«le broncijfers Â· 154 Statbel-sectoren Â· 2026");
+  await expect(page.locator("#layer-context-meta")).toHaveText("Officiële broncijfers · 154 Statbel-sectoren · 2026");
   await expect(page.locator("#layer-context-copy")).toContainText("Departement Zorg");
   await expect(page.locator("#layer-context-copy")).toContainText("wij tonen ze zonder herberekening");
-  await expect(page.locator(".control-attribution")).toContainText("Vlaamse overheid Â· Departement Zorg");
+  await expect(page.locator(".control-attribution")).toContainText("Vlaamse overheid · Departement Zorg");
   await expect(page.locator(".control-attribution")).toContainText("Statbel");
   const overlayRenderMs = await page.evaluate(() => performance.getEntriesByName("heat-overlay-first-render")[0]?.duration);
   // Shared GitHub runners have variable scheduling overhead. Keep the product's
@@ -380,10 +380,199 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(panel.locator(".summary-card").filter({ hasText: "Hitte" })).toContainText("7");
   await expect(panel.locator(".summary-card").filter({ hasText: "Kwetsbaarheid" })).toContainText("8");
   await expect(panel).toContainText("Relatieve rangschikking van het gemiddelde aantal hittegolfgraaddagen");
-  await expect(panel).toContainText("geen eenv…2768 tokens truncated…  await expect(page.locator("#legend-title")).toHaveText("Copernicus-landbedekking 2020");
-  await expect(page.locator("#dataset-status")).toContainText("Copernicus Â· raster 2020");
-  await expect(page.locator("#layer-context-meta")).toContainText("10 m-pixels Â· 2020");
-  await expect(page.locator("#layer-context-copy")).toContainText("officiÃ«le Copernicus LCM-10-classificatie");
+  await expect(panel).toContainText("geen eenvoudig gemiddelde");
+  await expect(panel).toContainText("Officieel broncijfer");
+  await panel.getByText("Bekijk alle kwetsbaarheidsindicatoren").click();
+  await expect(panel).toContainText("3,75");
+  await expect(panel).toContainText("gewicht 2");
+});
+
+test("switches between combined, heat and vulnerability scores without losing exploration state", async ({ page }) => {
+  await page.locator("#municipality-select").selectOption("Beersel");
+  const search = page.locator("#sector-search");
+  await search.fill("23003A001");
+  await search.press("Enter");
+  const panel = page.locator("#detail-panel");
+  await panel.locator('[data-section="indicators"] > summary').click();
+  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
+  const mapStateBefore = await page.evaluate(() => ({
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }));
+  const sectorColor = () => page.evaluate(() => {
+    const expression = window.__heatMap.map.getPaintProperty("heat-sectors-fill", "fill-color");
+    const index = expression.indexOf("23003A001");
+    return expression[index + 1];
+  });
+  expect(await sectorColor()).toBe("#B10064");
+
+  const mapSwitchDuration = await page.evaluate(() => {
+    window.__heatMap.setHeatMetric("final");
+    const started = performance.now();
+    window.__heatMap.setHeatMetric("heat");
+    return performance.now() - started;
+  });
+  expect(mapSwitchDuration).toBeLessThan(100);
+
+  const heatButton = await clickHeatMetric(page, "heat");
+  await expect(heatButton).toBeFocused();
+  await expect(heatButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid · Hitte");
+  await expect(page.locator("#dataset-status")).toContainText("hittescore 2026");
+  await expect(page.locator("#legend-title")).toHaveText("Hittescore");
+  await expect(page.locator("#layer-context-meta")).toContainText("Officiële hittescore");
+  await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000-2019");
+  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Hittekwetsbaarheid · Hitte in de Zennevallei");
+  await expect(page.locator("#selection-announcement")).toContainText("gewijzigd naar Hitte");
+  expect(await sectorColor()).toBe("#96004E");
+  await expect(panel.locator(".score-orb strong")).toHaveText("7");
+  await expect(panel.locator(".score-caption")).toContainText("Hitte: 7 van 10");
+  await expect(panel.locator(".summary-card").nth(0)).toContainText("Eindscore");
+  await expect(panel.locator(".summary-card").nth(0)).toContainText("6");
+  await expect(panel.locator(".summary-card").nth(1)).toContainText("Kwetsbaarheid");
+  await expect(panel.locator(".summary-card").nth(1)).toContainText("8");
+  await expect(panel.locator('[data-section="indicators"]')).toHaveAttribute("open", "");
+
+  if (!await page.locator('[data-panel-heat-metric="heat"]').isVisible()) {
+    const hoverPoint = await findUnobstructedSectorPoint(page, "heat-sectors-hit-area");
+    expect(hoverPoint).not.toBeNull();
+    await page.locator("#map canvas").hover({ position: hoverPoint });
+    await expect(page.locator(".sector-tooltip b")).toContainText("Hitte:");
+  }
+
+  const vulnerabilityButton = await clickHeatMetric(page, "vulnerability");
+  await expect(vulnerabilityButton).toBeFocused();
+  await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid · Kwetsbaarheid");
+  await expect(page.locator("#legend-title")).toHaveText("Kwetsbaarheidsscore");
+  expect(await sectorColor()).toBe("#7C003A");
+  await expect(panel.locator(".score-orb strong")).toHaveText("8");
+  await expect(panel.locator(".score-caption")).toContainText("Kwetsbaarheid: 8 van 10");
+  await expect(panel.locator(".summary-card").nth(0)).toContainText("Eindscore");
+  await expect(panel.locator(".summary-card").nth(0)).toContainText("6");
+  await expect(panel.locator(".summary-card").nth(1)).toContainText("Hitte");
+  await expect(panel.locator(".summary-card").nth(1)).toContainText("7");
+  await expect(panel.locator('[data-section="indicators"]')).toHaveAttribute("open", "");
+  expect(await page.evaluate(() => ({
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }))).toEqual(mapStateBefore);
+
+  await page.locator("#language-toggle").click();
+  await expect(page.locator("#active-layer-title")).toHaveText("Heat vulnerability · Vulnerability");
+  await expect(vulnerabilityButton).toHaveText("Vulnerability");
+  await expect(panel.locator(".score-caption")).toContainText("Vulnerability: 8 out of 10");
+
+  await page.locator('[data-layer="land-cover"]').click();
+  await expect(page.locator("#heat-metric-control")).toBeHidden();
+  await page.locator('[data-layer="heat"]').click();
+  await expect(page.locator("#heat-metric-control")).toBeVisible();
+  await expect(page.locator('[data-heat-metric="vulnerability"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(panel.locator(".score-orb strong")).toHaveText("8");
+
+  await page.reload();
+  await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
+  await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
+  await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid");
+});
+
+test("switches the complete interface to English without resetting exploration state", async ({ page }) => {
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
+  await expect(page).toHaveTitle("Zennevallei - heat resilience");
+  await expect(page.locator("#language-toggle")).toHaveText("EN");
+
+  await page.locator("#municipality-select").selectOption("Beersel");
+  await expect(page.locator("#visible-count")).toHaveText("39 sectoren");
+  const search = page.locator("#sector-search");
+  await search.fill("23003A001");
+  await search.press("Enter");
+  const panel = page.locator("#detail-panel");
+  await panel.locator('[data-section="indicators"] > summary').click();
+  await panel.locator('[data-section="ses"] > summary').click();
+  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
+  const mapStateBefore = await page.evaluate(() => ({
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }));
+
+  await page.locator("#language-toggle").click();
+  await expect(page.locator("#language-toggle")).toBeFocused();
+  await expect(page.locator("#language-toggle")).toHaveText("NL");
+  await expect(page.locator("#language-toggle")).toHaveAttribute("lang", "nl");
+  await expect(page.locator("#language-toggle")).toHaveAttribute("aria-label", "Switch to Dutch");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page).toHaveTitle("Zennevallei - heat resilience");
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /statistical sectors/);
+  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
+  await expect(page.locator("#visible-count")).toHaveText("39 sectors");
+  await expect(search).toHaveValue(/23003A001/);
+  await expect(search).toHaveAttribute("placeholder", "Name or sector code");
+  await expect(page.locator("#legend-content")).toContainText("Insufficient data");
+  await expect(page.locator("#layer-context-meta")).toHaveText("Official source values · 154 Statbel sectors · 2026");
+  await expect(page.locator("#layer-context-copy")).toContainText("we display them without recalculation");
+  await expect(page.locator(".control-attribution")).toContainText("Flemish Government · Department of Care");
+  await expect(panel).toContainText("Scores: Flemish Government · Department of Care (2026)");
+  await expect(page.locator(".maplibregl-ctrl-zoom-in")).toHaveAttribute("aria-label", "Zoom in");
+  await expect(page.locator("#selection-announcement")).toContainText("Details opened");
+  await expect(panel).toHaveAttribute("aria-hidden", "false");
+  await expect(panel).toContainText("Score 6 out of 10");
+  await expect(panel.locator(".summary-card").filter({ hasText: "Heat" })).toContainText("7");
+  await expect(panel.locator(".summary-card").filter({ hasText: "Vulnerability" })).toContainText("8");
+  await expect(panel).toContainText("3.75");
+  await expect(panel).toContainText("weight 2");
+  await expect(panel.locator('[data-section="indicators"]')).toHaveAttribute("open", "");
+  await expect(panel.locator('[data-section="ses"]')).toHaveAttribute("open", "");
+  const mapStateAfter = await page.evaluate(() => ({
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }));
+  expect(mapStateAfter).toEqual(mapStateBefore);
+
+  await page.locator("#language-toggle").click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
+  await expect(panel).toContainText("Score 6 van 10");
+  await page.reload();
+  await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
+  await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
+  await expect(page.locator("#language-toggle")).toHaveText("EN");
+});
+
+test("switches to Copernicus land cover and preserves the selected sector", async ({ page }) => {
+  await page.locator("#municipality-select").selectOption("Beersel");
+  const search = page.locator("#sector-search");
+  await search.fill("23003A001");
+  await search.press("Enter");
+  const panel = page.locator("#detail-panel");
+  await panel.locator('[data-section="indicators"] > summary').click();
+  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
+  const mapStateBefore = await page.evaluate(() => ({
+    center: window.__heatMap.map.getCenter().toArray(),
+    zoom: window.__heatMap.map.getZoom(),
+  }));
+
+  const landCoverButton = page.locator('[data-layer="land-cover"]');
+  await expect(landCoverButton).toHaveAttribute("aria-disabled", "false");
+  const switchStarted = await page.evaluate(() => performance.now());
+  await landCoverButton.click();
+  await page.waitForFunction(() => window.__heatMap.map.getLayer("land-cover-raster")
+    && window.__heatMap.map.getLayoutProperty("land-cover-raster", "visibility") === "visible");
+  const switchDuration = await page.evaluate((start) => performance.now() - start, switchStarted);
+  expect(switchDuration).toBeLessThan(1_000);
+  const subsequentSwitchDuration = await page.evaluate(async () => {
+    await window.__heatMap.setLayer("heat");
+    const started = performance.now();
+    await window.__heatMap.setLayer("land-cover");
+    return performance.now() - started;
+  });
+  expect(subsequentSwitchDuration).toBeLessThan(100);
+  await expect(landCoverButton).toBeFocused();
+  await expect(landCoverButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#legend-title")).toHaveText("Copernicus-landbedekking 2020");
+  await expect(page.locator("#dataset-status")).toContainText("Copernicus · raster 2020");
+  await expect(page.locator("#layer-context-meta")).toContainText("10 m-pixels · 2020");
+  await expect(page.locator("#layer-context-copy")).toContainText("officiële Copernicus LCM-10-classificatie");
   await expect(page.locator("#layer-context-copy")).toContainText("Wij knippen het raster uit");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Landbedekking 2020 in de Zennevallei");
   await expect(page.locator("#legend-content")).toContainText("Boombedekking");
@@ -465,8 +654,8 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await expect(atlasButton).toBeFocused();
   await expect(atlasButton).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#legend-title")).toHaveText("Urban Atlas-landbedekking 2021");
-  await expect(page.locator("#dataset-status")).toContainText("Copernicus Â· polygonen 2021");
-  await expect(page.locator("#layer-context-meta")).toContainText("geÃ¯nterpreteerde polygonen Â· 2021");
+  await expect(page.locator("#dataset-status")).toContainText("Copernicus · polygonen 2021");
+  await expect(page.locator("#layer-context-meta")).toContainText("geïnterpreteerde polygonen · 2021");
   await expect(page.locator("#layer-context-copy")).toContainText("landbedekking en landgebruik");
   await expect(page.locator("#layer-context-copy")).toContainText("Wij berekenen groenbedekking");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Urban Atlas 2021 in de Zennevallei");
@@ -553,7 +742,7 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   await expect(vegetationButton).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#active-layer-title")).toHaveText("Vegetatie-indicatie 2020");
   await expect(page.locator("#legend-title")).toHaveText("Vegetatie-indicatie 2020");
-  await expect(page.locator("#legend-note")).toHaveText("NDVI â‰¥ 0,697");
+  await expect(page.locator("#legend-note")).toHaveText("NDVI ≥ 0,697");
   await expect(page.locator("#legend-content")).toContainText("Waarschijnlijk begroeid");
   await expect(page.locator("#legend-content")).not.toContainText("Onder de NDVI-drempel");
   await expect(page.locator("#legend-content")).not.toContainText("Uitgesloten of geen waarneming");
@@ -621,7 +810,7 @@ test("filters all environmental overlays and opens area-weighted municipality su
 
   await page.locator('[data-layer="land-cover"]').click();
   await expect(panel).toHaveAttribute("aria-hidden", "false");
-  await expect(panel).toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
   await expect(panel).toContainText("61,22%");
   expect(await page.evaluate(() => window.__heatMap.map.getSource("land-cover-image").serialize().url)).toContain("land-cover-2020-beersel.png");
 
@@ -632,16 +821,16 @@ test("filters all environmental overlays and opens area-weighted municipality su
 
   await page.locator('[data-layer="vegetation"]').click();
   await expect(panel).toContainText("Hoeveel lijkt begroeid?");
-  await expect(panel).toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
   expect(await page.evaluate(() => window.__heatMap.map.getSource("likely-vegetation-image").serialize().url)).toContain("likely-vegetation-2020-beersel.png");
 
   const search = page.locator("#sector-search");
   await search.fill("23003A001");
   await search.press("Enter");
   await expect(panel).toContainText("23003A001");
-  await expect(panel).not.toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
+  await expect(panel).not.toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
   await page.locator("#panel-close").click();
-  await expect(panel).toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
 
   await page.locator('[data-layer="heat"]').click();
   await expect(panel).toHaveAttribute("aria-hidden", "true");
@@ -726,4 +915,3 @@ test("keeps the explanatory controls and panel free of automated accessibility v
     .analyze();
   expect(aboutResults.violations).toEqual([]);
 });
-
