@@ -195,7 +195,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
 });
 
-test("introduces the personal V0 project on every load", async ({ page }) => {
+test("introduces the personal V0.1 project on every load", async ({ page }) => {
   await page.reload();
   const dialog = page.locator("#project-intro");
   await expect(dialog).toBeVisible();
@@ -203,7 +203,7 @@ test("introduces the personal V0 project on every load", async ({ page }) => {
   await expect(page.locator("#project-intro-primary")).toBeFocused();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("#project-intro-language")).toHaveText("NL");
-  await expect(dialog).toContainText("personal V0 project");
+  await expect(dialog).toContainText("Personal project · V0.1");
   await expect(dialog).toContainText("urban heat-island effect");
   await expect(dialog).toContainText("Flemish Government’s Department of Care");
   await expect(dialog).toContainText("large language models (LLMs)");
@@ -220,7 +220,7 @@ test("introduces the personal V0 project on every load", async ({ page }) => {
 
   await page.locator("#project-intro-language").click();
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(dialog).toContainText("persoonlijke V0-project");
+  await expect(dialog).toContainText("Persoonlijk project · V0.1");
   await expect(dialog).toContainText("stedelijk hitte-eilandeffect");
   await expect(dialog).toContainText("grote taalmodellen (LLM’s)");
   await dialog.press("Escape");
@@ -940,7 +940,7 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   await expect(panel).toContainText("Official producer");
   await expect(panel).toContainText("What we add");
   await expect(panel).toContainText("OpenStreetMap is only the background map");
-  await expect(panel).toContainText("A personal and open V0 project");
+  await expect(panel).toContainText("A personal and open V0.1 project");
   await expect(panel).toContainText("large language models (LLMs)");
   await expect(panel.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
   await expect(panel).toContainText("This application uses no cookies, analytics, accounts or persistent identifiers");

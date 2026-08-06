@@ -50,10 +50,11 @@ describe("English–Dutch translations", () => {
 
   it("provides the complete project introduction in natural Dutch and English", () => {
     expect(t("intro.title", {}, "nl")).toBe("Over dit project");
-    expect(t("intro.body1", {}, "nl")).toContain("persoonlijke V0-project");
+    expect(t("intro.body1", {}, "nl")).toContain("versie 0.1 van mijn persoonlijke project");
     expect(t("intro.body2", {}, "nl")).toContain("Departement Zorg van de Vlaamse overheid");
     expect(t("intro.body3", {}, "nl")).toContain("grote taalmodellen (LLM’s)");
     expect(t("intro.title", {}, "en")).toBe("About this project");
+    expect(t("intro.body1", {}, "en")).toContain("version 0.1 of my personal project");
     expect(t("intro.body1", {}, "en")).toContain("urban heat-island effect");
     expect(t("intro.body2", {}, "en")).toContain("Copernicus and other sources");
     expect(t("intro.body3", {}, "en")).toContain("large language models (LLMs)");

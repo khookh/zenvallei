@@ -428,7 +428,7 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("Wat wij toevoegen");
     expect(panel.textContent).toContain("OpenStreetMap is alleen de achtergrondkaart");
     expect(panel.textContent).toContain("Waar nam Sentinel-2 een sterk vegetatiesignaal waar?");
-    expect(panel.textContent).toContain("Een persoonlijk en open V0-project");
+    expect(panel.textContent).toContain("Een persoonlijk en open V0.1-project");
     expect(panel.textContent).toContain("grote taalmodellen (LLM’s)");
     expect(panel.querySelector('a[href="https://github.com/khookh/zenvallei"]')?.getAttribute("rel")).toBe("noopener noreferrer");
     expect(panel.textContent).toContain("Deze toepassing gebruikt geen cookies, analytics, accounts of blijvende identificatoren");
@@ -442,7 +442,7 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("Statbel defines their codes and boundaries");
     expect(panel.textContent).toContain("Official producer");
     expect(panel.textContent).toContain("What we add");
-    expect(panel.textContent).toContain("A personal and open V0 project");
+    expect(panel.textContent).toContain("A personal and open V0.1 project");
     expect(panel.textContent).toContain("large language models (LLMs)");
     expect(panel.textContent).toContain("This application uses no cookies, analytics, accounts or persistent identifiers");
   });
