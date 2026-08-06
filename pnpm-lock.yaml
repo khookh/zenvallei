@@ -28,8 +28,8 @@ importers:
         specifier: 4.4.0
         version: 4.4.0
       geotiff:
-        specifier: ^2.1.4-beta.1
-        version: 2.1.4-beta.1
+        specifier: ^3.0.5
+        version: 3.0.5
       globals:
         specifier: ^17.9.0
         version: 17.9.0
@@ -41,7 +41,7 @@ importers:
         version: 0.15.7
       proj4:
         specifier: ^2.21.0
-        version: 2.21.0(geotiff@2.1.4-beta.1)
+        version: 2.21.0(geotiff@3.0.5)
       sharp:
         specifier: ^0.35.3
         version: 0.35.3
@@ -862,8 +862,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  geotiff@2.1.4-beta.1:
-    resolution: {integrity: sha512-3cW7V2XjnBWDJ8Gj/vCidvl3xiaN5c3az1Tfym9MBFq0LI3pi37YYWt9YxOjXF7njO135iKRGTJcbbsTiPdk2Q==}
+  geotiff@3.0.5:
+    resolution: {integrity: sha512-OWcL9S9+yDZ6iAlXMt32T1iwUApJM8UiD47xbm6ZP1h33d10fqkPs14EG/ttT5EnefpZSx3G15iDFC5FxUNUwA==}
     engines: {node: '>=10.19'}
 
   geotiff@3.1.0-beta.0:
@@ -2098,7 +2098,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  geotiff@2.1.4-beta.1:
+  geotiff@3.0.5:
     dependencies:
       '@petamoriken/float16': 3.9.3
       lerc: 3.0.0
@@ -2388,12 +2388,12 @@ snapshots:
 
   process-nextick-args@2.0.1: {}
 
-  proj4@2.21.0(geotiff@2.1.4-beta.1):
+  proj4@2.21.0(geotiff@3.0.5):
     dependencies:
       mgrs: 1.0.0
       wkt-parser: 1.5.6
     optionalDependencies:
-      geotiff: 2.1.4-beta.1
+      geotiff: 3.0.5
 
   protocol-buffers-schema@3.6.1: {}
 
