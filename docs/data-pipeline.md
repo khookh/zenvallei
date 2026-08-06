@@ -98,12 +98,14 @@ Outputs: one full PNG and seven municipality variants for 2020, plus `vegetation
 
 The browser PNGs colour only pixels classified as likely vegetated. Below-threshold pixels, agricultural exclusions, water, missing observations and areas outside the selected Statbel sectors are transparent. Their areas remain available in `vegetation.json` and the result panel.
 
-To inspect the cached GeoTIFFs directly in Python without changing the website:
+To download raw bands, calculate NDVI in Python and inspect them in VS Code:
 
 ```powershell
-pnpm playground:ndvi
+pnpm playground:setup
 pnpm playground:test
 ```
+
+The Python package requests raw B04, B08, SCL and dataMask bands and stores them under `.cache/vegetation/raw`. It calculates NDVI and masks observations locally. Notebook exports under `.cache/playground/web` are visible only through `pnpm dev:playground-map`; ordinary and Pages builds cannot serve them.
 
 See the [NDVI playground guide](../playground/ndvi/README.md).
 

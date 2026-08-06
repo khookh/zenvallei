@@ -16,7 +16,6 @@ test("loads the static map and switches its core presentation", async ({ page })
   await expect(page.locator("[data-layer]")).toHaveCount(4);
   await expect(page.locator("#project-intro")).toBeVisible();
   await page.locator("#project-intro-primary").click();
-  await page.locator("#language-toggle").click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.locator('[data-heat-metric="heat"]').click();
   await expect(page.locator("#active-layer-title")).toContainText("Heat");

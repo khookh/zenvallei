@@ -12,7 +12,11 @@ import {
 
 beforeEach(() => setLanguage(DEFAULT_LANGUAGE));
 
-describe("Dutch–English translations", () => {
+describe("English–Dutch translations", () => {
+  it("starts in English", () => {
+    expect(DEFAULT_LANGUAGE).toBe("en");
+    expect(getLanguage()).toBe("en");
+  });
   it("keeps both catalogues on the same stable contract", () => {
     expect(Object.keys(TRANSLATIONS.en).sort()).toEqual(Object.keys(TRANSLATIONS.nl).sort());
   });
@@ -26,10 +30,10 @@ describe("Dutch–English translations", () => {
     expect(Object.values(TRANSLATIONS.en).join(" ")).not.toMatch(/greenwave/i);
   });
 
-  it("falls back to Dutch for unsupported languages and unknown keys", () => {
-    expect(setLanguage("fr")).toBe("nl");
-    expect(getLanguage()).toBe("nl");
-    expect(t("brand.title")).toBe("Hittekwetsbaarheid");
+  it("falls back to English for unsupported languages and unknown keys", () => {
+    expect(setLanguage("fr")).toBe("en");
+    expect(getLanguage()).toBe("en");
+    expect(t("brand.title")).toBe("Heat vulnerability");
     expect(t("missing.translation.key")).toBe("missing.translation.key");
   });
 

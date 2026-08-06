@@ -5,6 +5,7 @@ export default [
   {
     ignores: [
       ".cache/**",
+      "**/.venv/**",
       "dist/**",
       "node_modules/**",
       "playwright-report/**",

@@ -14,7 +14,10 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await expect(page).toHaveURL(/\/zenvallei\/$/);
   await expect(page.locator("#project-intro")).toBeVisible();
   await expect(page.locator(".project-intro-heading img")).toHaveAttribute("src", "/zenvallei/assets/zennevallei-river-mark.png");
-  await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("[data-layer]")).toHaveCount(4);
+  await expect(page.locator('[data-layer="notebook-test"]')).toHaveCount(0);
+  await expect(page.locator("#visible-count")).toHaveText("154 sectors");
   await expect(page.locator("#map canvas")).toBeVisible();
   expect(ownResponses.some((url) => url.includes("urban-atlas.geojson"))).toBe(false);
   expect(ownResponses.some((url) => url.includes("land-cover-2020.png"))).toBe(false);

@@ -1,11 +1,12 @@
 param(
-    [switch]$Test
+    [switch]$Test,
+    [switch]$SetupOnly
 )
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $PlaygroundRoot = Join-Path $ProjectRoot "playground\ndvi"
-$EnvironmentRoot = Join-Path $ProjectRoot ".cache\ndvi-playground-venv"
+$EnvironmentRoot = Join-Path $PlaygroundRoot ".venv"
 $EnvironmentPython = Join-Path $EnvironmentRoot "Scripts\python.exe"
 $Requirements = Join-Path $PlaygroundRoot "requirements.lock.txt"
 $RequirementsStamp = Join-Path $EnvironmentRoot "greenwave-requirements.sha256"
@@ -39,11 +40,16 @@ if ($CurrentHash -ne $InstalledHash) {
     if ($LASTEXITCODE -ne 0) { throw "Could not install the NDVI playground dependencies." }
     & $EnvironmentPython -m pip install --disable-pip-version-check --no-deps --editable $PlaygroundRoot
     if ($LASTEXITCODE -ne 0) { throw "Could not install the Greenwave NDVI loader." }
-    & $EnvironmentPython -c "import dask, numpy, pandas, rasterio, xarray; import greenwave_ndvi"
+    & $EnvironmentPython -c "import dask, geopandas, matplotlib, nbclient, numpy, pandas, rasterio, requests, shapely, xarray; import greenwave_ndvi"
     if ($LASTEXITCODE -ne 0) {
         throw "The scientific Python stack could not be imported. The requirements stamp was not written; rerun after resolving the reported binary error."
     }
     Set-Content -LiteralPath $RequirementsStamp -Value $CurrentHash -Encoding ascii
+}
+
+if ($SetupOnly) {
+    Write-Host "NDVI playground ready. In VS Code, select: $EnvironmentPython"
+    exit 0
 }
 
 if ($Test) {

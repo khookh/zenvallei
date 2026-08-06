@@ -1,4 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
+import fs from "node:fs";
+import path from "node:path";
 
 const DEFAULT_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
@@ -51,8 +53,7 @@ export default defineConfig(({ mode }) => {
   // tile origin through the process environment. Explicit process values must
   // take precedence over values loaded from local .env files.
   const tileUrl = process.env.VITE_TILE_URL || environment.VITE_TILE_URL || DEFAULT_TILE_URL;
-  return {
-    plugins: [{
+  const plugins = [{
       name: "greenwave-security-meta",
       transformIndexHtml() {
         return [{
@@ -64,7 +65,29 @@ export default defineConfig(({ mode }) => {
           injectTo: "head-prepend",
         }];
       },
-    }],
+    }];
+  if (mode === "playground") {
+    const exportRoot = path.resolve(process.env.GREENWAVE_PLAYGROUND_WEB_ROOT || path.join(".cache", "playground", "web"));
+    const allowedFiles = new Set(["manifest.json", "test.png",
+      "test-beersel.png", "test-drogenbos.png", "test-halle.png", "test-linkebeek.png",
+      "test-pepingen.png", "test-sint-genesius-rode.png", "test-sint-pieters-leeuw.png"]);
+    plugins.push({
+      name: "greenwave-local-notebook-layer",
+      configureServer(server) {
+        server.middlewares.use("/__playground__", (request, response, next) => {
+          const name = decodeURIComponent((request.url ?? "").split("?")[0]).replace(/^\//, "");
+          if (!allowedFiles.has(name)) return next();
+          const target = path.join(exportRoot, name);
+          if (!fs.existsSync(target)) return next();
+          response.setHeader("Cache-Control", "no-store");
+          response.setHeader("Content-Type", name.endsWith(".json") ? "application/json; charset=utf-8" : "image/png");
+          fs.createReadStream(target).pipe(response);
+        });
+      },
+    });
+  }
+  return {
+    plugins,
     optimizeDeps: {
       exclude: ["maplibre-gl"],
     },

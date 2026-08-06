@@ -1,31 +1,61 @@
-# Greenwave NDVI playground
+# Standalone Sentinel-2 NDVI playground
 
-This isolated JupyterLab workspace reads the preparation-only Sentinel-2 NDVI GeoTIFFs in `.cache/vegetation`. It does not call Copernicus APIs and never exposes source rasters or credentials to the web application.
+This is a Python-only research workspace for VS Code or JupyterLab. It downloads raw Copernicus Sentinel-2 L2A bands, calculates NDVI locally, uses GeoPandas for spatial work and can export an experimental raster to the local map. Notebook users do not need to understand the web application or its JSON files.
 
-## Start
+## Prepare VS Code
 
-Double-click `Start NDVI Playground.cmd` in the repository root, or run:
+1. Double-click `Setup NDVI Playground.cmd` in the repository root.
+2. Open this folder in VS Code.
+3. Open `01_halle_ndvi_2020_2021.ipynb`.
+4. Choose `playground/ndvi/.venv/Scripts/python.exe` as the notebook kernel.
+5. Run the cells from top to bottom.
+
+`Start NDVI Playground.cmd` remains available if you prefer JupyterLab in the browser.
+
+## Copernicus credentials
+
+The first raw download needs a Sentinel Hub OAuth client. Either set temporary environment variables before opening VS Code:
 
 ```powershell
-pnpm playground:ndvi
+$env:CDSE_SH_CLIENT_ID = "your-client-id"
+$secureSecret = Read-Host "Sentinel Hub OAuth client secret" -AsSecureString
+$env:CDSE_SH_CLIENT_SECRET = [System.Net.NetworkCredential]::new("", $secureSecret).Password
 ```
 
-The first launch creates `.cache/ndvi-playground-venv`, installs pinned Python dependencies and opens JupyterLab on `127.0.0.1`. If the raw cache is missing, run the documented `vegetation:discover` and `vegetation:download` commands first.
+or let the notebook prompt for both values. The secret is hidden and never stored. Close VS Code and remove the temporary variables when the download finishes:
 
-## Loader examples
+```powershell
+Remove-Item Env:CDSE_SH_CLIENT_ID, Env:CDSE_SH_CLIENT_SECRET -ErrorAction SilentlyContinue
+```
+
+Raw GeoTIFFs are cached under `.cache/vegetation/raw`, so later runs do not need credentials.
+
+## Python API
 
 ```python
-from greenwave_ndvi import discover_observations, open_observation, open_stack
+from greenwave_ndvi import (
+    download_raw_observation, open_raw_observation, compute_ndvi,
+    municipality_bounds, crop_to_bounds, export_continuous_layer,
+)
 
-inventory = discover_observations()             # 12 selected annual dates
-all_cached = discover_observations(False)       # also downloaded alternatives
-scene = open_observation(2023)                  # eager y, x dataset
-annual = open_stack(chunks=(1, 512, 512))       # lazy time, y, x dataset
+path = download_raw_observation(2021)
+raw = open_raw_observation(path)
+ndvi = compute_ndvi(raw)
+halle = crop_to_bounds(ndvi, municipality_bounds("Halle", padding_m=1000))
+export_continuous_layer(halle, title="My NDVI test", units="NDVI")
 ```
 
-Values outside the 154-sector union and invalid Sentinel-2 observations are masked. The stack retains acquisition dates, the 10 m EPSG:32631 grid and a validity layer.
+The public helpers return ordinary `Path`, GeoPandas, Xarray and Matplotlib-compatible objects. Internal source-selection and export manifests are handled by the package.
 
-Notebook 01 explores observations and time series. Notebook 02 prepares spatially separated arrays for future one-class classification experiments. It deliberately does not choose or train an autoencoder.
+## Show an export on the local map
+
+After running an export cell:
+
+```powershell
+pnpm dev:playground-map
+```
+
+Open `http://127.0.0.1:4173/` and choose **Test** under **Land use and green cover**. This mode serves only the generated manifest and PNG files. Raw Sentinel bands and notebook outputs are ignored and never enter the GitHub Pages build.
 
 ## Verify
 
@@ -33,4 +63,4 @@ Notebook 01 explores observations and time series. Notebook 02 prepares spatiall
 pnpm playground:test
 ```
 
-Notebook exports belong under `.cache/playground` and must not be committed.
+Notebook 01 performs the complete 2020/2021 Halle comparison. Notebook 02 prepares annual time-series arrays for future one-class classification experiments without selecting a model.

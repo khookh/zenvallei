@@ -39,6 +39,7 @@ The map controller deliberately does not decide what an Urban Atlas, LCM, Sentin
 - Raster layers contain a full Zennevallei image and municipality-specific transparent variants. Vector layers use the same municipality filter directly.
 - Runtime code never imports preparation modules.
 - Preparation modules never import UI code.
+- The standalone Python playground is a separate research boundary. It may read official sources and Statbel geometry, but its raw caches and experimental Test exports remain outside `public` and `dist`.
 
 Every JSON manifest has a `schemaVersion`. Missing versions are temporarily interpreted as version 1 for older generated files. Unsupported versions fail during data loading with a readable error.
 

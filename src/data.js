@@ -19,7 +19,18 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       return { available: false, loadError: error.message };
     }
   };
-  const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation] = await Promise.all([
+  const loadNotebookTest = async () => {
+    if (import.meta.env.MODE !== "playground") return null;
+    try {
+      const response = await fetch(`${prefix}__playground__/manifest.json`, { cache: "no-store" });
+      if (response.status === 404) return { available: false, missing: true };
+      if (!response.ok) throw new Error(`manifest.json: HTTP ${response.status}`);
+      return { ...(await response.json()), available: true };
+    } catch (error) {
+      return { available: false, loadError: error.message };
+    }
+  };
+  const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation, notebookTest] = await Promise.all([
     loadJson("sectors.geojson"),
     loadJson("scores.json"),
     loadJson("methodology.json"),
@@ -27,6 +38,7 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
     loadOptionalJson("land-cover.json"),
     loadOptionalJson("urban-atlas.json", { tolerateErrors: true }),
     loadOptionalJson("vegetation.json", { tolerateErrors: true }),
+    loadNotebookTest(),
   ]);
   const resolveAssetUrl = (assetUrl) => {
     if (!assetUrl || /^(?:https?:)?\/\//.test(assetUrl)) return assetUrl;
@@ -46,9 +58,19 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       year.rasterVariants[key] = resolveAssetUrl(value);
     });
   });
+  const resolveNotebookUrl = (assetUrl) => {
+    if (!assetUrl || !/^[a-z0-9-]+\.png$/i.test(assetUrl)) return null;
+    return `${prefix}__playground__/${assetUrl}`;
+  };
+  if (notebookTest?.available) {
+    notebookTest.imageUrl = resolveNotebookUrl(notebookTest.imageUrl);
+    Object.entries(notebookTest.rasterVariants ?? {}).forEach(([key, value]) => {
+      notebookTest.rasterVariants[key] = resolveNotebookUrl(value);
+    });
+  }
   validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation });
   addMunicipalityStatistics({ scores: scorePayload.sectors, landCover, urbanAtlas, vegetation });
-  return { geojson, scores: scorePayload.sectors, methodology, provenance, landCover, urbanAtlas, vegetation };
+  return { geojson, scores: scorePayload.sectors, methodology, provenance, landCover, urbanAtlas, vegetation, notebookTest };
 }
 
 export function sectorsForMunicipality(scores, municipality = "") {

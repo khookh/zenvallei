@@ -191,6 +191,8 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
   await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
   await page.locator("#project-intro-primary").click();
+  await page.locator("#language-toggle").click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
 });
 
 test("introduces the personal V0 project on every load", async ({ page }) => {
@@ -199,12 +201,14 @@ test("introduces the personal V0 project on every load", async ({ page }) => {
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute("open", "");
   await expect(page.locator("#project-intro-primary")).toBeFocused();
-  await expect(dialog).toContainText("persoonlijke V0-project");
-  await expect(dialog).toContainText("stedelijk hitte-eilandeffect");
-  await expect(dialog).toContainText("Departement Zorg van de Vlaamse overheid");
-  await expect(dialog).toContainText("grote taalmodellen (LLM’s)");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#project-intro-language")).toHaveText("NL");
+  await expect(dialog).toContainText("personal V0 project");
+  await expect(dialog).toContainText("urban heat-island effect");
+  await expect(dialog).toContainText("Flemish Government’s Department of Care");
+  await expect(dialog).toContainText("large language models (LLMs)");
   await expect(dialog.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
-  await expect(dialog.locator('a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("Stuur feedback");
+  await expect(dialog.locator('a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("Send feedback");
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
   await expect(page.locator('[data-layer="heat"]')).toHaveAttribute("aria-pressed", "true");
 
@@ -215,10 +219,10 @@ test("introduces the personal V0 project on every load", async ({ page }) => {
   expect(accessibilityResults.violations).toEqual([]);
 
   await page.locator("#project-intro-language").click();
-  await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(dialog).toContainText("personal V0 project");
-  await expect(dialog).toContainText("urban heat-island effect");
-  await expect(dialog).toContainText("large language models (LLMs)");
+  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
+  await expect(dialog).toContainText("persoonlijke V0-project");
+  await expect(dialog).toContainText("stedelijk hitte-eilandeffect");
+  await expect(dialog).toContainText("grote taalmodellen (LLM’s)");
   await dialog.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(page.locator("#about-button")).toBeFocused();
@@ -230,6 +234,7 @@ test("introduces the personal V0 project on every load", async ({ page }) => {
 
   await page.reload();
   await expect(dialog).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.locator("#project-intro-close").click();
   await expect(dialog).not.toBeVisible();
 });
@@ -346,7 +351,7 @@ test("keeps local sectors usable when basemap tiles are unavailable", async ({ p
   await page.route("**/__test-tile.png", (route) => route.abort("failed"));
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
-  await expect(page.locator("#dataset-status")).toContainText("achtergrondkaart tijdelijk niet beschikbaar");
+  await expect(page.locator("#dataset-status")).toContainText("background temporarily unavailable");
   await expect(page.locator("#sector-options option")).toHaveCount(154);
 
   const expectedNetworkErrors = runtimeErrors.get(page);
@@ -379,9 +384,9 @@ test("matches the refined hierarchy in Dutch and English", async ({ page }) => {
     .toHaveScreenshot("land-cover-summary-nl.png", { animations: "disabled" });
 
   await page.reload();
-  await expect(page.locator("#project-intro")).toHaveScreenshot("project-intro-nl.png", { animations: "disabled" });
-  await page.locator("#project-intro-language").click();
   await expect(page.locator("#project-intro")).toHaveScreenshot("project-intro-en.png", { animations: "disabled" });
+  await page.locator("#project-intro-language").click();
+  await expect(page.locator("#project-intro")).toHaveScreenshot("project-intro-nl.png", { animations: "disabled" });
 });
 
 test("loads all sectors and opens a complete score breakdown from search", async ({ page }) => {
@@ -519,9 +524,9 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await page.reload();
   await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
   await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
-  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid");
+  await expect(page.locator("#active-layer-title")).toHaveText("Heat vulnerability");
 });
 
 test("switches the complete interface to English without resetting exploration state", async ({ page }) => {
@@ -582,8 +587,8 @@ test("switches the complete interface to English without resetting exploration s
   await page.reload();
   await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
   await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
-  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(page.locator("#language-toggle")).toHaveText("EN");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#language-toggle")).toHaveText("NL");
 });
 
 test("switches to Copernicus land cover and preserves the selected sector", async ({ page }) => {

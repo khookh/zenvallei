@@ -74,7 +74,7 @@ const application = {
 };
 
 const activeLayer = () => application.layers?.get(application.activeLayer);
-const supportsMunicipalitySummary = () => ["land-cover", "urban-atlas", "vegetation"].includes(application.activeLayer);
+const supportsMunicipalitySummary = () => Boolean(activeLayer()?.supportsMunicipalitySummary);
 
 function updateMapControlsDisclosure({ refreshMap = true } = {}) {
   const collapsed = application.mapControlsCollapsed;
@@ -386,7 +386,10 @@ async function start() {
   performance.mark("heat-map-start");
   const data = await loadApplicationData();
   application.data = data;
-  application.layers = buildLayerRegistry(data, { initialHeatMetric: application.activeHeatMetric });
+  application.layers = buildLayerRegistry(data, {
+    initialHeatMetric: application.activeHeatMetric,
+    playground: import.meta.env.MODE === "playground",
+  });
   createLayerControls();
   updateLayerControls();
   updateSecondaryControls();

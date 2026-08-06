@@ -3,6 +3,7 @@ import { createHeatLayer } from "./heat-layer.js";
 import { createLandCoverLayer } from "./land-cover-layer.js";
 import { createUrbanAtlasLayer } from "./urban-atlas-layer.js";
 import { createVegetationLayer } from "./vegetation-layer.js";
+import { createNotebookTestLayer } from "./notebook-test-layer.js";
 import { validateLayerCategories } from "./categories.js";
 
 /**
@@ -10,7 +11,7 @@ import { validateLayerCategories } from "./categories.js";
  * require changes to the application or MapLibre controller.
  */
 export function buildLayerRegistry(data, options = {}) {
-  return validateLayerCategories(createLayerRegistry([
+  const layers = [
     createHeatLayer({
       scores: data.scores,
       methodology: data.methodology,
@@ -19,5 +20,7 @@ export function buildLayerRegistry(data, options = {}) {
     createLandCoverLayer({ landCover: data.landCover }),
     createUrbanAtlasLayer({ urbanAtlas: data.urbanAtlas }),
     createVegetationLayer({ vegetation: data.vegetation }),
-  ]));
+  ];
+  if (options.playground) layers.push(createNotebookTestLayer({ notebookTest: data.notebookTest }));
+  return validateLayerCategories(createLayerRegistry(layers));
 }

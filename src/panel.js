@@ -1,4 +1,4 @@
-import { formatDate, formatNumber, t } from "./i18n.js";
+import { formatDate, formatNumber, getLanguage, t } from "./i18n.js";
 import {
   DEFAULT_HEAT_METRIC,
   HEAT_METRICS,
@@ -498,6 +498,51 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
     </div>`;
 }
 
+function translatedNotebookValue(value, fallback = "") {
+  if (typeof value === "string") return value;
+  return value?.[getLanguage()] ?? value?.en ?? value?.nl ?? fallback;
+}
+
+function renderNotebookTestRecord(model) {
+  const { record, manifest, stats } = model;
+  const title = translatedNotebookValue(manifest.title, t("layers.notebookTest"));
+  const description = translatedNotebookValue(manifest.description);
+  const areaCards = stats ? `
+    <div class="summary-grid notebook-test-area-grid">
+      ${metricCard("notebookTest.validArea", `${formatNumber(stats.validAreaHa)} ha`)}
+      ${metricCard("notebookTest.sectorArea", `${formatNumber(stats.sectorAreaHa)} ha`)}
+    </div>` : "";
+  const continuous = stats && manifest.kind === "continuous" ? `
+    <div class="summary-grid notebook-test-stat-grid">
+      ${metricCard("notebookTest.median", `${formatNumber(stats.median, 4)} ${escapeHtml(manifest.units ?? "")}`.trim())}
+      ${metricCard("notebookTest.mean", `${formatNumber(stats.mean, 4)} ${escapeHtml(manifest.units ?? "")}`.trim())}
+      ${metricCard("notebookTest.minimum", formatNumber(stats.minimum, 4))}
+      ${metricCard("notebookTest.maximum", formatNumber(stats.maximum, 4))}
+    </div>` : "";
+  const categorical = stats && manifest.kind === "categorical" ? `
+    <section class="notebook-test-classes">
+      <h3>${escapeHtml(t("notebookTest.classBreakdown"))}</h3>
+      ${(stats.classes ?? []).map((entry) => {
+        const definition = manifest.legend.items.find((item) => String(item.value) === String(entry.value));
+        return `
+          <div class="class-row">
+            <span class="class-swatch" style="--swatch:${escapeHtml(definition?.color ?? "#777")}"></span>
+            <span>${escapeHtml(translatedNotebookValue(definition?.label, String(entry.value)))}</span>
+            <strong>${escapeHtml(`${formatNumber(entry.areaHa)} ha · ${formatNumber(entry.percentage)}%`)}</strong>
+          </div>`;
+      }).join("")}
+    </section>` : "";
+  return `
+    <article class="panel-article notebook-test-panel">
+      <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+      <p class="panel-intro"><strong>${escapeHtml(title)}</strong></p>
+      ${description ? `<p>${escapeHtml(description)}</p>` : ""}
+      <p class="notebook-test-note">${escapeHtml(t("notebookTest.localOnly"))}</p>
+      ${stats ? `${areaCards}${continuous}${categorical}` : `<p>${escapeHtml(t("notebookTest.noData"))}</p>`}
+    </article>`;
+}
+
 function aboutLayerCard(key, label) {
   return `<article>
     <span class="about-layer-tag">${escapeHtml(label)}</span>
@@ -634,6 +679,7 @@ export function renderSectorPanelModel(model) {
   if (model.template === "vegetation") {
     return renderVegetationRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
   }
+  if (model.template === "notebook-test") return renderNotebookTestRecord(model);
   if (model.template === "metric-summary") return renderMetricSummary(model);
   throw new Error(`Unknown sector panel template '${model.template}'.`);
 }

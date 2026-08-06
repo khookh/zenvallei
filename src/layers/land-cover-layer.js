@@ -21,6 +21,7 @@ export function createLandCoverLayer({ landCover }) {
   return defineLayer({
     id: "land-cover",
     categoryId: "land-green",
+    supportsMunicipalitySummary: true,
     isAvailable: () => Boolean(landCover?.raster?.available && landCover.raster.imageUrl),
     getUnavailableReasonKey: () => "layers.landCoverUnavailable",
     getLabel: () => t("layers.landCover", { year: year() }),

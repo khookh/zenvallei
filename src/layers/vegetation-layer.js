@@ -25,6 +25,7 @@ export function createVegetationLayer({ vegetation }) {
   return defineLayer({
     id: "vegetation",
     categoryId: "land-green",
+    supportsMunicipalitySummary: true,
     isAvailable: () => Boolean(vegetation?.available && imageUrl()),
     getUnavailableReasonKey: () => vegetation?.loadError
       ? "layers.vegetationLoadError"

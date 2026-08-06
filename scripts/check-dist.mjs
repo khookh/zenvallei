@@ -12,6 +12,7 @@ const forbiddenPatterns = [
   { label: "client secret", pattern: /client_secret\s*[=:]\s*["'][^"']+/i },
 ];
 const forbiddenSecretFile = /(?:^|\/)(?:git_passphrase\.txt|credentials?\.(?:json|txt)|passphrases?\.(?:json|txt)|secrets?\.env)$/i;
+const forbiddenExperimentalAsset = /(?:^|\/)(?:__playground__|notebook-test)(?:\/|$)|(?:^|\/)test(?:-[a-z0-9-]+)?\.png$/i;
 
 async function filesBelow(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -25,6 +26,7 @@ const files = await filesBelow(distRoot);
 for (const file of files) {
   const relativePath = path.relative(distRoot, file).replaceAll("\\", "/");
   if (forbiddenSecretFile.test(relativePath)) throw new Error(`${relativePath} is a forbidden secret filename.`);
+  if (forbiddenExperimentalAsset.test(relativePath)) throw new Error(`${relativePath} is a local notebook export and must not be distributed.`);
 }
 for (const file of files.filter((entry) => textExtensions.has(path.extname(entry)))) {
   const contents = await fs.readFile(file, "utf8");

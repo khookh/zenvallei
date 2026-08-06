@@ -2,6 +2,8 @@
 
 Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. It combines official heat-vulnerability scores from the Government of Flanders with Statbel boundaries, Copernicus LCM-10, Copernicus Urban Atlas, a Sentinel-2 vegetation indication and an OpenStreetMap background.
 
+The interface starts in English. The `NL` button switches the complete interface to Dutch for the current page only.
+
 The application uses vanilla JavaScript, Vite and MapLibre GL JS. It has no backend, accounts, cookies, browser storage, analytics or live score calculation.
 
 Public POC: <https://khookh.github.io/zenvallei/>
@@ -65,11 +67,13 @@ See [Data pipeline](docs/data-pipeline.md) for complete examples and validation 
 Double-click `Start NDVI Playground.cmd`, or run:
 
 ```powershell
-pnpm playground:ndvi       # isolated JupyterLab on 127.0.0.1
-pnpm playground:test       # loader and real-cache smoke tests
+pnpm playground:setup      # prepare the Python environment for VS Code
+pnpm playground:ndvi       # optional JupyterLab on 127.0.0.1
+pnpm dev:playground-map    # show the latest notebook export as Test
+pnpm playground:test       # Python workflow and export tests
 ```
 
-The playground reads the preparation-only GeoTIFFs under `.cache/vegetation`. It does not expose them to the web application, which currently publishes only the 2020 likely-vegetation observation. See [NDVI playground](playground/ndvi/README.md) for copyable Python examples.
+The playground downloads raw B04, B08, SCL and data-mask bands, calculates NDVI in Python and can export an ignored local Test layer. Raw files and experiments are never published; the public application still contains only the 2020 likely-vegetation observation. See [NDVI playground](playground/ndvi/README.md) for the VS Code workflow and copyable examples.
 
 ## Project guides
 

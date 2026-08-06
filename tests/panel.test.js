@@ -447,6 +447,40 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("This application uses no cookies, analytics, accounts or persistent identifiers");
   });
 
+  it("renders continuous and categorical local notebook summaries without frontend-specific data", () => {
+    const record = records["23003A001"];
+    const continuous = renderSectorPanelModel({
+      template: "notebook-test",
+      record,
+      manifest: {
+        kind: "continuous", units: "NDVI",
+        title: { en: "Halle NDVI test", nl: "Halle NDVI-test" },
+        description: { en: "Python output", nl: "Python-uitvoer" },
+      },
+      stats: { validAreaHa: 12.5, sectorAreaHa: 20, minimum: -0.1, maximum: 0.9, mean: 0.55, median: 0.6 },
+    });
+    expect(continuous).toContain("Halle NDVI-test");
+    expect(continuous).toContain("Mediaan");
+    expect(continuous).toContain("0,6 NDVI");
+    expect(continuous).toContain("maakt geen deel uit van het publieke dashboard");
+
+    setLanguage("en");
+    const categorical = renderSectorPanelModel({
+      template: "notebook-test",
+      record,
+      manifest: {
+        kind: "categorical", units: "",
+        title: "Classification test", description: "Python output",
+        legend: { items: [{ value: 1, label: "Class one", color: "#238b45" }] },
+      },
+      stats: { validAreaHa: 10, sectorAreaHa: 20, classes: [{ value: 1, areaHa: 10, percentage: 100 }] },
+    });
+    expect(categorical).toContain("Class breakdown");
+    expect(categorical).toContain("Class one");
+    expect(categorical).toContain("10 ha · 100%");
+    expect(categorical).toContain("not part of the public dashboard");
+  });
+
   it("closes on Escape and reports the close action", () => {
     const { api, onClose } = fixture();
     api.open(records["23003A001"]);

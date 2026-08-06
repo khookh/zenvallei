@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: "cross-browser.smoke.js",
+  testIgnore: ["cross-browser.smoke.js", "playground.spec.js"],
   fullyParallel: false,
   workers: 1,
   retries: 0,

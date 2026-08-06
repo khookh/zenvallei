@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,32 +7,32 @@
     <meta name="theme-color" content="#0b2f3a" />
     <meta
       name="description"
-      content="Interactieve kaart van hittekwetsbaarheid, landbedekking, landgebruik en vegetatie voor de 154 Statbel-sectoren in de Zennevallei."
+      content="Interactive map of heat vulnerability, land cover, land use and vegetation for the 154 Statbel sectors in Zennevallei."
     />
     <title>Zennevallei - heat resilience</title>
   </head>
   <body>
-    <a class="skip-link" href="#map-controls" data-i18n="skip.controls">Ga naar de kaartbediening</a>
+    <a class="skip-link" href="#map-controls" data-i18n="skip.controls">Skip to map controls</a>
     <div class="app-shell">
       <header class="app-header">
         <img class="brand-mark" src="%BASE_URL%assets/zennevallei-river-mark.png" alt="" aria-hidden="true" />
         <div class="header-copy">
           <p class="eyebrow" data-i18n="brand.eyebrow">Zennevallei</p>
-          <h1 id="active-layer-title" data-i18n="brand.title">Hittekwetsbaarheid</h1>
+          <h1 id="active-layer-title" data-i18n="brand.title">Heat vulnerability</h1>
         </div>
         <div class="header-actions">
           <div class="header-status" id="dataset-status" aria-live="polite">
             <span class="status-dot" aria-hidden="true"></span>
-            <span data-i18n="loading.data">Gegevens laden…</span>
+            <span data-i18n="loading.data">Loading data…</span>
           </div>
           <button
             class="language-toggle"
             id="language-toggle"
             type="button"
-            lang="en"
-            aria-label="Schakel naar Engels"
-            title="Schakel naar Engels"
-          >EN</button>
+            lang="nl"
+            aria-label="Switch to Dutch"
+            title="Switch to Dutch"
+          >NL</button>
         </div>
       </header>
 
@@ -41,20 +41,20 @@
           id="map"
           class="map"
           role="region"
-          aria-label="Interactieve kaart van de hittekwetsbaarheid in de Zennevallei"
+          aria-label="Interactive heat-vulnerability map of Zennevallei"
           data-i18n-aria-label="map.region"
         ></div>
 
-        <section class="map-controls" id="map-controls" aria-label="Kaartbediening" data-i18n-aria-label="controls.region">
+        <section class="map-controls" id="map-controls" aria-label="Map controls" data-i18n-aria-label="controls.region">
           <div class="control-heading">
             <div>
-              <p class="control-kicker" data-i18n="controls.kicker">Verken de buurt</p>
-              <h2 id="map-controls-title" data-i18n="controls.title">Waar wil je kijken?</h2>
+              <p class="control-kicker" data-i18n="controls.kicker">Explore the area</p>
+              <h2 id="map-controls-title" data-i18n="controls.title">What would you like to look at?</h2>
             </div>
             <div class="control-heading-actions">
-              <button class="info-button" id="about-button" type="button" aria-label="Open uitleg over deze kaart" data-i18n-aria-label="controls.about">
+              <button class="info-button" id="about-button" type="button" aria-label="Open an explanation of this map" data-i18n-aria-label="controls.about">
                 <span class="info-glyph" aria-hidden="true">i</span>
-                <span data-i18n="controls.aboutShort">Uitleg</span>
+                <span data-i18n="controls.aboutShort">About</span>
               </button>
               <button
                 class="controls-disclosure"
@@ -62,8 +62,8 @@
                 type="button"
                 aria-expanded="true"
                 aria-controls="map-controls-body"
-                aria-label="Kaartbediening inklappen"
-                title="Kaartbediening inklappen"
+                aria-label="Collapse map controls"
+                title="Collapse map controls"
                 hidden
               >
                 <span id="map-controls-toggle-icon" aria-hidden="true">−</span>
@@ -72,24 +72,24 @@
           </div>
 
           <div class="map-controls-body" id="map-controls-body">
-          <div class="layer-switch" id="layer-switch" aria-label="Kaartlagen" data-i18n-aria-label="layers.region"></div>
+          <div class="layer-switch" id="layer-switch" aria-label="Map layer" data-i18n-aria-label="layers.region"></div>
           <div class="heat-metric-control" id="heat-metric-control">
-            <p data-i18n="heatMetric.prompt">Toon score</p>
-            <div class="heat-metric-switch" role="group" aria-label="Hittekwetsbaarheidsscore" data-i18n-aria-label="heatMetric.region">
-              <button class="heat-metric-button is-active" type="button" data-heat-metric="final" aria-pressed="true" data-i18n="heatMetric.final">Eindscore</button>
-              <button class="heat-metric-button" type="button" data-heat-metric="heat" aria-pressed="false" data-i18n="heatMetric.heat">Hitte</button>
-              <button class="heat-metric-button" type="button" data-heat-metric="vulnerability" aria-pressed="false" data-i18n="heatMetric.vulnerability">Kwetsbaarheid</button>
+            <p data-i18n="heatMetric.prompt">Show score</p>
+            <div class="heat-metric-switch" role="group" aria-label="Heat vulnerability score" data-i18n-aria-label="heatMetric.region">
+              <button class="heat-metric-button is-active" type="button" data-heat-metric="final" aria-pressed="true" data-i18n="heatMetric.final">Combined</button>
+              <button class="heat-metric-button" type="button" data-heat-metric="heat" aria-pressed="false" data-i18n="heatMetric.heat">Heat</button>
+              <button class="heat-metric-button" type="button" data-heat-metric="vulnerability" aria-pressed="false" data-i18n="heatMetric.vulnerability">Vulnerability</button>
             </div>
           </div>
           <div class="vegetation-year-control" id="vegetation-year-control" hidden>
             <div class="vegetation-year-heading">
-              <label for="vegetation-year-slider" data-i18n="vegetation.yearPrompt">Opnamejaar</label>
+              <label for="vegetation-year-slider" data-i18n="vegetation.yearPrompt">Observation year</label>
               <output id="vegetation-year-output" for="vegetation-year-slider">2023</output>
             </div>
             <div class="vegetation-year-slider-row">
-              <button id="vegetation-year-previous" type="button" aria-label="Vorig jaar" data-i18n-aria-label="vegetation.previousYear">‹</button>
+              <button id="vegetation-year-previous" type="button" aria-label="Previous observation year" data-i18n-aria-label="vegetation.previousYear">‹</button>
               <input id="vegetation-year-slider" type="range" min="2023" max="2023" step="1" value="2023" aria-describedby="vegetation-year-date" />
-              <button id="vegetation-year-next" type="button" aria-label="Volgend jaar" data-i18n-aria-label="vegetation.nextYear">›</button>
+              <button id="vegetation-year-next" type="button" aria-label="Next observation year" data-i18n-aria-label="vegetation.nextYear">›</button>
             </div>
             <p id="vegetation-year-date" class="vegetation-year-date"></p>
           </div>
@@ -99,14 +99,14 @@
           </section>
           <p class="layer-help" id="layer-help" aria-live="polite"></p>
 
-          <label class="field-label" for="municipality-select" data-i18n="controls.municipality">Gemeente</label>
+          <label class="field-label" for="municipality-select" data-i18n="controls.municipality">Municipality</label>
           <div class="select-wrap">
             <select id="municipality-select">
-              <option value="" data-i18n="controls.allMunicipalities">Hele Zennevallei</option>
+              <option value="" data-i18n="controls.allMunicipalities">Entire Zennevallei</option>
             </select>
           </div>
 
-          <label class="field-label" for="sector-search" data-i18n="controls.sectorSearch">Zoek een statistische sector</label>
+          <label class="field-label" for="sector-search" data-i18n="controls.sectorSearch">Search for a statistical sector</label>
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
@@ -114,24 +114,24 @@
               type="search"
               list="sector-options"
               autocomplete="off"
-              placeholder="Naam of sectorcode"
+              placeholder="Name or sector code"
               data-i18n-placeholder="controls.searchPlaceholder"
               aria-describedby="sector-search-help"
             />
             <datalist id="sector-options"></datalist>
           </div>
-          <p class="field-help" id="sector-search-help" data-i18n="controls.searchHelp">Selecteer uit de lijst of druk Enter na een sectorcode.</p>
+          <p class="field-help" id="sector-search-help" data-i18n="controls.searchHelp">Choose from the list or press Enter after entering a sector code.</p>
 
           <div class="control-actions">
             <button class="secondary-button" id="reset-view" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68" /></svg>
-              <span data-i18n="controls.reset">Overzicht</span>
+              <span data-i18n="controls.reset">Overview</span>
             </button>
-            <span id="visible-count" class="visible-count">Sectoren laden…</span>
+            <span id="visible-count" class="visible-count">Loading sectors…</span>
           </div>
           <p class="control-attribution">
-            <span data-i18n="controls.sourceData">Brondata:</span>
-            <a href="https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen" target="_blank" rel="noopener noreferrer" data-i18n="source.organization">Vlaamse overheid · Departement Zorg</a>
+            <span data-i18n="controls.sourceData">Source data:</span>
+            <a href="https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen" target="_blank" rel="noopener noreferrer" data-i18n="source.organization">Flemish Government · Department of Care</a>
             <span aria-hidden="true">·</span>
             <a href="https://statbel.fgov.be/en/open-data/statistical-sectors-2024" target="_blank" rel="noopener noreferrer">Statbel</a>
             <span aria-hidden="true">·</span>
@@ -142,14 +142,14 @@
 
         <details class="legend" id="legend" open>
           <summary>
-            <span id="legend-title" data-i18n="legend.title">Hittekwetsbaarheidsscore</span>
+            <span id="legend-title" data-i18n="legend.title">Heat vulnerability score</span>
             <span class="legend-summary-note" id="legend-note">0–10</span>
           </summary>
-          <div class="legend-content" id="legend-content" tabindex="0" role="region" aria-label="Inhoud van de legenda" data-i18n-aria-label="legend.content"></div>
+          <div class="legend-content" id="legend-content" tabindex="0" role="region" aria-label="Legend contents" data-i18n-aria-label="legend.content"></div>
         </details>
 
         <aside class="detail-panel" id="detail-panel" aria-hidden="true" aria-labelledby="panel-title" tabindex="-1">
-          <button class="panel-close" id="panel-close" type="button" aria-label="Sluit sectordetails" data-i18n-aria-label="panel.close">
+          <button class="panel-close" id="panel-close" type="button" aria-label="Close details" data-i18n-aria-label="panel.close">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
           <div id="panel-content"></div>
@@ -157,12 +157,12 @@
 
         <div class="map-loading" id="map-loading" role="status">
           <span class="loading-spinner" aria-hidden="true"></span>
-          <span data-i18n="loading.map">Kaart en sectoren laden…</span>
+          <span data-i18n="loading.map">Loading map and sectors…</span>
         </div>
 
         <div class="error-banner" id="error-banner" role="alert" hidden>
-          <strong data-i18n="error.title">De kaartgegevens konden niet worden geladen.</strong>
-          <span id="error-message" data-i18n="error.default">Controleer of de lokale server actief is en probeer opnieuw.</span>
+          <strong data-i18n="error.title">The map data could not be loaded.</strong>
+          <span id="error-message" data-i18n="error.default">Check that the local server is running and try again.</span>
         </div>
 
         <div class="sr-only" id="selection-announcement" aria-live="polite"></div>
@@ -181,15 +181,15 @@
             class="project-intro-language"
             id="project-intro-language"
             type="button"
-            lang="en"
-            aria-label="Schakel naar Engels"
-            title="Schakel naar Engels"
-          >EN</button>
+            lang="nl"
+            aria-label="Switch to Dutch"
+            title="Switch to Dutch"
+          >NL</button>
           <button
             class="project-intro-close"
             id="project-intro-close"
             type="button"
-            aria-label="Sluit projectintroductie"
+            aria-label="Close project introduction"
             data-i18n-aria-label="intro.close"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
@@ -199,22 +199,22 @@
         <header class="project-intro-heading">
           <img src="%BASE_URL%assets/zennevallei-river-mark.png" alt="" aria-hidden="true" />
           <div>
-            <p data-i18n="intro.kicker">Persoonlijk V0-project</p>
-            <h2 id="project-intro-title" data-i18n="intro.title">Over dit project</h2>
+            <p data-i18n="intro.kicker">Personal V0 project</p>
+            <h2 id="project-intro-title" data-i18n="intro.title">About this project</h2>
           </div>
         </header>
 
         <div class="project-intro-copy" id="project-intro-copy">
-          <p data-i18n="intro.body1">Dit is mijn persoonlijke V0-project om hittekwetsbaarheid in de Zennevallei te visualiseren en te onderzoeken hoe die samenhangt met nabij groen en bodemverharding, twee factoren die het stedelijk hitte-eilandeffect beïnvloeden.</p>
-          <p data-i18n="intro.body2">De hitte-indicatoren komen voorlopig uitsluitend van het Departement Zorg van de Vlaamse overheid; voor landbedekking, landgebruik en vegetatie experimenteer ik met Copernicus-gegevens, en ik werk aan de integratie van meer relevante gegevens uit Copernicus en andere bronnen.</p>
-          <p data-i18n="intro.body3">Het project staat open voor feedback en samenwerking via GitHub of e-mail; de frontend is in belangrijke mate ontwikkeld met ondersteuning van grote taalmodellen (LLM’s), en het dashboard documenteert de gegevens, hun herkomst en hoe ze worden verwerkt en gebruikt.</p>
+          <p data-i18n="intro.body1">This is my personal V0 project for visualising heat vulnerability in Zennevallei and exploring how it relates to nearby green space and soil sealing, two factors that influence the urban heat-island effect.</p>
+          <p data-i18n="intro.body2">For now, the heat indicators come exclusively from the Flemish Government’s Department of Care; for land cover, land use and vegetation, I am experimenting with Copernicus data and working to incorporate more relevant data from Copernicus and other sources.</p>
+          <p data-i18n="intro.body3">The project is open to feedback and collaboration through GitHub or email; the frontend was developed extensively with assistance from large language models (LLMs), and the dashboard documents the data, where it comes from and how it is processed and used.</p>
         </div>
 
         <div class="project-intro-footer">
-          <button class="project-intro-primary" id="project-intro-primary" type="button" autofocus data-i18n="intro.openMap">Kaart openen</button>
+          <button class="project-intro-primary" id="project-intro-primary" type="button" autofocus data-i18n="intro.openMap">Open map</button>
           <div class="project-intro-links">
-            <a href="https://github.com/khookh/zenvallei" target="_blank" rel="noopener noreferrer" data-i18n="intro.github">Bekijk of werk mee op GitHub</a>
-            <a href="mailto:stefanodonne@gmail.com" data-i18n="intro.contact">Stuur feedback</a>
+            <a href="https://github.com/khookh/zenvallei" target="_blank" rel="noopener noreferrer" data-i18n="intro.github">View or collaborate on GitHub</a>
+            <a href="mailto:stefanodonne@gmail.com" data-i18n="intro.contact">Send feedback</a>
           </div>
         </div>
       </div>

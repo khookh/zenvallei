@@ -1,7 +1,7 @@
 import { en } from "./i18n/en.js";
 import { nl } from "./i18n/nl.js";
 
-export const DEFAULT_LANGUAGE = "nl";
+export const DEFAULT_LANGUAGE = "en";
 export const SUPPORTED_LANGUAGES = Object.freeze(["nl", "en"]);
 export const TRANSLATIONS = Object.freeze({ nl, en });
 

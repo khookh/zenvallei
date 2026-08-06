@@ -8,6 +8,7 @@
   "description": "Interactieve kaart voor hittebestendigheid, landbedekking en groen in de Zennevallei.",
   "scripts": {
     "dev": "vite",
+    "dev:playground-map": "vite --mode playground",
     "build": "vite build",
     "build:pages": "vite build --base=/zenvallei/ && node scripts/check-subpath-build.mjs --root dist --base /zenvallei/ && node scripts/check-dist.mjs",
     "preview": "vite preview",
@@ -22,6 +23,7 @@
     "vegetation:prepare": "node --max-old-space-size=2048 scripts/prepare-vegetation-years.mjs",
     "brand:prepare": "node scripts/generate-brand-mark.mjs",
     "playground:ndvi": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-ndvi-playground.ps1",
+    "playground:setup": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-ndvi-playground.ps1 -SetupOnly",
     "playground:test": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-ndvi-playground.ps1 -Test",
     "data:validate": "node scripts/validate-generated-data.mjs",
     "lint": "eslint .",
@@ -31,13 +33,14 @@
     "test:e2e": "playwright test",
     "test:e2e:cross-browser": "playwright test --config playwright.smoke.config.js",
     "test:pages": "playwright test --config playwright.pages.config.js",
+    "test:playground-map": "playwright test --config playwright.playground.config.js",
     "test:lan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-lan.ps1",
     "dist:check": "node scripts/check-dist.mjs",
     "build:subpath": "vite build --base=/zenvallei/ --outDir .cache/subpath-build && node scripts/check-subpath-build.mjs --root .cache/subpath-build --base /zenvallei/",
     "security:check": "pnpm audit --audit-level high && node scripts/check-repository-secrets.mjs",
     "verify:quick": "pnpm lint && pnpm typecheck && pnpm test && pnpm data:validate && pnpm build && pnpm dist:check",
-    "verify:ci": "pnpm verify:quick && pnpm security:check && pnpm test:e2e && pnpm test:pages",
-    "verify": "pnpm verify:quick && pnpm playground:test && pnpm test:e2e && pnpm test:pages && pnpm build:subpath && pnpm security:check",
+    "verify:ci": "pnpm verify:quick && pnpm security:check && pnpm test:e2e && pnpm test:playground-map && pnpm test:pages",
+    "verify": "pnpm verify:quick && pnpm playground:test && pnpm test:e2e && pnpm test:playground-map && pnpm test:pages && pnpm build:subpath && pnpm security:check",
     "test:all": "pnpm verify"
   },
   "engines": {

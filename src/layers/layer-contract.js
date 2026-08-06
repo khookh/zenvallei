@@ -7,6 +7,7 @@
  * @typedef {Object} LayerDefinition
  * @property {string} id Stable identifier used by controls and application state.
  * @property {string} categoryId Stable navigation category identifier.
+ * @property {boolean} [supportsMunicipalitySummary] Whether the panel can aggregate selected sectors.
  * @property {() => boolean} isAvailable Whether the prepared browser asset can be used.
  * @property {() => string} getLabel Current translated layer label.
  * @property {(context: object) => string} getDatasetStatus Current translated status text.
