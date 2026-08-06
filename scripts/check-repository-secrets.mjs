@@ -20,7 +20,11 @@ for (const relativePath of trackedFiles) {
   const normalized = relativePath.replaceAll("\\", "/");
   if (forbiddenSecretFile.test(normalized)) throw new Error(`${relativePath} is a forbidden secret filename.`);
   const target = path.join(projectRoot, relativePath);
-  if (textExtensions.has(path.extname(relativePath)) && (await fs.stat(target)).size < 30_000_000) {
+  const statistics = await fs.stat(target).catch((error) => {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  });
+  if (statistics && textExtensions.has(path.extname(relativePath)) && statistics.size < 30_000_000) {
     const contents = await fs.readFile(target, "utf8");
     patterns.forEach(({ label, pattern }) => {
       if (pattern.test(contents)) throw new Error(`${relativePath} contains a possible ${label}.`);

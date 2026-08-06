@@ -101,8 +101,9 @@ The browser PNGs colour only pixels classified as likely vegetated. Below-thresh
 To download raw bands, calculate NDVI in Python and inspect them in VS Code:
 
 ```powershell
-pnpm playground:setup
-pnpm playground:test
+py -3.11 -m venv playground/ndvi/.venv
+playground/ndvi/.venv/Scripts/python.exe -m pip install -e "playground/ndvi[dev]"
+playground/ndvi/.venv/Scripts/python.exe -m pytest playground/ndvi/tests
 ```
 
 The Python package requests raw B04, B08, SCL and dataMask bands and stores them under `.cache/vegetation/raw`. It calculates NDVI and masks observations locally. Notebook exports under `.cache/playground/web` are visible only through `pnpm dev:playground-map`; ordinary and Pages builds cannot serve them.

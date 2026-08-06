@@ -4,13 +4,14 @@ This is a Python-only research workspace for VS Code or JupyterLab. It downloads
 
 ## Prepare VS Code
 
-1. Double-click `Setup NDVI Playground.cmd` in the repository root.
-2. Open this folder in VS Code.
-3. Open `01_halle_ndvi_2020_2021.ipynb`.
-4. Choose `playground/ndvi/.venv/Scripts/python.exe` as the notebook kernel.
-5. Run the cells from top to bottom.
+Run these standard Python commands once from the repository root:
 
-`Start NDVI Playground.cmd` remains available if you prefer JupyterLab in the browser.
+```powershell
+py -3.11 -m venv playground/ndvi/.venv
+playground/ndvi/.venv/Scripts/python.exe -m pip install -e "playground/ndvi[dev]"
+```
+
+Then open this folder in VS Code, open `01_halle_ndvi_2020_2021.ipynb`, choose `playground/ndvi/.venv/Scripts/python.exe` as the kernel and run the cells. Dependencies and their exact versions are declared in `pyproject.toml`; no project launcher is required.
 
 ## Copernicus credentials
 
@@ -60,7 +61,7 @@ Open `http://127.0.0.1:4173/` and choose **Test** under **Land use and green cov
 ## Verify
 
 ```powershell
-pnpm playground:test
+playground/ndvi/.venv/Scripts/python.exe -m pytest playground/ndvi/tests
 ```
 
 Notebook 01 performs the complete 2020/2021 Halle comparison. Notebook 02 prepares annual time-series arrays for future one-class classification experiments without selecting a model.

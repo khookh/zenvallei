@@ -64,16 +64,14 @@ See [Data pipeline](docs/data-pipeline.md) for complete examples and validation 
 
 ## NDVI playground
 
-Double-click `Start NDVI Playground.cmd`, or run:
+Open `playground/ndvi` in VS Code and create its standard Python environment once:
 
 ```powershell
-pnpm playground:setup      # prepare the Python environment for VS Code
-pnpm playground:ndvi       # optional JupyterLab on 127.0.0.1
-pnpm dev:playground-map    # show the latest notebook export as Test
-pnpm playground:test       # Python workflow and export tests
+py -3.11 -m venv playground/ndvi/.venv
+playground/ndvi/.venv/Scripts/python.exe -m pip install -e "playground/ndvi[dev]"
 ```
 
-The playground downloads raw B04, B08, SCL and data-mask bands, calculates NDVI in Python and can export an ignored local Test layer. Raw files and experiments are never published; the public application still contains only the 2020 likely-vegetation observation. See [NDVI playground](playground/ndvi/README.md) for the VS Code workflow and copyable examples.
+Select that interpreter as the notebook kernel. The playground downloads raw B04, B08, SCL and data-mask bands, calculates NDVI in Python and can export an ignored local Test layer. `pnpm dev:playground-map` displays the latest export as Test. Raw files and experiments are never published; the public application still contains only the 2020 likely-vegetation observation. See [NDVI playground](playground/ndvi/README.md) for the VS Code workflow and copyable examples.
 
 ## Project guides
 

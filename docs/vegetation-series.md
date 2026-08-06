@@ -71,4 +71,4 @@ Sector metrics use the projected 10 m grid. Municipality metrics sum the underly
 
 ## Explore the source observations in Python
 
-Double-click `Start NDVI Playground.cmd` or run `pnpm playground:ndvi`. The isolated JupyterLab workspace exposes lazy Xarray/Dask loaders for the 12 annual choices and any optional cached alternatives. It also includes examples for maps, distributions, pixel time series and spatially separated modelling arrays. See the [playground guide](../playground/ndvi/README.md).
+Open `playground/ndvi` in VS Code and select its `.venv` interpreter. The Python workspace exposes raw-band loading, NDVI calculation, GeoPandas regions, lazy Xarray/Dask stacks and browser-ready experimental exports. The first notebook compares the cached 2020 and 2021 observations around Halle; the second prepares cached observations for time-series modelling. See the [playground guide](../playground/ndvi/README.md).
