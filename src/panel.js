@@ -287,5 +287,460 @@ function renderLandCoverRecord(record, methodology, landCover, urbanAtlas, veget
           <p>${escapeHtml(t("landCover.methodologyText"))}</p>
           <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landCover.comparisonWarning"))}</p>
           <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landCover.warningText"))}</p>
-          <p>${escapeHtml(t("landCoveã´¶‰ËkºwµçM¥Ñ¥½¹…Ñ”¤°(€€€€€€€€€€€Ñ¡É•Í¡½±è™½Éµ…Ñ9Õµ‰•È¡å•…É…Ñ„ü¹Ñ¡É•Í¡½±°€Ì¤°(€€€€€€€€€ô¤¥ôğ½Àø(€€€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹µ•Ñ¡½‘½±½åQ•áĞˆ¤¥ôğ½Àø(€€€€€€€€€€‘í…±¥‰É…Ñ¥½¸€ü€ñ Ğø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹…±¥‰É…Ñ¥½¹Q¥Ñ±”ˆ¤¥ôğ½ Ğø(€€€€€€€€€€€€ñÕ°ø(€€€€€€€€€€€€€€ñ±¤ø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹…±¥‰É…Ñ¥½¹M…µÁ±•Ìˆ°ì(€€€€€€€€€€€€€€€Á½Í¥Ñ¥Ù”è™½Éµ…Ñ9Õµ‰•È¡…±¥‰É…Ñ¥½¸¹Á½Í¥Ñ¥Ù”¹½Õ¹Ğ°€À¤°(€€€€€€€€€€€€€€€¹•…Ñ¥Ù”è™½Éµ…Ñ9Õµ‰•È¡…±¥‰É…Ñ¥½¸¹¹•…Ñ¥Ù”¹½Õ¹Ğ°€À¤°(€€€€€€€€€€€€€ô¤¥ôğ½±¤ø(€€€€€€€€€€€€€€ñ±¤ø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹…±¥‰É…Ñ¥½¹A•É™½Éµ…¹”ˆ°ì(€€€€€€€€€€€€€€€Í•¹Í¥Ñ¥Ù¥Ñäè™½Éµ…Ñ9Õµ‰•È¡…±¥‰É…Ñ¥½¸¹Í•¹Í¥Ñ¥Ù¥Ñä€¨€ÄÀÀ°€Ä¤°(€€€€€€€€€€€€€€€ÍÁ•¥™¥¥Ñäè™½Éµ…Ñ9Õµ‰•È¡…±¥‰É…Ñ¥½¸¹ÍÁ•¥™¥¥Ñä€¨€ÄÀÀ°€Ä¤°(€€€€€€€€€€€€€€€‰…±…¹•è™½Éµ…Ñ9Õµ‰•È¡…±¥‰É…Ñ¥½¸¹‰…±…¹•‘ÕÉ…ä€¨€ÄÀÀ°€Ä¤°(€€€€€€€€€€€€€€€…ÕŒè™½Éµ…Ñ9Õµ‰•È¡…±¥‰É…Ñ¥½¸¹…ÕŒ°€Ì¤°(€€€€€€€€€€€€€ô¤¥ôğ½±¤ø(€€€€€€€€€€€€ğ½Õ°ù€€è€ˆ‰ô(€€€€€€€€€€ñÀøñÍÑÉ½¹œø‘í•Í…Á•!Ñµ°¡Ğ ‰Á…¹•°¹İ…É¹¥¹1…‰•°ˆ¤¥ôğ½ÍÑÉ½¹œø€‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹…±¥‰É…Ñ¥½¹…Ù•…Ğˆ¤¥ôğ½Àø(€€€€€€€€€€ñÀøñÍÑÉ½¹œø‘í•Í…Á•!Ñµ°¡Ğ ‰Á…¹•°¹İ…É¹¥¹1…‰•°ˆ¤¥ôğ½ÍÑÉ½¹œø€‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹±…ÍÍ¥™¥…Ñ¥½¹…Ù•…Ğˆ¤¥ôğ½Àø(€€€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ù••Ñ…Ñ¥½¸ü¹Í½ÕÉ”ü¹…ÑÑÉ¥‰ÕÑ¥½¸€üüĞ ‰Ù••Ñ…Ñ¥½¸¹…ÑÑÉ¥‰ÕÑ¥½¸ˆ¤¥ôğ½Àø(€€€€€€€€€€‘ì¡å•…É…Ñ„ü¹ÁÉ½‘ÕÑÌ€üüÙ••Ñ…Ñ¥½¸ü¹Í½ÕÉ”ü¹ÁÉ½‘ÕÑÌ¤ü¹±•¹Ñ €ü€ñ Ğø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹Í½ÕÉ•AÉ½‘ÕÑÌˆ¤¥ôğ½ ĞøñÕ°ø‘ì¡å•…É…Ñ„ü¹ÁÉ½‘ÕÑÌ€üüÙ••Ñ…Ñ¥½¸¹Í½ÕÉ”¹ÁÉ½‘ÕÑÌ¤¹µ…À ¡ÁÉ½‘ÕĞ¤€ôø€ñ±¤ø‘í•Í…Á•!Ñµ°¡ÁÉ½‘ÕĞ¹¥¥ôğ½±¤ù€¤¹©½¥¸ ˆˆ¥ôğ½Õ°ù€€è€ˆ‰ô(€€€€€€€€€€‘íÙ••Ñ…Ñ¥½¸ü¹Í½ÕÉ”ü¹…•ÍÍ•‘Ğ€ü€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰±…¹‘½Ù•È¹…•ÍÍ•ˆ°ì‘…Ñ”è™½Éµ…Ñ…Ñ”¡Ù••Ñ…Ñ¥½¸¹Í½ÕÉ”¹…•ÍÍ•‘Ğ¤ô¤¥ôğ½Àù€€è€ˆ‰ô(€€€€€€€€€€‘íÙ••Ñ…Ñ¥½¸ü¹•¹•É…Ñ•‘Ğ€ü€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰±…¹‘½Ù•È¹•¹•É…Ñ•‘Ğˆ°ì‘…Ñ”è™½Éµ…Ñ…Ñ”¡Ù••Ñ…Ñ¥½¸¹•¹•É…Ñ•‘Ğ¤ô¤¥ôğ½Àù€€è€ˆ‰ô(€€€€€€€€€€ñ Ğø‘í•Í…Á•!Ñµ°¡Ğ ‰Á…¹•°¹Í½ÕÉ•Ìˆ¤¥ôğ½ Ğø(€€€€€€€€€€‘íÍ½ÕÉ•1¥¹­Ì¡µ•Ñ¡½‘½±½ä°±…¹‘½Ù•È°ÕÉ‰…¹Ñ±…Ì°Ù••Ñ…Ñ¥½¸¥ô(€€€€€€€€ğ½‘¥Øø(€€€€€€ğ½‘•Ñ…¥±Ìø(€€€€ğ½‘¥Øù€ì)ô()™Õ¹Ñ¥½¸…‰½ÕÑ1…å•É…É¡­•ä°±…‰•°¤ì(€É•ÑÕÉ¸€ñ…ÉÑ¥±”ø(€€€€ñÍÁ…¸±…ÍÌô‰…‰½ÕĞµ±…å•ÈµÑ…œˆø‘í•Í…Á•!Ñµ°¡±…‰•°¥ôğ½ÍÁ…¸ø(€€€€ñ Ğø‘í•Í…Á•!Ñµ°¡Ğ¡…‰½ÕĞ¸‘í­•åõEÕ•ÍÑ¥½¹€¤¥ôğ½ Ğø(€€€€ñ‘°±…ÍÌô‰…‰½ÕĞµ±…å•Èµ™…ÑÌˆø(€€€€€€ñ‘¥Øøñ‘Ğø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹‘…Ñ…1…‰•°ˆ¤¥ôğ½‘Ğøñ‘ø‘í•Í…Á•!Ñµ°¡Ğ¡…‰½ÕĞ¸‘í­•åõQ•áÑ€¤¥ôğ½‘øğ½‘¥Øø(€€€€€€ñ‘¥Øøñ‘Ğø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ½‘Õ•É1…‰•°ˆ¤¥ôğ½‘Ğøñ‘ø‘í•Í…Á•!Ñµ°¡Ğ¡…‰½ÕĞ¸‘í­•åõAÉ½‘Õ•É€¤¥ôğ½‘øğ½‘¥Øø(€€€€€€ñ‘¥Øøñ‘Ğø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹É••¹İ…Ù•1…‰•°ˆ¤¥ôğ½‘Ğøñ‘ø‘í•Í…Á•!Ñµ°¡Ğ¡…‰½ÕĞ¸‘í­•åõÉ••¹İ…Ù•€¤¥ôğ½‘øğ½‘¥Øø(€€€€ğ½‘°ø(€€ğ½…ÉÑ¥±”ù€ì)ô()™Õ¹Ñ¥½¸É•¹‘•É‰½ÕĞ¡µ•Ñ¡½‘½±½ä°±…¹‘½Ù•È°ÕÉ‰…¹Ñ±…Ì°Ù••Ñ…Ñ¥½¸°ÁÉ½Ù•¹…¹”¤ì(€½¹ÍĞÍ•Ñ½É½Õ¹Ğ€ôÁÉ½Ù•¹…¹”ü¹½ÕÑÁÕĞü¹Í•Ñ½É½Õ¹Ğ€üü€ÄÔĞì(€É•ÑÕÉ¸€(€€€€ñ‘¥Ø±…ÍÌô‰Á…¹•°µ¡•É¼Á…¹•°µ¡•É¼´µ…‰½ÕĞˆø(€€€€€€ñÀ±…ÍÌô‰Á…¹•°µ•å•‰É½Üˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹•å•‰É½Üˆ°ì½Õ¹ĞèÍ•Ñ½É½Õ¹Ğô¤¥ôğ½Àø(€€€€€€ñ È¥ô‰Á…¹•°µÑ¥Ñ±”ˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹Ñ¥Ñ±”ˆ¤¥ôğ½ Èø(€€€€€€ñÀ±…ÍÌô‰…‰½ÕĞµ¥¹ÑÉ¼ˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹¥¹ÑÉ¼ˆ¤¥ôğ½Àø(€€€€ğ½‘¥Øø(€€€€ñ‘¥Ø±…ÍÌô‰Á…¹•°µ‰½‘ä…‰½ÕĞµ‰½‘äˆø(€€€€€€ñÍ•Ñ¥½¸ø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰Í•Ñ¥½¸µ¡•…‘¥¹œˆøñÀ±…ÍÌô‰Í•Ñ¥½¸µ­¥­•Èˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÍÑ…ÉÑ-¥­•Èˆ¤¥ôğ½Àøñ Ìø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹¡½İQ¼ˆ¤¥ôğ½ Ìøğ½‘¥Øø(€€€€€€€€ñ½°±…ÍÌô‰…‰½ÕĞµÍÑ•ÁÌˆø(€€€€€€€€€€ñ±¤øñÍÁ…¸øÄğ½ÍÁ…¸øñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÍÑ•ÀÄˆ¤¥ôğ½Àøğ½±¤ø(€€€€€€€€€€ñ±¤øñÍÁ…¸øÈğ½ÍÁ…¸øñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÍÑ•ÀÈˆ¤¥ôğ½Àøğ½±¤ø(€€€€€€€€€€ñ±¤øñÍÁ…¸øÌğ½ÍÁ…¸øñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÍÑ•ÀÌˆ¤¥ôğ½Àøğ½±¤ø(€€€€€€€€ğ½½°ø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸ø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰Í•Ñ¥½¸µ¡•…‘¥¹œˆøñÀ±…ÍÌô‰Í•Ñ¥½¸µ­¥­•Èˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹±…å•ÉÍ-¥­•Èˆ¤¥ôğ½Àøñ Ìø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹±…å•ÉÍQ¥Ñ±”ˆ¤¥ôğ½ Ìøğ½‘¥Øø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰…‰½ÕĞµ±…å•Èµ…Ñ•½Éäˆø(€€€€€€€€€€ñ Ğ±…ÍÌô‰…‰½ÕĞµ…Ñ•½ÉäµÑ¥Ñ±”ˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹…Ñ•½Éå!•…Ğˆ¤¥ôğ½ Ğø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰…‰½ÕĞµ±…å•Èµ±¥ÍĞˆø(€€€€€€€€€€€€‘í…‰½ÕÑ1…å•É…É ‰¡•…Ğˆ°Ğ ‰±…å•ÉÌ¹¡•…Ğˆ¤¥ô(€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€ğ½‘¥Øø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰…‰½ÕĞµ±…å•Èµ…Ñ•½Éäˆø(€€€€€€€€€€ñ Ğ±…ÍÌô‰…‰½ÕĞµ…Ñ•½ÉäµÑ¥Ñ±”ˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹…Ñ•½Éå1…¹‘É••¸ˆ¤¥ôğ½ Ğø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰…‰½ÕĞµ±…å•Èµ±¥ÍĞˆø(€€€€€€€€€€€€‘í…‰½ÕÑ1…å•É…É ‰±…¹‘½Ù•Èˆ°Ğ ‰±…å•ÉÌ¹±…¹‘½Ù•Èˆ°ìå•…Èè±…¹‘½Ù•Èü¹…Ñ¥Ù•e•…È€üü€ÈÀÈÀô¤¥ô(€€€€€€€€€€€€‘í…‰½ÕÑ1…å•É…É ‰ÕÉ‰…¹Ñ±…Ìˆ°Ğ ‰±…å•ÉÌ¹ÕÉ‰…¹Ñ±…Ìˆ°ìå•…ÈèÕÉ‰…¹Ñ±…Ìü¹…Ñ¥Ù•e•…È€üü€ÈÀÈÄô¤¥ô(€€€€€€€€€€€€‘í…‰½ÕÑ1…å•É…É ‰Ù••Ñ…Ñ¥½¸ˆ°Ğ ‰±…å•ÉÌ¹Ù••Ñ…Ñ¥½¸ˆ°ìå•…ÈèÙ••Ñ…Ñ¥½¸ü¹…Ñ¥Ù•e•…È€üü€ÈÀÈÀô¤¥ô(€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€ğ½‘¥Øø(€€€€€€€€ñÀ±…ÍÌô‰½µÁ…É¥Í½¸µ…Ù•…Ğˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹½µÁ…É•…Ù•…Ğˆ¤¥ôğ½Àø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰…‰½ÕĞµ¹½Ñ”…‰½ÕĞµÍ•Ñ½ÉÌˆø(€€€€€€€€ñÀ±…ÍÌô‰Í•Ñ¥½¸µ­¥­•Èˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹Í•Ñ½ÉÍ-¥­•Èˆ¤¥ôğ½Àø(€€€€€€€€ñ Ìø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹Í•Ñ½ÉÍQ¥Ñ±”ˆ¤¥ôğ½ Ìø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹Í•Ñ½ÉÍQ•áĞˆ°ì½Õ¹ĞèÍ•Ñ½É½Õ¹Ğô¤¥ôğ½Àø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹Í•Ñ½ÉÍ½µÁ…Ñ¥‰¥±¥Ñäˆ¤¥ôğ½Àø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰…‰½ÕĞµ¹½Ñ”…‰½ÕĞµ™½Õ¹‘…Ñ¥½¹Ìˆø(€€€€€€€€ñÀ±…ÍÌô‰Í•Ñ¥½¸µ­¥­•Èˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹™½Õ¹‘…Ñ¥½¹-¥­•Èˆ¤¥ôğ½Àø(€€€€€€€€ñ Ìø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹™½Õ¹‘…Ñ¥½¹Q¥Ñ±”ˆ¤¥ôğ½ Ìø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ½Ù•¹…¹••½µ•ÑÉäˆ¤¥ôğ½Àø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ½Ù•¹…¹•	…Í•µ…Àˆ¤¥ôğ½Àø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰…‰½ÕĞµ¹½Ñ”…‰½ÕĞµÁÉ¥Ù…äˆø(€€€€€€€€ñÀ±…ÍÌô‰Í•Ñ¥½¸µ­¥­•Èˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ¥Ù…å-¥­•Èˆ¤¥ôğ½Àø(€€€€€€€€ñ Ìø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ¥Ù…åQ¥Ñ±”ˆ¤¥ôğ½ Ìø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ¥Ù…åÁÁ±¥…Ñ¥½¸ˆ¤¥ôğ½Àø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ¥Ù…å!½ÍÑ¥¹œˆ¤¥ôğ½Àø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÁÉ¥Ù…åQ¥±•Ìˆ¤¥ôğ½Àø(€€€€€€€€ñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹½¹Ñ…ÑQ•áĞˆ¤¥ô€ñ„¡É•˜ô‰µ…¥±Ñ¼éÍÑ•™…¹½‘½¹¹•µ…¥°¹½´ˆùÍÑ•™…¹½‘½¹¹•µ…¥°¹½´ğ½„ø¸ğ½Àø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸ø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰Í•Ñ¥½¸µ¡•…‘¥¹œˆøñÀ±…ÍÌô‰Í•Ñ¥½¸µ­¥­•Èˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹µ•Ñ¡½‘½±½å-¥­•Èˆ¤¥ôğ½Àøñ Ìø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹µ•Ñ¡½‘½±½åQ¥Ñ±”ˆ¤¥ôğ½ Ìøğ½‘¥Øø(€€€€€€€€ñ‘•Ñ…¥±Ì±…ÍÌô‰‘•Ñ…¥°µ…½É‘¥½¸…‰½ÕĞµµ•Ñ¡½ˆ‘…Ñ„µÍ•Ñ¥½¸ô‰…‰½ÕĞµ¡•…Ğµµ•Ñ¡½‘½±½äˆø(€€€€€€€€€€ñÍÕµµ…Éä‘…Ñ„µ™½ÕÌµ­•äô‰…‰½ÕĞµ¡•…Ğµµ•Ñ¡½‘½±½äµÍÕµµ…ÉäˆøñÍÁ…¸ø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹¡•…Ñ5•Ñ¡½‘Q¥Ñ±”ˆ¤¥ôğ½ÍÁ…¸øğ½ÍÕµµ…Éäø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰…½É‘¥½¸µ½¹Ñ•¹Ğµ•Ñ¡½‘½±½äµ½ÁäˆøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹¡•…Ñ5•Ñ¡½‘Q•áĞˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹¹½…Ñ…Q•áĞˆ¤¥ôğ½Àøğ½‘¥Øø(€€€€€€€€ğ½‘•Ñ…¥±Ìø(€€€€€€€€ñ‘•Ñ…¥±Ì±…ÍÌô‰‘•Ñ…¥°µ…½É‘¥½¸…‰½ÕĞµµ•Ñ¡½ˆ‘…Ñ„µÍ•Ñ¥½¸ô‰…‰½ÕĞµ±…¹µ½Ù•Èµµ•Ñ¡½‘½±½äˆø(€€€€€€€€€€ñÍÕµµ…Éä‘…Ñ„µ™½ÕÌµ­•äô‰…‰½ÕĞµ±…¹µ½Ù•Èµµ•Ñ¡½‘½±½äµÍÕµµ…ÉäˆøñÍÁ…¸ø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹±…¹‘½Ù•É5•Ñ¡½‘Q¥Ñ±”ˆ¤¥ôğ½ÍÁ…¸øğ½ÍÕµµ…Éäø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰…½É‘¥½¸µ½¹Ñ•¹Ğµ•Ñ¡½‘½±½äµ½ÁäˆøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰±…¹‘½Ù•È¹ÁÉ½‘ÕÑ¥½¹Q•áĞˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰±…¹‘½Ù•È¹µ•Ñ¡½‘½±½åQ•áĞˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰±…¹‘½Ù•È¹½µÁ…É¥Í½¹]…É¹¥¹œˆ¤¥ôğ½Àøğ½‘¥Øø(€€€€€€€€ğ½‘•Ñ…¥±Ìø(€€€€€€€€ñ‘•Ñ…¥±Ì±…ÍÌô‰‘•Ñ…¥°µ…½É‘¥½¸…‰½ÕĞµµ•Ñ¡½ˆ‘…Ñ„µÍ•Ñ¥½¸ô‰…‰½ÕĞµÕÉ‰…¸µ…Ñ±…Ìµµ•Ñ¡½‘½±½äˆø(€€€€€€€€€€ñÍÕµµ…Éä‘…Ñ„µ™½ÕÌµ­•äô‰…‰½ÕĞµÕÉ‰…¸µ…Ñ±…Ìµµ•Ñ¡½‘½±½äµÍÕµµ…ÉäˆøñÍÁ…¸ø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹ÕÉ‰…¹Ñ±…Í5•Ñ¡½‘Q¥Ñ±”ˆ¤¥ôğ½ÍÁ…¸øğ½ÍÕµµ…Éäø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰…½É‘¥½¸µ½¹Ñ•¹Ğµ•Ñ¡½‘½±½äµ½ÁäˆøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰ÕÉ‰…¹Ñ±…Ì¹ÁÉ½‘ÕÑ¥½¹Q•áĞˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰ÕÉ‰…¹Ñ±…Ì¹µ•Ñ¡½‘½±½åQ•áĞˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰ÕÉ‰…¹Ñ±…Ì¹…•ÍÍ]…É¹¥¹œˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰ÕÉ‰…¹Ñ±…Ì¹½µÁ…É¥Í½¹]…É¹¥¹œˆ¤¥ôğ½Àøğ½‘¥Øø(€€€€€€€€ğ½‘•Ñ…¥±Ìø(€€€€€€€€ñ‘•Ñ…¥±Ì±…ÍÌô‰‘•Ñ…¥°µ…½É‘¥½¸…‰½ÕĞµµ•Ñ¡½ˆ‘…Ñ„µÍ•Ñ¥½¸ô‰…‰½ÕĞµÙ••Ñ…Ñ¥½¸µµ•Ñ¡½‘½±½äˆø(€€€€€€€€€€ñÍÕµµ…Éä‘…Ñ„µ™½ÕÌµ­•äô‰…‰½ÕĞµÙ••Ñ…Ñ¥½¸µµ•Ñ¡½‘½±½äµÍÕµµ…ÉäˆøñÍÁ…¸ø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹Ù••Ñ…Ñ¥½¹5•Ñ¡½‘Q¥Ñ±”ˆ¤¥ôğ½ÍÁ…¸øğ½ÍÕµµ…Éäø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰…½É‘¥½¸µ½¹Ñ•¹Ğµ•Ñ¡½‘½±½äµ½ÁäˆøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹µ•Ñ¡½‘½±½åQ•áĞˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹…±¥‰É…Ñ¥½¹…Ù•…Ğˆ¤¥ôğ½ÀøñÀø‘í•Í…Á•!Ñµ°¡Ğ ‰Ù••Ñ…Ñ¥½¸¹±…ÍÍ¥™¥…Ñ¥½¹…Ù•…Ğˆ¤¥ôğ½Àøğ½‘¥Øø(€€€€€€€€ğ½‘•Ñ…¥±Ìø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰…‰½ÕĞµÍ½ÕÉ•Ìˆø(€€€€€€€€ñ Ìø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹Í½ÕÉ•ÍQ¥Ñ±”ˆ¤¥ôğ½ Ìø(€€€€€€€€‘íÍ½ÕÉ•1¥¹­Ì¡µ•Ñ¡½‘½±½ä°±…¹‘½Ù•È°ÕÉ‰…¹Ñ±…Ì°Ù••Ñ…Ñ¥½¸¥ô(€€€€€€€€ñÀ±…ÍÌô‰…‰½ÕĞµ…Ù•…Ğˆø‘í•Í…Á•!Ñµ°¡Ğ ‰…‰½ÕĞ¹…Ù•…Ğˆ¤¥ôğ½Àø(€€€€€€ğ½Í•Ñ¥½¸ø(€€€€ğ½‘¥Øù€ì)ô()™Õ¹Ñ¥½¸É•¹‘•É5•ÑÉ¥MÕµµ…Éä¡µ½‘•°¤ì(€½¹ÍĞÙ…±Õ”€ô9Õµ‰•È¹¥Í¥¹¥Ñ”¡µ½‘•°¹Ù…±Õ”¤€ü™½Éµ…Ñ9Õµ‰•È¡µ½‘•°¹Ù…±Õ”¤€èĞ ‰Ù…±Õ”¹¹½ÑÙ…¥±…‰±”ˆ¤ì(€½¹ÍĞÕ¹¥Ğ€ôµ½‘•°¹Õ¹¥Ğ€üü€ˆ”ˆì(€½¹ÍĞ½±½È€ôµ½‘•°¹½±½È€üü€ˆŒÁˆÙ”Øäˆì(€É•ÑÕÉ¸€(€€€€ñ‘¥Ø±…ÍÌô‰Á…¹•°µ¡•É¼±…¹µ½Ù•Èµ¡•É¼ˆø(€€€€€€ñÀ±…ÍÌô‰Á…¹•°µ•å•‰É½Üˆø‘í•Í…Á•!Ñµ°¡µ½‘•°¹É•½É¹µÕ¹¥¥Á…±¥Ñä¥ôƒ
-Ü€‘í•Í…Á•!Ñµ°¡µ½‘•°¹É•½É¹Í•Ñ½É%¥ôğ½Àø(€€€€€€ñ È¥ô‰Á…¹•°µÑ¥Ñ±”ˆø‘í•Í…Á•!Ñµ°¡µ½‘•°¹É•½É¹Í•Ñ½É9…µ”¥ôğ½ Èø(€€€€€€ñ‘¥Ø±…ÍÌô‰Í½É”µ¡•É¼ˆÍÑå±”ôˆ´µ¡•É¼µ½±½Èè‘í•Í…Á•!Ñµ°¡½±½È¥ôˆø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰Í½É”µ½ÉˆˆøñÍÑÉ½¹œø‘í•Í…Á•!Ñµ°¡Ù…±Õ”¥ôğ½ÍÑÉ½¹œøñÍÁ…¸ø‘í•Í…Á•!Ñµ°¡Õ¹¥Ğ¥ôğ½ÍÁ…¸øğ½‘¥Øø(€€€€€€€€ñ‘¥ØøñÍÁ…¸±…ÍÌô‰Í½É”µ…ÁÑ¥½¸ˆø‘í•Í…Á•!Ñµ°¡µ½‘•°¹Ñ¥Ñ±”¥ôğ½ÍÁ…¸ø‘íµ½‘•°¹‘•ÍÉ¥ÁÑ¥½¸€ü€ñÀø‘í•Í…Á•!Ñµ°¡µ½‘•°¹‘•ÍÉ¥ÁÑ¥½¸¥ôğ½Àù€€è€ˆ‰ôğ½‘¥Øø(€€€€€€ğ½‘¥Øø(€€€€ğ½‘¥Øø(€€€€‘íµ½‘•°¹¹½Ñ•Ìü¹±•¹Ñ €ü€ñ‘¥Ø±…ÍÌô‰Á…¹•°µ‰½‘äµ•Ñ¡½‘½±½äµ½Áäˆø‘íµ½‘•°¹¹½Ñ•Ì¹µ…À ¡¹½Ñ”¤€ôø€ñÀø‘í•Í…Á•!Ñµ°¡¹½Ñ”¥ôğ½Àù€¤¹©½¥¸ ˆˆ¥ôğ½‘¥Øù€€è€ˆ‰õ€ì)ô((¼¨¨I•¹‘•È„Á±…¥¸Á…¹•°µ½‘•°ÍÕÁÁ±¥•‰ä„±…å•Èµ½‘Õ±”¸€¨¼)•áÁ½ÉĞ™Õ¹Ñ¥½¸É•¹‘•ÉM•Ñ½ÉA…¹•±5½‘•°¡µ½‘•°¤ì(€¥˜€¡µ½‘•°¹Ñ•µÁ±…Ñ”€ôôô€‰¡•…Ğˆ¤ì(€€€É•ÑÕÉ¸É•¹‘•É!•…ÑI•½É¡µ½‘•°¹É•½É°µ½‘•°¹µ•Ñ¡½‘½±½ä°µ½‘•°¹±…¹‘½Ù•È°µ½‘•°¹ÕÉ‰…¹Ñ±…Ì°µ½‘•°¹Ù••Ñ…Ñ¥½¸°µ½‘•°¹¡•…Ñ5•ÑÉ¥Œ¤ì(€ô(€¥˜€¡µ½‘•°¹Ñ•µÁ±…Ñ”€ôôô€‰±…¹µ½Ù•Èˆ¤ì(€€€É•ÑÕÉ¸É•¹‘•É1…¹‘½Ù•ÉI•½É¡µ½‘•°¹É•½É°µ½‘•°¹µ•Ñ¡½‘½±½ä°µ½‘•°¹±…¹‘½Ù•È°µ½‘•°¹ÕÉ‰…¹Ñ±…Ì°µ½‘•°¹Ù••Ñ…Ñ¥½¸¤ì(€ô(€¥˜€¡µ½‘•°¹Ñ•µÁ±…Ñ”€ôôô€‰ÕÉ‰…¸µ…Ñ±…Ìˆ¤ì(€€€É•ÑÕÉ¸É•¹‘•ÉUÉ‰…¹Ñ±…ÍI•½É¡µ½‘•°¹É•½É°µ½‘•°¹µ•Ñ¡½‘½±½ä°µ½‘•°¹±…¹‘½Ù•È°µ½‘•°¹ÕÉ‰…¹Ñ±…Ì°µ½‘•°¹Ù••Ñ…Ñ¥½¸¤ì(€ô(€¥˜€¡µ½‘•°¹Ñ•µÁ±…Ñ”€ôôô€‰Ù••Ñ…Ñ¥½¸ˆ¤ì(€€€É•ÑÕÉ¸É•¹‘•ÉY••Ñ…Ñ¥½¹I•½É¡µ½‘•°¹É•½É°µ½‘•°¹µ•Ñ¡½‘½±½ä°µ½‘•°¹±…¹‘½Ù•È°µ½‘•°¹ÕÉ‰…¹Ñ±…Ì°µ½‘•°¹Ù••Ñ…Ñ¥½¸¤ì(€ô(€¥˜€¡µ½‘•°¹Ñ•µÁ±…Ñ”€ôôô€‰µ•ÑÉ¥ŒµÍÕµµ…Éäˆ¤É•ÑÕÉ¸É•¹‘•É5•ÑÉ¥MÕµµ…Éä¡µ½‘•°¤ì(€Ñ¡É½Ü¹•ÜÉÉ½È¡U¹­¹½İ¸Í•Ñ½ÈÁ…¹•°Ñ•µÁ±…Ñ”€œ‘íµ½‘•°¹Ñ•µÁ±…Ñ•ôœ¹€¤ì)ô()•áÁ½ÉĞ™Õ¹Ñ¥½¸É•…Ñ••Ñ…¥±A…¹•°¡ì(€Á…¹•°°(€½¹Ñ•¹Ğ°(€±½Í•	ÕÑÑ½¸°(€•ÑA…¹•±5½‘•°°(€•Ñ‰½ÕÑ5½‘•°°(€¡•…Ñ5•ÑÉ¥Œ€ôU1Q}!Q}5QI%°(€½¹1…å•É=ÁÑ¥½¹¡…¹”°(€½¹±½Í”°)ô¤ì(€¥˜€¡ÑåÁ•½˜•ÑA…¹•±5½‘•°€„ôô€‰™Õ¹Ñ¥½¸ˆñğÑåÁ•½˜•Ñ‰½ÕÑ5½‘•°€„ôô€‰™Õ¹Ñ¥½¸ˆ¤ì(€€€Ñ¡É½Ü¹•ÜQåÁ•ÉÉ½È ‰Q¡”‘•Ñ…¥°Á…¹•°É•ÅÕ¥É•Ì±…å•Èµ½İ¹•Á…¹•°…¹…‰½ÕĞµ½‘•°ÁÉ½Ù¥‘•ÉÌ¸ˆ¤ì(€ô((€±•ĞÉ•ÑÕÉ¹½ÕÍ±•µ•¹Ğ€ô¹Õ±°ì(€±•ĞÕÉÉ•¹ÑY¥•Ü€ô¹Õ±°ì(€±•Ğ…Ñ¥Ù•!•…Ñ5•ÑÉ¥Œ€ô¹½Éµ…±¥é•!•…Ñ5•ÑÉ¥Œ¡¡•…Ñ5•ÑÉ¥Œ¤ì((€½¹ÍĞ…ÁÑÕÉ•I•¹‘•ÉMÑ…Ñ”€ô€ ¤€ôø€¡ì(€€€½Á•¹M•Ñ¥½¹Ìèl¸¸¹½¹Ñ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½É±° ‰‘•Ñ…¥±Ím½Á•¹um‘…Ñ„µÍ•Ñ¥½¹tˆ¥t¹µ…À ¡•±•µ•¹Ğ¤€ôø•±•µ•¹Ğ¹‘…Ñ…Í•Ğ¹Í•Ñ¥½¸¤°(€€€¡…‘áÁ…¹‘•‘M•Ñ¥½¸è	½½±•…¸¡½¹Ñ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È ‰‘•Ñ…¥±Ím½Á•¹tˆ¤¤°(€€€™½ÕÍ-•äè½¹Ñ•¹Ğ¹½¹Ñ…¥¹Ì¡‘½Õµ•¹Ğ¹…Ñ¥Ù•±•µ•¹Ğ¤€ü‘½Õµ•¹Ğ¹…Ñ¥Ù•±•µ•¹Ğ¹‘…Ñ…Í•Ğ¹™½ÕÍ-•ä€è¹Õ±°°(€ô¤ì((€½¹ÍĞÉ•¹‘•ÉÕÉÉ•¹ÑY¥•Ü€ô€¡ìÁÉ•Í•ÉÙ•MÑ…Ñ”€ôÑÉÕ”°™½ÕÍA…¹•°€ô™…±Í”ô€ôíô¤€ôøì(€€€¥˜€ …ÕÉÉ•¹ÑY¥•Ü¤É•ÑÕÉ¸ì(€€€½¹ÍĞÉ•¹‘•ÉMÑ…Ñ”€ôÁÉ•Í•ÉÙ•MÑ…Ñ”€ü…ÁÑÕÉ•I•¹‘•ÉMÑ…Ñ” ¤€èì½Á•¹M•Ñ¥½¹Ìèmt°¡…‘áÁ…¹‘•‘M•Ñ¥½¸è™…±Í”°™½ÕÍ-•äè¹Õ±°ôì(€€€¥˜€¡ÕÉÉ•¹ÑY¥•Ü¹ÑåÁ”€ôôô€‰…‰½ÕĞˆ¤ì(€€€€€½¹ÍĞµ½‘•°€ô•Ñ‰½ÕÑ5½‘•° ¤ì(€€€€€½¹Ñ•¹Ğ¹¥¹¹•É!Q50€ôÉ•¹‘•É‰½ÕĞ¡µ½‘•°¹µ•Ñ¡½‘½±½ä°µ½‘•°¹±…¹‘½Ù•È°µ½‘•°¹ÕÉ‰…¹Ñ±…Ì°µ½‘•°¹Ù••Ñ…Ñ¥½¸°µ½‘•°¹ÁÉ½Ù•¹…¹”¤ì(€€€ô•±Í”ì(€€€€€½¹Ñ•¹Ğ¹¥¹¹•É!Q50€ôÉ•¹‘•ÉM•Ñ½ÉA…¹•±5½‘•°¡•ÑA…¹•±5½‘•°¡ÕÉÉ•¹ÑY¥•Ü¹±…å•É%°ÕÉÉ•¹ÑY¥•Ü¹É•½É°ì(€€€€€€€¡•…Ñ5•ÑÉ¥Œè…Ñ¥Ù•!•…Ñ5•ÑÉ¥Œ°(€€€€€ô¤¤ì(€€€ô(€€€±•ĞÉ•ÍÑ½É•‘M•Ñ¥½¸€ô™…±Í”ì(€€€É•¹‘•ÉMÑ…Ñ”¹½Á•¹M•Ñ¥½¹Ì¹™½É…  ¡Í•Ñ¥½¹%¤€ôøì(€€€€€½¹ÍĞµ…Ñ¡¥¹M•Ñ¥½¸€ôl¸¸¹½¹Ñ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½É±° ‰‘•Ñ…¥±Ím‘…Ñ„µÍ•Ñ¥½¹tˆ¥t(€€€€€€€€¹™¥¹ ¡•±•µ•¹Ğ¤€ôø•±•µ•¹Ğ¹‘…Ñ…Í•Ğ¹Í•Ñ¥½¸€ôôôÍ•Ñ¥½¹%¤ì(€€€€€¥˜€¡µ…Ñ¡¥¹M•Ñ¥½¸¤ì(€€€€€€€µ…Ñ¡¥¹M•Ñ¥½¸¹Í•ÑÑÑÉ¥‰ÕÑ” ‰½Á•¸ˆ°€ˆˆ¤ì(€€€€€€€É•ÍÑ½É•‘M•Ñ¥½¸€ôÑÉÕ”ì(€€€€€ô(€€€ô¤ì(€€€¥˜€¡É•¹‘•ÉMÑ…Ñ”¹¡…‘áÁ…¹‘•‘M•Ñ¥½¸€˜˜€…É•ÍÑ½É•‘M•Ñ¥½¸¤½¹Ñ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½È ‰‘•Ñ…¥±Ím‘…Ñ„µÍ•Ñ¥½¹tˆ¤ü¹Í•ÑÑÑÉ¥‰ÕÑ” ‰½Á•¸ˆ°€ˆˆ¤ì(€€€¥˜€¡É•¹‘•ÉMÑ…Ñ”¹™½ÕÍ-•ä¤ì(€€€€€l¸¸¹½¹Ñ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½É±° ‰m‘…Ñ„µ™½ÕÌµ­•åtˆ¥t(€€€€€€€€¹™¥¹ ¡•±•µ•¹Ğ¤€ôø•±•µ•¹Ğ¹‘…Ñ…Í•Ğ¹™½ÕÍ-•ä€ôôôÉ•¹‘•ÉMÑ…Ñ”¹™½ÕÍ-•ä¤(€€€€€€€€ü¹™½ÕÌ¡ìÁÉ•Ù•¹ÑMÉ½±°èÑÉÕ”ô¤ì(€€€ô•±Í”¥˜€¡™½ÕÍA…¹•°¤ì(€€€€€É•ÅÕ•ÍÑ¹¥µ…Ñ¥½¹É…µ”  ¤€ôøÁ…¹•°¹™½ÕÌ¡ìÁÉ•Ù•¹ÑMÉ½±°èÑÉÕ”ô¤¤ì(€€€ô(€ôì((€½¹ÍĞ±½Í”€ô€¡ìÉ•ÍÑ½É•½ÕÌ€ôÑÉÕ”ô€ôíô¤€ôøì(€€€½¹ÍĞ±½Í•‘Y¥•Ü€ôÕÉÉ•¹ÑY¥•Üì(€€€ÕÉÉ•¹ÑY¥•Ü€ô¹Õ±°ì(€€€Á…¹•°¹±…ÍÍ1¥ÍĞ¹É•µ½Ù” ‰¥Ìµ½Á•¸ˆ¤ì(€€€Á…¹•°¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µ¡¥‘‘•¸ˆ°€‰ÑÉÕ”ˆ¤ì(€€€½¹±½Í”ü¸¡±½Í•‘Y¥•Ü¤ì(€€€¥˜€¡É•ÍÑ½É•½ÕÌ€˜˜É•ÑÕÉ¹½ÕÍ±•µ•¹Ğ¥¹ÍÑ…¹•½˜!Q51±•µ•¹Ğ¤É•ÑÕÉ¹½ÕÍ±•µ•¹Ğ¹™½ÕÌ ¤ì(€ôì((€½¹ÍĞÍ¡½Ü€ô€¡Ù¥•Ü°ÑÉ¥•É±•µ•¹Ğ¤€ôøì(€€€É•ÑÕÉ¹½ÕÍ±•µ•¹Ğ€ôÑÉ¥•É±•µ•¹Ğ¥¹ÍÑ…¹•½˜!Q51±•µ•¹Ğ€üÑÉ¥•É±•µ•¹Ğ€è‘½Õµ•¹Ğ¹…Ñ¥Ù•±•µ•¹Ğì(€€€ÕÉÉ•¹ÑY¥•Ü€ôÙ¥•Üì(€€€É•¹‘•ÉÕÉÉ•¹ÑY¥•Ü¡ìÁÉ•Í•ÉÙ•MÑ…Ñ”è™…±Í”°™½ÕÍA…¹•°èÑÉÕ”ô¤ì(€€€Á…¹•°¹±…ÍÍ1¥ÍĞ¹…‘ ‰¥Ìµ½Á•¸ˆ¤ì(€€€Á…¹•°¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µ¡¥‘‘•¸ˆ°€‰™…±Í”ˆ¤ì(€ôì((€½¹ÍĞ½Á•¸€ô€¡É•½É°ÑÉ¥•É±•µ•¹Ğ€ô¹Õ±°°±…å•É%€ô€‰¡•…Ğˆ¤€ôøÍ¡½Ü¡ìÑåÁ”è€‰É•½Éˆ°É•½É°±…å•É%ô°ÑÉ¥•É±•µ•¹Ğ¤ì(€½¹ÍĞ½Á•¹‰½ÕĞ€ô€¡ÑÉ¥•É±•µ•¹Ğ€ô¹Õ±°¤€ôøÍ¡½Ü¡ìÑåÁ”è€‰…‰½ÕĞˆô°ÑÉ¥•É±•µ•¹Ğ¤ì(€½¹ÍĞÍ•ÑA…¹•±1…¹Õ…”€ô€ ¤€ôøì(€€€¥˜€¡ÕÉÉ•¹ÑY¥•Ü€˜˜Á…¹•°¹±…ÍÍ1¥ÍĞ¹½¹Ñ…¥¹Ì ‰¥Ìµ½Á•¸ˆ¤¤É•¹‘•ÉÕÉÉ•¹ÑY¥•Ü¡ìÁÉ•Í•ÉÙ•MÑ…Ñ”èÑÉÕ”ô¤ì(€ôì(€½¹ÍĞÍ•ÑÑ¥Ù•1…å•È€ô€¡±…å•É%¤€ôøì(€€€¥˜€¡ÕÉÉ•¹ÑY¥•Üü¹ÑåÁ”€„ôô€‰É•½Éˆ¤É•ÑÕÉ¸ì(€€€ÕÉÉ•¹ÑY¥•Ü¹±…å•É%€ô±…å•É%ì(€€€¥˜€¡Á…¹•°¹±…ÍÍ1¥ÍĞ¹½¹Ñ…¥¹Ì ‰¥Ìµ½Á•¸ˆ¤¤É•¹‘•ÉÕÉÉ•¹ÑY¥•Ü¡ìÁÉ•Í•ÉÙ•MÑ…Ñ”èÑÉÕ”ô¤ì(€ôì(€½¹ÍĞÍ•Ñ!•…Ñ5•ÑÉ¥Œ€ô€¡µ•ÑÉ¥Œ¤€ôøì(€€€…Ñ¥Ù•!•…Ñ5•ÑÉ¥Œ€ô¹½Éµ…±¥é•!•…Ñ5•ÑÉ¥Œ¡µ•ÑÉ¥Œ¤ì(€€€¥˜€¡ÕÉÉ•¹ÑY¥•Üü¹ÑåÁ”€ôôô€‰É•½Éˆ€˜˜ÕÉÉ•¹ÑY¥•Ü¹±…å•É%€ôôô€‰¡•…Ğˆ€˜˜Á…¹•°¹±…ÍÍ1¥ÍĞ¹½¹Ñ…¥¹Ì ‰¥Ìµ½Á•¸ˆ¤¤ì(€€€€€É•¹‘•ÉÕÉÉ•¹ÑY¥•Ü¡ìÁÉ•Í•ÉÙ•MÑ…Ñ”èÑÉÕ”ô¤ì(€€€ô(€ôì((€±½Í•	ÕÑÑ½¸¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰±¥¬ˆ°€ ¤€ôø±½Í” ¤¤ì(€Á…¹•°¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰­•å‘½İ¸ˆ°€¡•Ù•¹Ğ¤€ôøì(€€€¥˜€¡•Ù•¹Ğ¹­•ä€ôôô€‰Í…Á”ˆ¤±½Í” ¤ì(€ô¤ì(€½¹Ñ•¹Ğ¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰±¥¬ˆ°€¡•Ù•¹Ğ¤€ôøì(€€€½¹ÍĞ‰ÕÑÑ½¸€ô•Ù•¹Ğ¹Ñ…É•Ğ¹±½Í•ÍĞ ‰m‘…Ñ„µÁ…¹•°µ¡•…Ğµµ•ÑÉ¥tˆ¤ì(€€€¥˜€ …‰ÕÑÑ½¸¤É•ÑÕÉ¸ì(€€€½¹1…å•É=ÁÑ¥½¹¡…¹”ü¸ ‰µ•ÑÉ¥Œˆ°‰ÕÑÑ½¸¹‘…Ñ…Í•Ğ¹Á…¹•±!•…Ñ5•ÑÉ¥Œ°‰ÕÑÑ½¸¤ì(€ô¤ì(€½¹Ñ•¹Ğ¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰­•å‘½İ¸ˆ°€¡•Ù•¹Ğ¤€ôøì(€€€½¹ÍĞ‰ÕÑÑ½¸€ô•Ù•¹Ğ¹Ñ…É•Ğ¹±½Í•ÍĞ ‰m‘…Ñ„µÁ…¹•°µ¡•…Ğµµ•ÑÉ¥tˆ¤ì(€€€¥˜€ …‰ÕÑÑ½¸ñğ€…l‰ÉÉ½İ1•™Ğˆ°€‰ÉÉ½İI¥¡Ğ‰t¹¥¹±Õ‘•Ì¡•Ù•¹Ğ¹­•ä¤¤É•ÑÕÉ¸ì(€€€•Ù•¹Ğ¹ÁÉ•Ù•¹Ñ•™…Õ±Ğ ¤ì(€€€½¹ÍĞ‰ÕÑÑ½¹Ì€ôl¸¸¹½¹Ñ•¹Ğ¹ÅÕ•ÉåM•±•Ñ½É±° ‰m‘…Ñ„µÁ…¹•°µ¡•…Ğµµ•ÑÉ¥tˆ¥tì(€€€½¹ÍĞÕÉÉ•¹Ñ%¹‘•à€ô‰ÕÑÑ½¹Ì¹¥¹‘•á=˜¡‰ÕÑÑ½¸¤ì(€€€½¹ÍĞ‘¥É•Ñ¥½¸€ô•Ù•¹Ğ¹­•ä€ôôô€‰ÉÉ½İI¥¡Ğˆ€ü€Ä€è€´Äì(€€€‰ÕÑÑ½¹Íl¡ÕÉÉ•¹Ñ%¹‘•à€¬‘¥É•Ñ¥½¸€¬‰ÕÑÑ½¹Ì¹±•¹Ñ ¤€”‰ÕÑÑ½¹Ì¹±•¹Ñ¡t¹™½ÕÌ ¤ì(€ô¤ì(€É•ÑÕÉ¸ì(€€€½Á•¸°(€€€½Á•¹‰½ÕĞ°(€€€±½Í”°(€€€Í•Ñ1…¹Õ…”èÍ•ÑA…¹•±1…¹Õ…”°(€€€Í•ÑÑ¥Ù•1…å•È°(€€€Í•Ñ!•…Ñ5•ÑÉ¥Œ°(€€€É•™É•Í è€ ¤€ôøÉ•¹‘•ÉÕÉÉ•¹ÑY¥•Ü¡ìÁÉ•Í•ÉÙ•MÑ…Ñ”èÑÉÕ”ô¤°(€€€¥Í=Á•¸è€ ¤€ôøÁ…¹•°¹±…ÍÍ1¥ÍĞ¹½¹Ñ…¥¹Ì ‰¥Ìµ½Á•¸ˆ¤°(€€€¥Í5Õ¹¥¥Á…±¥ÑåMÕµµ…Éäè€ ¤€ôøÕÉÉ•¹ÑY¥•Üü¹ÑåÁ”€ôôô€‰É•½Éˆ€˜˜ÕÉÉ•¹ÑY¥•Ü¹É•½É¹Í½Á”€ôôô€‰µÕ¹¥¥Á…±¥Ñäˆ°(€ôì)ô(
+          <p>${escapeHtml(t("landCover.attribution"))}</p>
+          ${landCover.source?.doi ? `<p><a href="${safeHref(landCover.source.doi)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
+          ${landCover.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(landCover.source.accessedAt) }))}</p>` : ""}
+          ${landCover.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(landCover.generatedAt) }))}</p>` : ""}
+          <h4>${escapeHtml(t("panel.sources"))}</h4>
+          ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
+        </div>
+      </details>
+    </div>`;
+}
+
+function urbanAtlasDefinition(urbanAtlas, code) {
+  return urbanAtlas?.classes?.find((entry) => String(entry.code) === String(code));
+}
+
+function urbanAtlasClassLabel(urbanAtlas, code) {
+  const definition = urbanAtlasDefinition(urbanAtlas, code);
+  return definition ? t(`urbanAtlas.class.${definition.code}`) : String(code);
+}
+
+function urbanAtlasRow(entry, urbanAtlas, { showMetricPercentage = true } = {}) {
+  const definition = urbanAtlasDefinition(urbanAtlas, entry.code);
+  if (!definition) return "";
+  return `
+    <div class="land-cover-row urban-atlas-row">
+      <span class="land-cover-swatch" style="--swatch:${escapeHtml(definition.color)}" aria-hidden="true"></span>
+      <span>${escapeHtml(urbanAtlasClassLabel(urbanAtlas, entry.code))}</span>
+      <strong>
+        ${escapeHtml(t("unit.hectares", { value: formatNumber(entry.areaHa) }))}
+        <small>${escapeHtml(t("urbanAtlas.sectorShare", { value: formatNumber(entry.sectorPercentage) }))}${showMetricPercentage ? ` Â· ${escapeHtml(t("urbanAtlas.metricShare", { value: formatNumber(entry.metricPercentage) }))}` : ""}</small>
+      </strong>
+    </div>`;
+}
+
+function urbanAtlasArtificialGroups(stats, urbanAtlas) {
+  const groupOrder = ["urbanFabric", "industryServices", "transport", "constructionExtraction"];
+  return groupOrder.map((groupKey) => {
+    const rows = stats.artificial.classes.filter((entry) => (
+      urbanAtlasDefinition(urbanAtlas, entry.code)?.artificialGroupKey === groupKey && entry.areaHa > 0
+    ));
+    if (!rows.length) return "";
+    return `<section class="urban-atlas-breakdown-group">
+      <h4>${escapeHtml(t(`urbanAtlas.artificialGroup.${groupKey}`))}</h4>
+      ${rows.map((entry) => urbanAtlasRow(entry, urbanAtlas)).join("")}
+    </section>`;
+  }).join("");
+}
+
+function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas, vegetation) {
+  const stats = scopedStatistics(urbanAtlas, record);
+  const dominant = urbanAtlasDefinition(urbanAtlas, stats?.dominantClassCode);
+  const dominantLabel = dominant ? urbanAtlasClassLabel(urbanAtlas, dominant.code) : t("urbanAtlas.noData");
+  const dominantColor = dominant?.color ?? "#b4b4b4";
+  const validationKey = urbanAtlas?.source?.validationStatus === "not-yet-validated"
+    ? "urbanAtlas.validationNotYet"
+    : "urbanAtlas.validationUnknown";
+  return `
+    <div class="panel-hero land-cover-hero urban-atlas-hero">
+      <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+      <div class="score-hero" style="--hero-color:${dominantColor}">
+        <div class="land-cover-orb" style="--class-color:${dominantColor}" aria-hidden="true"></div>
+        <div><span class="score-caption">${escapeHtml(t("urbanAtlas.dominant"))}</span><p class="land-cover-dominant">${escapeHtml(dominantLabel)}</p></div>
+      </div>
+      <p class="relative-note"><span aria-hidden="true">â—‡</span> ${escapeHtml(t("urbanAtlas.eyebrow", { year: urbanAtlas.activeYear }))}</p>
+    </div>
+    <div class="panel-body">
+      ${stats ? `
+        <section aria-labelledby="urban-atlas-summary-title">
+          <div class="section-heading"><p class="section-kicker">${escapeHtml(t("urbanAtlas.eyebrow", { year: urbanAtlas.activeYear }))}</p><h3 id="urban-atlas-summary-title">${escapeHtml(t("urbanAtlas.summaryTitle"))}</h3></div>
+          <div class="summary-grid">
+            ${metricCard("urbanAtlas.greenCoverage", t("unit.percentage", { value: formatNumber(stats.green.percentage) }), "#008c00")}
+            ${metricCard("urbanAtlas.artificialisation", t("unit.percentage", { value: formatNumber(stats.artificial.percentage) }), "#bf0000")}
+          </div>
+          <p class="urban-atlas-valid-area">${escapeHtml(t("urbanAtlas.validArea", { area: formatNumber(stats.validAreaHa) }))}</p>
+          <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("urbanAtlas.derivedNote"))}</span></p>
+        </section>
+        <details class="detail-accordion" data-section="urban-atlas-green" open>
+          <summary data-focus-key="urban-atlas-green-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.greenBreakdown"))}</span></summary>
+          <div class="accordion-content land-cover-classes">${stats.green.classes.map((entry) => urbanAtlasRow(entry, urbanAtlas)).join("")}</div>
+        </details>
+        <details class="detail-accordion" data-section="urban-atlas-artificial" open>
+          <summary data-focus-key="urban-atlas-artificial-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.artificialBreakdown"))}</span></summary>
+          <div class="accordion-content">${urbanAtlasArtificialGroups(stats, urbanAtlas)}</div>
+        </details>
+        ${stats.otherClasses?.length ? `<details class="detail-accordion" data-section="urban-atlas-other">
+          <summary data-focus-key="urban-atlas-other-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.otherLandCover"))}</span></summary>
+          <div class="accordion-content land-cover-classes">${stats.otherClasses.map((entry) => urbanAtlasRow(entry, urbanAtlas, { showMetricPercentage: false })).join("")}</div>
+        </details>` : ""}` : `<p class="panel-empty-state">${escapeHtml(t("urbanAtlas.noData"))}</p>`}
+      <details class="detail-accordion methodology-accordion" data-section="urban-atlas-methodology">
+        <summary data-focus-key="urban-atlas-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("urbanAtlas.methodologyTitle"))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t("urbanAtlas.productionText"))}</p>
+          <p>${escapeHtml(t("urbanAtlas.methodologyText"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("urbanAtlas.comparisonWarning"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("urbanAtlas.accessWarning"))}</p>
+          <p>${escapeHtml(t("urbanAtlas.classificationWarning"))}</p>
+          <p>${escapeHtml(t(validationKey, { date: formatDate(urbanAtlas?.source?.validationStatusCheckedAt) }))}</p>
+          <p>${escapeHtml(t("landCover.attribution"))}</p>
+          ${urbanAtlas?.source?.doi ? `<p><a href="${safeHref(urbanAtlas.source.doi)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landCover.doi"))}</a></p>` : ""}
+          ${urbanAtlas?.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(urbanAtlas.source.accessedAt) }))}</p>` : ""}
+          ${urbanAtlas?.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(urbanAtlas.generatedAt) }))}</p>` : ""}
+          <h4>${escapeHtml(t("panel.sources"))}</h4>
+          ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
+        </div>
+      </details>
+    </div>`;
+}
+
+function vegetationAreaValue(areaHa, percentage) {
+  return t("vegetation.areaAndPercentage", {
+    area: formatNumber(areaHa),
+    percentage: formatNumber(percentage),
+  });
+}
+
+function vegetationComposition(stats, vegetation) {
+  const otherArea = Math.max(0, Number(stats.sectorAreaHa) - Number(stats.likelyVegetatedAreaHa));
+  const otherPercentage = Math.max(0, 100 - Number(stats.likelyVegetatedPercentage));
+  const items = [
+    { key: "likelyVegetated", area: stats.likelyVegetatedAreaHa, percentage: stats.likelyVegetatedPercentage, color: vegetation.palette.likelyVegetated },
+    { key: "otherValidArea", area: otherArea, percentage: otherPercentage, color: "#D9DEDA" },
+  ];
+  const label = items.map((item) => `${t(`vegetation.${item.key}`)} ${formatNumber(item.percentage)}%`).join(", ");
+  return `
+    <div class="vegetation-composition" role="img" aria-label="${escapeHtml(label)}">
+      ${items.filter((item) => item.percentage > 0).map((item) => `<span style="width:${item.percentage}%;--segment:${item.color}"></span>`).join("")}
+    </div>
+    <div class="vegetation-composition-key">
+      ${items.map((item) => `<span><i style="--swatch:${item.color}" aria-hidden="true"></i><b>${escapeHtml(t(`vegetation.${item.key}`))}</b><strong>${escapeHtml(vegetationAreaValue(item.area, item.percentage))}</strong></span>`).join("")}
+    </div>`;
+}
+
+function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vegetation) {
+  const year = vegetation?.activeYear ?? 2020;
+  const yearData = vegetation?.years?.[year];
+  const stats = scopedStatistics(yearData, record);
+  const calibration = yearData?.calibration;
+  return `
+    <div class="panel-hero land-cover-hero vegetation-hero">
+      <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+      ${stats ? `<div class="score-hero" style="--hero-color:${escapeHtml(vegetation.palette.likelyVegetated)}">
+        <div class="score-orb"><strong>${escapeHtml(formatNumber(stats.likelyVegetatedPercentage))}</strong><span>%</span></div>
+        <div><span class="score-caption">${escapeHtml(t("vegetation.likelyVegetated"))}</span><p>${escapeHtml(t("vegetation.headlineArea", { area: formatNumber(stats.likelyVegetatedAreaHa) }))}</p></div>
+      </div>` : `<p class="panel-empty-state">${escapeHtml(t("vegetation.noData"))}</p>`}
+      <p class="relative-note"><span aria-hidden="true">â—‡</span> ${escapeHtml(t("vegetation.eyebrow", { year }))}</p>
+    </div>
+    <div class="panel-body">
+      ${stats ? `<section aria-labelledby="vegetation-summary-title">
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("vegetation.eyebrow", { year }))}</p><h3 id="vegetation-summary-title">${escapeHtml(t("vegetation.summaryTitle"))}</h3></div>
+        <p class="vegetation-definition">${escapeHtml(t("vegetation.ndviDefinition"))}</p>
+        <p class="section-intro vegetation-intro">${escapeHtml(t("vegetation.summaryExplanation"))}</p>
+        ${vegetationComposition(stats, vegetation)}
+      </section>
+      <details class="detail-accordion" data-section="vegetation-observation-details">
+        <summary data-focus-key="vegetation-observation-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("vegetation.observationDetails"))}</span></summary>
+        <div class="accordion-content">
+          <div class="summary-grid vegetation-summary-grid">
+            ${metricCard("vegetation.medianNdvi", formatNumber(stats.medianNdvi, 3), "#238B45")}
+            ${metricCard("vegetation.belowThreshold", vegetationAreaValue(stats.belowThresholdAreaHa, stats.belowThresholdPercentage), "#52615C")}
+            ${metricCard("vegetation.excludedCropland", vegetationAreaValue(stats.excludedCroplandAreaHa ?? stats.excludedArableAreaHa ?? 0, stats.excludedCroplandPercentage ?? stats.excludedArablePercentage ?? 0), "#6F5D1C")}
+            ${metricCard("vegetation.excludedWater", vegetationAreaValue(stats.excludedWaterAreaHa, stats.excludedWaterPercentage), "#24658F")}
+            ${metricCard("vegetation.missingObservation", t("unit.hectares", { value: formatNumber(stats.missingObservationAreaHa) }), "#52615C")}
+          </div>
+          ${stats.medianIsAreaWeightedApproximation ? `<p class="calculation-note">${escapeHtml(t("vegetation.municipalityMedianNote"))}</p>` : ""}
+          <p class="urban-atlas-valid-area vegetation-valid-area">${escapeHtml(t("vegetation.validArea", {
+            area: formatNumber(stats.validAreaHa),
+            sectorArea: formatNumber(stats.sectorAreaHa),
+          }))}</p>
+          <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("vegetation.derivedNote"))}</span></p>
+        </div>
+      </details>` : ""}
+      ${yearData?.quality?.status === "warning" ? `<p class="panel-warning">${escapeHtml(t("vegetation.qualityWarning", {
+        cloud: formatNumber(yearData.quality.cloudAffectedPercentage, 1),
+        coverage: formatNumber(yearData.quality.coveragePercentage, 1),
+      }))}</p>` : ""}
+      <details class="detail-accordion methodology-accordion" data-section="vegetation-methodology">
+        <summary data-focus-key="vegetation-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("vegetation.methodologyTitle"))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t("vegetation.observation", {
+            date: formatDate(yearData?.acquisitionDate),
+            threshold: formatNumber(yearData?.threshold, 3),
+          }))}</p>
+          <p>${escapeHtml(t("vegetation.methodologyText"))}</p>
+          ${calibration ? `<h4>${escapeHtml(t("vegetation.calibrationTitle"))}</h4>
+            <ul>
+              <li>${escapeHtml(t("vegetation.calibrationSamples", {
+                positive: formatNumber(calibration.positive.count, 0),
+                negative: formatNumber(calibration.negative.count, 0),
+              }))}</li>
+              <li>${escapeHtml(t("vegetation.calibrationPerformance", {
+                sensitivity: formatNumber(calibration.sensitivity * 100, 1),
+                specificity: formatNumber(calibration.specificity * 100, 1),
+                balanced: formatNumber(calibration.balancedAccuracy * 100, 1),
+                auc: formatNumber(calibration.auc, 3),
+              }))}</li>
+            </ul>` : ""}
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("vegetation.calibrationCaveat"))}</p>
+          <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("vegetation.classificationCaveat"))}</p>
+          <p>${escapeHtml(vegetation?.source?.attribution ?? t("vegetation.attribution"))}</p>
+          ${(yearData?.products ?? vegetation?.source?.products)?.length ? `<h4>${escapeHtml(t("vegetation.sourceProducts"))}</h4><ul>${(yearData?.products ?? vegetation.source.products).map((product) => `<li>${escapeHtml(product.id)}</li>`).join("")}</ul>` : ""}
+          ${vegetation?.source?.accessedAt ? `<p>${escapeHtml(t("landCover.accessed", { date: formatDate(vegetation.source.accessedAt) }))}</p>` : ""}
+          ${vegetation?.generatedAt ? `<p>${escapeHtml(t("landCover.generatedAt", { date: formatDate(vegetation.generatedAt) }))}</p>` : ""}
+          <h4>${escapeHtml(t("panel.sources"))}</h4>
+          ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
+        </div>
+      </details>
+    </div>`;
+}
+
+function aboutLayerCard(key, label) {
+  return `<article>
+    <span class="about-layer-tag">${escapeHtml(label)}</span>
+    <h4>${escapeHtml(t(`about.${key}Question`))}</h4>
+    <dl class="about-layer-facts">
+      <div><dt>${escapeHtml(t("about.dataLabel"))}</dt><dd>${escapeHtml(t(`about.${key}Text`))}</dd></div>
+      <div><dt>${escapeHtml(t("about.producerLabel"))}</dt><dd>${escapeHtml(t(`about.${key}Producer`))}</dd></div>
+      <div><dt>${escapeHtml(t("about.greenwaveLabel"))}</dt><dd>${escapeHtml(t(`about.${key}Greenwave`))}</dd></div>
+    </dl>
+  </article>`;
+}
+
+function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance) {
+  const sectorCount = provenance?.output?.sectorCount ?? 154;
+  return `
+    <div class="panel-hero panel-hero--about">
+      <p class="panel-eyebrow">${escapeHtml(t("about.eyebrow", { count: sectorCount }))}</p>
+      <h2 id="panel-title">${escapeHtml(t("about.title"))}</h2>
+      <p class="about-intro">${escapeHtml(t("about.intro"))}</p>
+    </div>
+    <div class="panel-body about-body">
+      <section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.startKicker"))}</p><h3>${escapeHtml(t("about.howTo"))}</h3></div>
+        <ol class="about-steps">
+          <li><span>1</span><p>${escapeHtml(t("about.step1"))}</p></li>
+          <li><span>2</span><p>${escapeHtml(t("about.step2"))}</p></li>
+          <li><span>3</span><p>${escapeHtml(t("about.step3"))}</p></li>
+        </ol>
+      </section>
+      <section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.layersKicker"))}</p><h3>${escapeHtml(t("about.layersTitle"))}</h3></div>
+        <div class="about-layer-category">
+          <h4 class="about-category-title">${escapeHtml(t("about.categoryHeat"))}</h4>
+          <div class="about-layer-list">
+            ${aboutLayerCard("heat", t("layers.heat"))}
+          </div>
+        </div>
+        <div class="about-layer-category">
+          <h4 class="about-category-title">${escapeHtml(t("about.categoryLandGreen"))}</h4>
+          <div class="about-layer-list">
+            ${aboutLayerCard("landCover", t("layers.landCover", { year: landCover?.activeYear ?? 2020 }))}
+            ${aboutLayerCard("urbanAtlas", t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}
+            ${aboutLayerCard("vegetation", t("layers.vegetation", { year: vegetation?.activeYear ?? 2020 }))}
+          </div>
+        </div>
+        <p class="comparison-caveat">${escapeHtml(t("about.compareCaveat"))}</p>
+      </section>
+      <section class="about-note about-sectors">
+        <p class="section-kicker">${escapeHtml(t("about.sectorsKicker"))}</p>
+        <h3>${escapeHtml(t("about.sectorsTitle"))}</h3>
+        <p>${escapeHtml(t("about.sectorsText", { count: sectorCount }))}</p>
+        <p>${escapeHtml(t("about.sectorsCompatibility"))}</p>
+      </section>
+      <section class="about-note about-foundations">
+        <p class="section-kicker">${escapeHtml(t("about.foundationKicker"))}</p>
+        <h3>${escapeHtml(t("about.foundationTitle"))}</h3>
+        <p>${escapeHtml(t("about.provenanceGeometry"))}</p>
+        <p>${escapeHtml(t("about.provenanceBasemap"))}</p>
+      </section>
+      <section class="about-note about-privacy">
+        <p class="section-kicker">${escapeHtml(t("about.privacyKicker"))}</p>
+        <h3>${escapeHtml(t("about.privacyTitle"))}</h3>
+        <p>${escapeHtml(t("about.privacyApplication"))}</p>
+        <p>${escapeHtml(t("about.privacyHosting"))}</p>
+        <p>${escapeHtml(t("about.privacyTiles"))}</p>
+        <p>${escapeHtml(t("about.contactText"))} <a href="mailto:stefanodonne@gmail.com">stefanodonne@gmail.com</a>.</p>
+      </section>
+      <section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.methodologyKicker"))}</p><h3>${escapeHtml(t("about.methodologyTitle"))}</h3></div>
+        <details class="detail-accordion about-method" data-section="about-heat-methodology">
+          <summary data-focus-key="about-heat-methodology-summary"><span>${escapeHtml(t("about.heatMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("about.heatMethodText"))}</p><p>${escapeHtml(t("about.noDataText"))}</p></div>
+        </details>
+        <details class="detail-accordion about-method" data-section="about-land-cover-methodology">
+          <summary data-focus-key="about-land-cover-methodology-summary"><span>${escapeHtml(t("about.landCoverMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("landCover.productionText"))}</p><p>${escapeHtml(t("landCover.methodologyText"))}</p><p>${escapeHtml(t("landCover.comparisonWarning"))}</p></div>
+        </details>
+        <details class="detail-accordion about-method" data-section="about-urban-atlas-methodology">
+          <summary data-focus-key="about-urban-atlas-methodology-summary"><span>${escapeHtml(t("about.urbanAtlasMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("urbanAtlas.productionText"))}</p><p>${escapeHtml(t("urbanAtlas.methodologyText"))}</p><p>${escapeHtml(t("urbanAtlas.accessWarning"))}</p><p>${escapeHtml(t("urbanAtlas.comparisonWarning"))}</p></div>
+        </details>
+        <details class="detail-accordion about-method" data-section="about-vegetation-methodology">
+          <summary data-focus-key="about-vegetation-methodology-summary"><span>${escapeHtml(t("about.vegetationMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("vegetation.methodologyText"))}</p><p>${escapeHtml(t("vegetation.calibrationCaveat"))}</p><p>${escapeHtml(t("vegetation.classificationCaveat"))}</p></div>
+        </details>
+      </section>
+      <section class="about-sources">
+        <h3>${escapeHtml(t("about.sourcesTitle"))}</h3>
+        ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
+        <p class="about-caveat">${escapeHtml(t("about.caveat"))}</p>
+      </section>
+    </div>`;
+}
+
+function renderMetricSummary(model) {
+  const value = Number.isFinite(model.value) ? formatNumber(model.value) : t("value.notAvailable");
+  const unit = model.unit ?? "%";
+  const color = model.color ?? "#0b6e69";
+  return `
+    <div class="panel-hero land-cover-hero">
+      <p class="panel-eyebrow">${escapeHtml(model.record.municipality)} Â· ${escapeHtml(model.record.sectorId)}</p>
+      <h2 id="panel-title">${escapeHtml(model.record.sectorName)}</h2>
+      <div class="score-hero" style="--hero-color:${escapeHtml(color)}">
+        <div class="score-orb"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(unit)}</span></div>
+        <div><span class="score-caption">${escapeHtml(model.title)}</span>${model.description ? `<p>${escapeHtml(model.description)}</p>` : ""}</div>
+      </div>
+    </div>
+    ${model.notes?.length ? `<div class="panel-body methodology-copy">${model.notes.map((note) => `<p>${escapeHtml(note)}</p>`).join("")}</div>` : ""}`;
+}
+
+/** Render a plain panel model supplied by a layer module. */
+export function renderSectorPanelModel(model) {
+  if (model.template === "heat") {
+    return renderHeatRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation, model.heatMetric);
+  }
+  if (model.template === "land-cover") {
+    return renderLandCoverRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
+  }
+  if (model.template === "urban-atlas") {
+    return renderUrbanAtlasRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
+  }
+  if (model.template === "vegetation") {
+    return renderVegetationRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
+  }
+  if (model.template === "metric-summary") return renderMetricSummary(model);
+  throw new Error(`Unknown sector panel template '${model.template}'.`);
+}
+
+export function createDetailPanel({
+  panel,
+  content,
+  closeButton,
+  getPanelModel,
+  getAboutModel,
+  heatMetric = DEFAULT_HEAT_METRIC,
+  onLayerOptionChange,
+  onClose,
+}) {
+  if (typeof getPanelModel !== "function" || typeof getAboutModel !== "function") {
+    throw new TypeError("The detail panel requires layer-owned panel and about model providers.");
+  }
+
+  let returnFocusElement = null;
+  let currentView = null;
+  let activeHeatMetric = normalizeHeatMetric(heatMetric);
+
+  const captureRenderState = () => ({
+    openSections: [...content.querySelectorAll("details[open][data-section]")].map((element) => element.dataset.section),
+    hadExpandedSection: Boolean(content.querySelector("details[open]")),
+    focusKey: content.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null,
+  });
+
+  const renderCurrentView = ({ preserveState = true, focusPanel = false } = {}) => {
+    if (!currentView) return;
+    const renderState = preserveState ? captureRenderState() : { openSections: [], hadExpandedSection: false, focusKey: null };
+    if (currentView.type === "about") {
+      const model = getAboutModel();
+      content.innerHTML = renderAbout(model.methodology, model.landCover, model.urbanAtlas, model.vegetation, model.provenance);
+    } else {
+      content.innerHTML = renderSectorPanelModel(getPanelModel(currentView.layerId, currentView.record, {
+        heatMetric: activeHeatMetric,
+      }));
+    }
+    let restoredSection = false;
+    renderState.openSections.forEach((sectionId) => {
+      const matchingSection = [...content.querySelectorAll("details[data-section]")]
+        .find((element) => element.dataset.section === sectionId);
+      if (matchingSection) {
+        matchingSection.setAttribute("open", "");
+        restoredSection = true;
+      }
+    });
+    if (renderState.hadExpandedSection && !restoredSection) content.querySelector("details[data-section]")?.setAttribute("open", "");
+    if (renderState.focusKey) {
+      [...content.querySelectorAll("[data-focus-key]")]
+        .find((element) => element.dataset.focusKey === renderState.focusKey)
+        ?.focus({ preventScroll: true });
+    } else if (focusPanel) {
+      requestAnimationFrame(() => panel.focus({ preventScroll: true }));
+    }
+  };
+
+  const close = ({ restoreFocus = true } = {}) => {
+    const closedView = currentView;
+    currentView = null;
+    panel.classList.remove("is-open");
+    panel.setAttribute("aria-hidden", "true");
+    onClose?.(closedView);
+    if (restoreFocus && returnFocusElement instanceof HTMLElement) returnFocusElement.focus();
+  };
+
+  const show = (view, triggerElement) => {
+    returnFocusElement = triggerElement instanceof HTMLElement ? triggerElement : document.activeElement;
+    currentView = view;
+    renderCurrentView({ preserveState: false, focusPanel: true });
+    panel.classList.add("is-open");
+    panel.setAttribute("aria-hidden", "false");
+  };
+
+  const open = (record, triggerElement = null, layerId = "heat") => show({ type: "record", record, layerId }, triggerElement);
+  const openAbout = (triggerElement = null) => show({ type: "about" }, triggerElement);
+  const setPanelLanguage = () => {
+    if (currentView && panel.classList.contains("is-open")) renderCurrentView({ preserveState: true });
+  };
+  const setActiveLayer = (layerId) => {
+    if (currentView?.type !== "record") return;
+    currentView.layerId = layerId;
+    if (panel.classList.contains("is-open")) renderCurrentView({ preserveState: true });
+  };
+  const setHeatMetric = (metric) => {
+    activeHeatMetric = normalizeHeatMetric(metric);
+    if (currentView?.type === "record" && currentView.layerId === "heat" && panel.classList.contains("is-open")) {
+      renderCurrentView({ preserveState: true });
+    }
+  };
+
+  closeButton.addEventListener("click", () => close());
+  panel.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+  content.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-panel-heat-metric]");
+    if (!button) return;
+    onLayerOptionChange?.("metric", button.dataset.panelHeatMetric, button);
+  });
+  content.addEventListener("keydown", (event) => {
+    const button = event.target.closest("[data-panel-heat-metric]");
+    if (!button || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [...content.querySelectorAll("[data-panel-heat-metric]")];
+    const currentIndex = buttons.indexOf(button);
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    buttons[(currentIndex + direction + buttons.length) % buttons.length].focus();
+  });
+  return {
+    open,
+    openAbout,
+    close,
+    setLanguage: setPanelLanguage,
+    setActiveLayer,
+    setHeatMetric,
+    refresh: () => renderCurrentView({ preserveState: true }),
+    isOpen: () => panel.classList.contains("is-open"),
+    isMunicipalitySummary: () => currentView?.type === "record" && currentView.record.scope === "municipality",
+  };
+}
