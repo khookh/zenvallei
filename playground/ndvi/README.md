@@ -11,7 +11,7 @@ py -3.11 -m venv playground/ndvi/.venv
 playground/ndvi/.venv/Scripts/python.exe -m pip install -e "playground/ndvi[dev]"
 ```
 
-Then open this folder in VS Code, open `01_halle_ndvi_2020_2021.ipynb`, choose `playground/ndvi/.venv/Scripts/python.exe` as the kernel and run the cells. Dependencies and their exact versions are declared in `pyproject.toml`; no project launcher is required.
+Dependencies and their exact versions are declared in `pyproject.toml`; no project launcher is required.
 
 ## Copernicus credentials
 
@@ -21,12 +21,6 @@ The first raw download needs a Sentinel Hub OAuth client. Either set temporary e
 $env:CDSE_SH_CLIENT_ID = "your-client-id"
 $secureSecret = Read-Host "Sentinel Hub OAuth client secret" -AsSecureString
 $env:CDSE_SH_CLIENT_SECRET = [System.Net.NetworkCredential]::new("", $secureSecret).Password
-```
-
-or let the notebook prompt for both values. The secret is hidden and never stored. Close VS Code and remove the temporary variables when the download finishes:
-
-```powershell
-Remove-Item Env:CDSE_SH_CLIENT_ID, Env:CDSE_SH_CLIENT_SECRET -ErrorAction SilentlyContinue
 ```
 
 Raw GeoTIFFs are cached under `.cache/vegetation/raw`, so later runs do not need credentials.
