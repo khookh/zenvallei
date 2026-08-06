@@ -72,7 +72,9 @@ jobs:
       id-token: write
     concurrency:
       group: github-pages
-      cancel-in-progress: true
+      # Cancelling a Pages publication can leave its backend deployment queued.
+      # Let the current publication finish before a newer push deploys.
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -18,6 +18,7 @@ describe("GitHub Pages deployment contract", () => {
     expect(actionReferences.every((reference) => /^[a-f0-9]{40}$/.test(reference))).toBe(true);
     expect(workflow).toContain("pnpm install --frozen-lockfile");
     expect(workflow).toContain("pnpm verify:ci");
+    expect(workflow).toContain("cancel-in-progress: false");
   });
 
   it("keeps the local Git passphrase file outside version control", async () => {
