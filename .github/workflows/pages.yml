@@ -1,26 +1,36 @@
-name: Verify and deploy GitHub Pages
+name: Deploy GitHub Pages
+run-name: Deploy main at ${{ github.sha }} by @${{ github.actor }}
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
 jobs:
-  build:
+  deploy:
+    name: Verify, build and deploy
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
+      PAGES_URL: https://khookh.github.io/zenvallei/
       VITE_TILE_URL: ${{ vars.VITE_TILE_URL }}
       VITE_TILE_ATTRIBUTION: ${{ vars.VITE_TILE_ATTRIBUTION }}
     steps:
-      - name: Check out repository
+      - name: Check out main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -44,41 +54,63 @@ jobs:
       - name: Install NDVI playground dependencies
         run: python -m pip install --editable "playground/ndvi[dev]"
 
-      - name: Verify NDVI playground
-        run: python -m pytest playground/ndvi/tests -q
-
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Verify NDVI playground
+        id: python_verification
+        run: python -m pytest playground/ndvi/tests -q
+
       - name: Verify application
+        id: application_verification
         run: pnpm verify:ci
 
       - name: Build GitHub Pages artifact
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: pages_build
         run: pnpm build:pages
 
+      - name: Record release identity
+        id: release_manifest
+        run: >-
+          node scripts/write-release-manifest.mjs
+          --root dist
+          --sha "$GITHUB_SHA"
+          --run-id "$GITHUB_RUN_ID"
+
       - name: Upload GitHub Pages artifact
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: artifact_upload
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
 
-  deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    concurrency:
-      group: github-pages
-      # Cancelling a Pages publication can leave its backend deployment queued.
-      # Let the current publication finish before a newer push deploys.
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy GitHub Pages artifact
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+      - name: Verify the published commit
+        id: live_verification
+        if: always() && steps.artifact_upload.outcome == 'success'
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: >-
+          node scripts/verify-pages-release.mjs
+          --url "$PAGES_URL"
+          --sha "$EXPECTED_SHA"
+          --timeout-ms 300000
+          --interval-ms 5000
+
+      - name: Summarise deployment
+        if: always()
+        env:
+          REQUESTED_SHA: ${{ github.sha }}
+          PYTHON_OUTCOME: ${{ steps.python_verification.outcome }}
+          APPLICATION_OUTCOME: ${{ steps.application_verification.outcome }}
+          BUILD_OUTCOME: ${{ steps.pages_build.outcome }}
+          MANIFEST_OUTCOME: ${{ steps.release_manifest.outcome }}
+          UPLOAD_OUTCOME: ${{ steps.artifact_upload.outcome }}
+          DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
+          LIVE_OUTCOME: ${{ steps.live_verification.outcome }}
+          LIVE_FAILURE_CODE: ${{ steps.live_verification.outputs.failure_code }}
+          PUBLISHED_SHA: ${{ steps.live_verification.outputs.published_sha }}
+        run: node scripts/write-deployment-summary.mjs

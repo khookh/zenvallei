@@ -29,7 +29,7 @@ If port 4173 is already occupied, the launcher stops with the owning process ID.
 
 ## Public static host
 
-The public POC is deployed to <https://khookh.github.io/zenvallei/> by `.github/workflows/pages.yml`. Pull requests verify the application without deploying it. A verified push to `main`, or a manual run on `main`, builds and publishes `dist` through the official GitHub Pages artifact actions.
+The public POC is available at <https://khookh.github.io/zenvallei/>. **Verify application** runs automatically for pull requests and pushes to `main`. **Deploy GitHub Pages** publishes only when it is started manually on `main`.
 
 ```powershell
 pnpm build:pages
@@ -40,13 +40,26 @@ The Pages build uses `/zenvallei/` for application, worker and data assets. Do n
 
 ### Deploy or redeploy GitHub Pages
 
-1. Run `pnpm verify` and `pnpm test:e2e:cross-browser` locally.
-2. Review `git status` and commit the intended files on `main`.
-3. Run `git push origin main`.
-4. In GitHub, open **Actions**, then **Verify and deploy GitHub Pages**, and wait for both the build and deploy jobs to succeed.
-5. Open <https://khookh.github.io/zenvallei/> and smoke-test every layer, both languages and a mobile layout.
+1. Confirm that **Verify application** is green for the latest commit on `main`.
+2. Check [GitHub Status](https://www.githubstatus.com/) if Actions or Pages is degraded.
+3. In **Actions**, open **Deploy GitHub Pages**, choose **Run workflow**, select `main` and start it once.
+4. Wait for the job summary to confirm that the requested commit SHA is live.
+5. Smoke-test the public map in English and Dutch. Do not start a duplicate run while another deployment is queued or active.
 
-For a redeploy without a code change, open the same workflow, choose **Run workflow**, select `main` and run it. Avoid starting several deployments in quick succession. For a local Pages-path check before pushing, run `pnpm build:pages` followed by `pnpm test:pages`.
+Every deployment repeats the complete verification suite before packaging and publishing. The workflow writes `release.json` into the artifact and checks that exact commit on the public site. A matching live SHA is authoritative even when the Pages status API times out; a stale or unavailable marker keeps the workflow red.
+
+For a local Pages-path check before pushing, run `pnpm build:pages` followed by `pnpm test:pages`.
+
+### Workflow troubleshooting
+
+| Symptom | Meaning and action |
+| --- | --- |
+| Waiting for a hosted runner | GitHub has not assigned infrastructure. Check GitHub Status and wait; do not start duplicate runs. |
+| A named verification step fails | The application or test failed. Run the command shown in the job summary locally. |
+| Pages action fails, but the live SHA matches | Publication succeeded and the Pages status API failed. The workflow reports a warning and succeeds. |
+| Live SHA is old or never appears | Publication genuinely failed or is still delayed. Check Pages status, then retry once after recovery. |
+| Cancelled by `@user` | A person cancelled the run; this is not an application failure. |
+| Internal server error | Preserve the correlation ID from the log for GitHub Support and check GitHub Status. |
 
 The eventual host must provide:
 
@@ -74,8 +87,8 @@ The current OSM service is retained for modest interactive use. To change it wit
 1. Choose a managed or self-hosted OSM-derived provider with browser-safe credentials.
 2. Restrict the public token to `https://khookh.github.io` and set provider quotas.
 3. Set GitHub repository variables `VITE_TILE_URL` and `VITE_TILE_ATTRIBUTION`.
-4. Rebuild and verify the new attribution, tile origin and unavailable-tile fallback.
-5. Roll back by restoring or deleting the variables and rerunning the Pages workflow.
+4. Run automatic verification, then manually deploy and verify the new attribution, tile origin and unavailable-tile fallback.
+5. Roll back by restoring or deleting the variables and manually redeploying.
 
 Never store a confidential token in `VITE_*`; Vite embeds these values in public JavaScript.
 
@@ -92,6 +105,6 @@ GitHub Pages records visitor IP addresses for security. Browser requests to Open
 3. Review `THIRD_PARTY_DATA.md` and every visible attribution.
 4. Test desktop, mobile, keyboard navigation and a failed tile connection.
 5. Confirm no application cookies, analytics or browser storage are present.
-6. Push `main`, wait for the GitHub workflow to succeed, then smoke-test all layers and both languages over HTTPS.
+6. Push `main`, wait for **Verify application**, then run **Deploy GitHub Pages** once and smoke-test all layers and both languages over HTTPS.
 
-Rollback by reverting the faulty commit on `main`; the revert deploys the prior static state. Data migrations are not required because there is no server-side state.
+Rollback by reverting the faulty commit on `main`, waiting for verification and manually deploying the revert. Data migrations are not required because there is no server-side state.

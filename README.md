@@ -87,7 +87,9 @@ Select that interpreter as the notebook kernel. The playground downloads raw B04
 
 ## Public deployment
 
-Verified changes on `main` are deployed through GitHub Actions to <https://khookh.github.io/zenvallei/>. The standard OpenStreetMap tile service is retained for this modest non-commercial POC. It must be replaced through the existing environment configuration before meaningful public traffic.
+Changes on `main` are checked automatically by **Verify application**. Publishing to <https://khookh.github.io/zenvallei/> is deliberately manual: run **Deploy GitHub Pages** once after verification is green. The deployment repeats all checks and confirms the exact live commit through `release.json`. See the [deployment guide](docs/deployment.md) for the short procedure and failure meanings.
+
+The standard OpenStreetMap tile service is retained for this modest non-commercial POC. It must be replaced through the existing environment configuration before meaningful public traffic.
 
 GitHub Pages cannot apply the complete response-header policy used by local preview. A build-time CSP and referrer policy protect the Pages POC; the remaining headers are documented for the next hosting provider. Vite preview remains limited to development and trusted local-network access.
 
