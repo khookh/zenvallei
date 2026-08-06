@@ -308,602 +308,8 @@ test("keeps local sectors usable when basemap tiles are unavailable", async ({ p
   await expect(page.locator("#sector-options option")).toHaveCount(154);
 
   const expectedNetworkErrors = runtimeErrors.get(page);
-  expect(expectedNetworkErrors.length).toBeGreaterThan(0);
-  expect(expectedNetworkErrors.every((message) => message.includes("Failed to load resource"))).toBe(true);
-  runtimeErrors.set(page, []);
-});
-
-test.afterEach(async ({ page }) => {
-  expect(runtimeErrors.get(page), "De app mag geen browserfouten loggen").toEqual([]);
-});
-
-test("matches the refined hierarchy in Dutch and English", async ({ page }) => {
-  await expect(page.locator(".app-header")).toHaveScreenshot("header-nl.png", { animations: "disabled" });
-  await expect(page.locator("#map-controls")).toHaveScreenshot("controls-nl.png", { animations: "disabled" });
-
-  await page.locator("#language-toggle").click();
-  await expect(page.locator(".app-header")).toHaveScreenshot("header-en.png", { animations: "disabled" });
-  await expect(page.locator("#map-controls")).toHaveScreenshot("controls-en.png", { animations: "disabled" });
-  await page.locator('[data-heat-metric="vulnerability"]').click();
-  await expect(page.locator(".app-header")).toHaveScreenshot("header-vulnerability-en.png", { animations: "disabled" });
-
-  await page.locator("#language-toggle").click();
-  await page.locator("#municipality-select").selectOption("Beersel");
-  await page.locator("#sector-search").fill("23003A001");
-  await page.locator("#sector-search").press("Enter");
-  await page.locator('[data-layer="land-cover"]').click();
-  await expect(page.locator('[aria-labelledby="land-cover-summary-title"]'))
-    .toHaveScreenshot("land-cover-summary-nl.png", { animations: "disabled" });
-});
-
-test("loads all sectors and opens a complete score breakdown from search", async ({ page }) => {
-  await expect(page).toHaveTitle("Zennevallei - heat resilience");
-  await expect(page.locator(".brand-mark")).toBeVisible();
-  await expect(page.locator(".brand-mark")).toHaveAttribute("src", /assets\/zennevallei-river-mark\.png$/);
-  await expect(page.locator(".eyebrow")).toHaveText("Zennevallei");
-  await expect(page.locator("[data-layer]")).toHaveCount(4);
-  await expect(page.locator(".layer-category")).toHaveCount(2);
-  await expect(page.locator('[data-layer-category="heat"]')).toContainText("Hitte");
-  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik en groen");
-  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(1);
-  await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(3);
-  await expect(page.locator("[data-heat-metric]")).toHaveCount(3);
-  await expect(page.locator("#heat-metric-control")).toBeVisible();
-  await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('[data-layer="change"]')).toHaveCount(0);
-  await expect(page.locator('[data-layer="urban-atlas"]')).toHaveText("Urban Atlas 2021");
-  await expect(page.locator('[data-layer="vegetation"]')).toHaveText("Vegetatie-indicatie 2020");
-  expect(vegetationRasterRequests.get(page)).toBe(0);
-  await expect(page.locator("#dataset-status")).toContainText("154 Statbel-sectoren Â· scores 2026");
-  await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
-  await expect(page.locator("#about-button")).toContainText("Uitleg");
-  await expect(page.locator("#layer-context-meta")).toHaveText("OfficiÃ«le broncijfers Â· 154 Statbel-sectoren Â· 2026");
-  await expect(page.locator("#layer-context-copy")).toContainText("Departement Zorg");
-  await expect(page.locator("#layer-context-copy")).toContainText("wij tonen ze zonder herberekening");
-  await expect(page.locator(".control-attribution")).toContainText("Vlaamse overheid Â· Departement Zorg");
-  await expect(page.locator(".control-attribution")).toContainText("Statbel");
-  const overlayRenderMs = await page.evaluate(() => performance.getEntriesByName("heat-overlay-first-render")[0]?.duration);
-  expect(overlayRenderMs).toBeLessThan(500);
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  const panel = page.locator("#detail-panel");
-  await expect(panel).toHaveAttribute("aria-hidden", "false");
-  await expect(panel).toContainText("BEERSEL-KERN");
-  await expect(panel).toContainText("Score 6 van 10");
-  await expect(panel).toContainText("Hitte");
-  await expect(panel).toContainText("Kwetsbaarheid");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Hitte" })).toContainText("7");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Kwetsbaarheid" })).toContainText("8");
-  await expect(panel).toContainText("Relatieve rangschikking van het gemiddelde aantal hittegolfgraaddagen");
-  await expect(panel).toContainText("geen eenvoudig gemiddelde");
-  await expect(panel).toContainText("Officieel broncijfer");
-  await panel.getByText("Bekijk alle kwetsbaarheidsindicatoren").click();
-  await expect(panel).toContainText("3,75");
-  await expect(panel).toContainText("gewicht 2");
-});
-
-test("switches between combined, heat and vulnerability scores without losing exploration state", async ({ page }) => {
-  await page.locator("#municipality-select").selectOption("Beersel");
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  const panel = page.locator("#detail-panel");
-  await panel.locator('[data-section="indicators"] > summary').click();
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-  const sectorColor = () => page.evaluate(() => {
-    const expression = window.__heatMap.map.getPaintProperty("heat-sectors-fill", "fill-color");
-    const index = expression.indexOf("23003A001");
-    return expression[index + 1];
-  });
-  expect(await sectorColor()).toBe("#B10064");
-
-  const mapSwitchDuration = await page.evaluate(() => {
-    window.__heatMap.setHeatMetric("final");
-    const started = performance.now();
-    window.__heatMap.setHeatMetric("heat");
-    return performance.now() - started;
-  });
-  expect(mapSwitchDuration).toBeLessThan(100);
-
-  const heatButton = await clickHeatMetric(page, "heat");
-  await expect(heatButton).toBeFocused();
-  await expect(heatButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid Â· Hitte");
-  await expect(page.locator("#dataset-status")).toContainText("hittescore 2026");
-  await expect(page.locator("#legend-title")).toHaveText("Hittescore");
-  await expect(page.locator("#layer-context-meta")).toContainText("OfficiÃ«le hittescore");
-  await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000-2019");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Hittekwetsbaarheid Â· Hitte in de Zennevallei");
-  await expect(page.locator("#selection-announcement")).toContainText("gewijzigd naar Hitte");
-  expect(await sectorColor()).toBe("#96004E");
-  await expect(panel.locator(".score-orb strong")).toHaveText("7");
-  await expect(panel.locator(".score-caption")).toContainText("Hitte: 7 van 10");
-  await expect(panel.locator(".summary-card").nth(0)).toContainText("Eindscore");
-  await expect(panel.locator(".summary-card").nth(0)).toContainText("6");
-  await expect(panel.locator(".summary-card").nth(1)).toContainText("Kwetsbaarheid");
-  await expect(panel.locator(".summary-card").nth(1)).toContainText("8");
-  await expect(panel.locator('[data-section="indicators"]')).toHaveAttribute("open", "");
-
-  if (!await page.locator('[data-panel-heat-metric="heat"]').isVisible()) {
-    const hoverPoint = await findUnobstructedSectorPoint(page, "heat-sectors-hit-area");
-    expect(hoverPoint).not.toBeNull();
-    await page.locator("#map canvas").hover({ position: hoverPoint });
-    await expect(page.locator(".sector-tooltip b")).toContainText("Hitte:");
-  }
-
-  const vulnerabilityButton = await clickHeatMetric(page, "vulnerability");
-  await expect(vulnerabilityButton).toBeFocused();
-  await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid Â· Kwetsbaarheid");
-  await expect(page.locator("#legend-title")).toHaveText("Kwetsbaarheidsscore");
-  expect(await sectorColor()).toBe("#7C003A");
-  await expect(panel.locator(".score-orb strong")).toHaveText("8");
-  await expect(panel.locator(".score-caption")).toContainText("Kwetsbaarheid: 8 van 10");
-  await expect(panel.locator(".summary-card").nth(0)).toContainText("Eindscore");
-  await expect(panel.locator(".summary-card").nth(0)).toContainText("6");
-  await expect(panel.locator(".summary-card").nth(1)).toContainText("Hitte");
-  await expect(panel.locator(".summary-card").nth(1)).toContainText("7");
-  await expect(panel.locator('[data-section="indicators"]')).toHaveAttribute("open", "");
-  expect(await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }))).toEqual(mapStateBefore);
-
-  await page.locator("#language-toggle").click();
-  await expect(page.locator("#active-layer-title")).toHaveText("Heat vulnerability Â· Vulnerability");
-  await expect(vulnerabilityButton).toHaveText("Vulnerability");
-  await expect(panel.locator(".score-caption")).toContainText("Vulnerability: 8 out of 10");
-
-  await page.locator('[data-layer="land-cover"]').click();
-  await expect(page.locator("#heat-metric-control")).toBeHidden();
-  await page.locator('[data-layer="heat"]').click();
-  await expect(page.locator("#heat-metric-control")).toBeVisible();
-  await expect(page.locator('[data-heat-metric="vulnerability"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.locator(".score-orb strong")).toHaveText("8");
-
-  await page.reload();
-  await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
-  await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
-  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid");
-});
-
-test("switches the complete interface to English without resetting exploration state", async ({ page }) => {
-  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(page).toHaveTitle("Zennevallei - heat resilience");
-  await expect(page.locator("#language-toggle")).toHaveText("EN");
-
-  await page.locator("#municipality-select").selectOption("Beersel");
-  await expect(page.locator("#visible-count")).toHaveText("39 sectoren");
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  const panel = page.locator("#detail-panel");
-  await panel.locator('[data-section="indicators"] > summary').click();
-  await panel.locator('[data-section="ses"] > summary').click();
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-
-  await page.locator("#language-toggle").click();
-  await expect(page.locator("#language-toggle")).toBeFocused();
-  await expect(page.locator("#language-toggle")).toHaveText("NL");
-  await expect(page.locator("#language-toggle")).toHaveAttribute("lang", "nl");
-  await expect(page.locator("#language-toggle")).toHaveAttribute("aria-label", "Switch to Dutch");
-  await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page).toHaveTitle("Zennevallei - heat resilience");
-  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /statistical sectors/);
-  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-  await expect(page.locator("#visible-count")).toHaveText("39 sectors");
-  await expect(search).toHaveValue(/23003A001/);
-  await expect(search).toHaveAttribute("placeholder", "Name or sector code");
-  await expect(page.locator("#legend-content")).toContainText("Insufficient data");
-  await expect(page.locator("#layer-context-meta")).toHaveText("Official source values Â· 154 Statbel sectors Â· 2026");
-  await expect(page.locator("#layer-context-copy")).toContainText("we display them without recalculation");
-  await expect(page.locator(".control-attribution")).toContainText("Flemish Government Â· Department of Care");
-  await expect(panel).toContainText("Scores: Flemish Government Â· Department of Care (2026)");
-  await expect(page.locator(".maplibregl-ctrl-zoom-in")).toHaveAttribute("aria-label", "Zoom in");
-  await expect(page.locator("#selection-announcement")).toContainText("Details opened");
-  await expect(panel).toHaveAttribute("aria-hidden", "false");
-  await expect(panel).toContainText("Score 6 out of 10");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Heat" })).toContainText("7");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Vulnerability" })).toContainText("8");
-  await expect(panel).toContainText("3.75");
-  await expect(panel).toContainText("weight 2");
-  await expect(panel.locator('[data-section="indicators"]')).toHaveAttribute("open", "");
-  await expect(panel.locator('[data-section="ses"]')).toHaveAttribute("open", "");
-  const mapStateAfter = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-  expect(mapStateAfter).toEqual(mapStateBefore);
-
-  await page.locator("#language-toggle").click();
-  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(panel).toContainText("Score 6 van 10");
-  await page.reload();
-  await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
-  await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
-  await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(page.locator("#language-toggle")).toHaveText("EN");
-});
-
-test("switches to Copernicus land cover and preserves the selected sector", async ({ page }) => {
-  await page.locator("#municipality-select").selectOption("Beersel");
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  const panel = page.locator("#detail-panel");
-  await panel.locator('[data-section="indicators"] > summary').click();
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-
-  const landCoverButton = page.locator('[data-layer="land-cover"]');
-  await expect(landCoverButton).toHaveAttribute("aria-disabled", "false");
-  const switchStarted = await page.evaluate(() => performance.now());
-  await landCoverButton.click();
-  await page.waitForFunction(() => window.__heatMap.map.getLayer("land-cover-raster")
-    && window.__heatMap.map.getLayoutProperty("land-cover-raster", "visibility") === "visible");
-  const switchDuration = await page.evaluate((start) => performance.now() - start, switchStarted);
-  expect(switchDuration).toBeLessThan(1_000);
-  const subsequentSwitchDuration = await page.evaluate(async () => {
-    await window.__heatMap.setLayer("heat");
-    const started = performance.now();
-    await window.__heatMap.setLayer("land-cover");
-    return performance.now() - started;
-  });
-  expect(subsequentSwitchDuration).toBeLessThan(100);
-  await expect(landCoverButton).toBeFocused();
-  await expect(landCoverButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#legend-title")).toHaveText("Copernicus-landbedekking 2020");
-  await expect(page.locator("#dataset-status")).toContainText("Copernicus Â· raster 2020");
-  await expect(page.locator("#layer-context-meta")).toContainText("10 m-pixels Â· 2020");
-  await expect(page.locator("#layer-context-copy")).toContainText("officiÃ«le Copernicus LCM-10-classificatie");
-  await expect(page.locator("#layer-context-copy")).toContainText("Wij knippen het raster uit");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Landbedekking 2020 in de Zennevallei");
-  await expect(page.locator("#legend-content")).toContainText("Boombedekking");
-  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Generated using European Union's Copernicus Land Monitoring Service information");
-  await expect(panel).toContainText("Dominante landbedekking");
-  await expect(panel).toContainText("Boombedekking");
-  await expect(panel).toContainText("Bomen en grasland samen");
-  await expect(panel.locator(".land-cover-trees")).toContainText("Boombedekking");
-  await expect(panel.locator(".land-cover-trees")).toContainText("40,82%");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("Akkerland");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("16,33%");
-  await expect(panel).toContainText("61,22%");
-  await expect(panel).toContainText("Bebouwde oppervlakte");
-  await expect(panel).toContainText("22,45%");
-  await expect(panel).toContainText("Berekend door deze toepassing");
-  await expect(panel).not.toContainText("Gekarteerd gebied");
-  await expect(panel.locator('[data-section="land-cover-classes"]')).toHaveAttribute("open", "");
-  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-  await expect(search).toHaveValue(/23003A001/);
-  expect(await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }))).toEqual(mapStateBefore);
-
-  await page.locator("#panel-close").click();
-  await search.fill("23003A001");
-  await search.press("Enter");
-  await expect(panel).toContainText("Dominante landbedekking");
-  await page.locator("#panel-close").click();
-  await expect(panel).toContainText("Gemeenteoverzicht");
-  await page.locator("#panel-close").click();
-  await page.locator("#legend").evaluate((element) => element.removeAttribute("open"));
-  await page.locator("#reset-view").click();
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const landCoverClickPoint = await findUnobstructedSectorPoint(page, "heat-sectors-hit-area");
-  expect(landCoverClickPoint).not.toBeNull();
-  await page.locator("#map canvas").click({ position: landCoverClickPoint });
-  await expect(panel).toHaveAttribute("aria-hidden", "false");
-  await expect(panel.locator(".land-cover-hero")).toBeVisible();
-  await search.fill("23003A001");
-  await search.press("Enter");
-
-  await page.locator("#language-toggle").click();
-  await expect(landCoverButton).toHaveText("Land cover 2020");
-  await expect(page.locator("#legend-title")).toHaveText("Copernicus land cover 2020");
-  await expect(panel).toContainText("Dominant land cover");
-  await expect(panel).toContainText("Tree cover");
-  await expect(panel).toContainText("Trees and grassland combined");
-  await expect(panel.locator(".land-cover-trees")).toContainText("Tree cover");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("Cropland");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("16.33%");
-  await expect(panel).toContainText("61.22%");
-  await expect(panel).toContainText("Built-up area");
-  await expect(panel).toContainText("22.45%");
-  await expect(panel).not.toContainText("Mapped area");
-
-  await page.locator('[data-layer="heat"]').click();
-  await expect(panel).toContainText("Score 6 out of 10");
-  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-});
-
-test("loads Urban Atlas lazily and presents green and artificialisation statistics", async ({ page }) => {
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  const panel = page.locator("#detail-panel");
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-  const atlasButton = page.locator('[data-layer="urban-atlas"]');
-  await expect(atlasButton).toHaveAttribute("aria-disabled", "false");
-  await atlasButton.click();
-  await page.waitForFunction(() => window.__heatMap.map.getLayer("urban-atlas-fill")
-    && window.__heatMap.map.getLayoutProperty("urban-atlas-fill", "visibility") === "visible");
-  const firstRender = await page.evaluate(() => performance.getEntriesByName("urban-atlas-first-render")[0]?.duration);
-  expect(firstRender).toBeLessThan(1_500);
-  await expect(atlasButton).toBeFocused();
-  await expect(atlasButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#legend-title")).toHaveText("Urban Atlas-landbedekking 2021");
-  await expect(page.locator("#dataset-status")).toContainText("Copernicus Â· polygonen 2021");
-  await expect(page.locator("#layer-context-meta")).toContainText("geÃ¯nterpreteerde polygonen Â· 2021");
-  await expect(page.locator("#layer-context-copy")).toContainText("landbedekking en landgebruik");
-  await expect(page.locator("#layer-context-copy")).toContainText("Wij berekenen groenbedekking");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Urban Atlas 2021 in de Zennevallei");
-  await expect(page.locator("#legend-content")).toContainText("Kunstmatige oppervlakken");
-  await expect(page.locator("#legend-content")).toContainText("Kruidachtige vegetatie");
-  await expect(page.locator("#legend-content")).toContainText("Groen stedelijk gebied (publieke toegang)");
-  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Urban Atlas DOI");
-  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-opacity"))).toBe(0.68);
-  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-color"))).toContain("#ccf24d");
-
-  await expect(panel).toContainText("Dominante Urban Atlas-klasse");
-  await expect(panel).toContainText("Bossen");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Groenbedekking" })).toContainText("40%");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Artificialisering" })).toContainText("40%");
-  await expect(panel).toContainText("Kruidachtige vegetatie");
-  await expect(panel).toContainText("Weilanden");
-  await expect(panel).toContainText("publieke toegang");
-  await expect(panel).toContainText("private toegang");
-  await expect(panel).toContainText("toegang onbekend");
-  await expect(panel).toContainText("Bouwterreinen");
-  await expect(panel).toContainText("Berekend door deze toepassing");
-  await expect(panel.locator('[data-section="urban-atlas-other"]')).not.toHaveAttribute("open", "");
-  expect(await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }))).toEqual(mapStateBefore);
-
-  const subsequentSwitch = await page.evaluate(async () => {
-    await window.__heatMap.setLayer("heat");
-    const started = performance.now();
-    await window.__heatMap.setLayer("urban-atlas");
-    return performance.now() - started;
-  });
-  expect(subsequentSwitch).toBeLessThan(100);
-
-  await page.locator("#language-toggle").click();
-  await expect(atlasButton).toHaveText("Urban Atlas 2021");
-  await expect(page.locator("#legend-title")).toHaveText("Urban Atlas land cover 2021");
-  await expect(panel).toContainText("Green coverage");
-  await expect(panel).toContainText("Herbaceous vegetation");
-  await expect(panel).toContainText("Pastures");
-  await expect(panel).toContainText("not yet validated");
-  await expect(panel.locator('[data-section="urban-atlas-green"]')).toHaveAttribute("open", "");
-
-  await page.locator("#language-toggle").click();
-  const municipalityCounts = {
-    Beersel: 39,
-    Drogenbos: 7,
-    Halle: 41,
-    Linkebeek: 7,
-    Pepingen: 15,
-    "Sint-Genesius-Rode": 22,
-    "Sint-Pieters-Leeuw": 23,
-  };
-  for (const [municipality, count] of Object.entries(municipalityCounts)) {
-    await page.locator("#municipality-select").selectOption(municipality);
-    await expect(page.locator("#visible-count")).toHaveText(`${count} sectoren`);
-    expect(await page.evaluate(() => window.__heatMap.map.getFilter("urban-atlas-fill"))).toEqual(["==", ["get", "municipality"], municipality]);
-  }
-});
-
-test("loads likely vegetation lazily and presents calibrated NDVI statistics", async ({ page }) => {
-  expect(vegetationRasterRequests.get(page)).toBe(0);
-  await page.locator("#municipality-select").selectOption("Beersel");
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const panel = page.locator("#detail-panel");
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-
-  const vegetationButton = page.locator('[data-layer="vegetation"]');
-  await expect(vegetationButton).toHaveAttribute("aria-disabled", "false");
-  const switchStarted = await page.evaluate(() => performance.now());
-  await vegetationButton.click();
-  await page.waitForFunction(() => window.__heatMap.map.getLayer("likely-vegetation-raster")
-    && window.__heatMap.map.getLayoutProperty("likely-vegetation-raster", "visibility") === "visible");
-  expect(await page.evaluate((start) => performance.now() - start, switchStarted)).toBeLessThan(1_000);
-  expect(vegetationRasterRequests.get(page)).toBe(1);
-  await expect(vegetationButton).toBeFocused();
-  await expect(vegetationButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("Vegetatie-indicatie 2020");
-  await expect(page.locator("#legend-title")).toHaveText("Vegetatie-indicatie 2020");
-  await expect(page.locator("#legend-note")).toHaveText("NDVI â‰¥ 0,697");
-  await expect(page.locator("#legend-content")).toContainText("Waarschijnlijk begroeid");
-  await expect(page.locator("#legend-content")).not.toContainText("Onder de NDVI-drempel");
-  await expect(page.locator("#legend-content")).not.toContainText("Uitgesloten of geen waarneming");
-  await expect(page.locator("#legend-content")).toContainText("Ongekleurde pixels kunnen onder de drempel liggen");
-  await expect(page.locator("#layer-context-meta")).toContainText("24 jun 2020");
-  await expect(page.locator("#layer-context-copy")).toContainText("bewijst geen ecologische gezondheid");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Vegetatie-indicatie 2020 in de Zennevallei");
-  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-opacity"))).toBe(0.68);
-  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-resampling"))).toBe("nearest");
-
-  await expect(panel).toContainText("Waarschijnlijk begroeid");
-  await expect(panel).toContainText("47,69");
-  await expect(panel).toContainText("24,51 ha");
-  await expect(panel).toContainText("NDVI is een satellietmaat voor groenheid");
-  await expect(panel).toContainText("Andere oppervlakte van de sector");
-  await expect(panel).toContainText("Mediane NDVI");
-  await expect(panel).toContainText("0,677");
-  await expect(panel).toContainText("Uitgesloten akkerland");
-  await expect(panel.locator('[data-section="vegetation-methodology"]')).not.toHaveAttribute("open", "");
-  await panel.locator('[data-section="vegetation-methodology"] > summary').click();
-  await expect(panel).toContainText("Berekende NDVI-drempel: 0,697");
-  await expect(panel).toContainText("Kalibratie van de drempel");
-  await expect(panel).toContainText("ROC AUC 0,925");
-  await expect(panel).toContainText("S2B_MSIL2A_20200624T104629");
-  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Copernicus Sentinel-2 information");
-  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-  expect(await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }))).toEqual(mapStateBefore);
-
-  await page.locator("#language-toggle").click();
-  await expect(vegetationButton).toHaveText("Likely vegetation 2020");
-  await expect(page.locator("#map-controls-title")).toHaveText("What would you like to look at?");
-  await expect(page.locator('[data-layer-category="heat"]')).toContainText("Heat");
-  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Land use and green cover");
-  await expect(page.locator("#legend-title")).toHaveText("Likely vegetation 2020");
-  await expect(panel).toContainText("Likely vegetated");
-  await expect(panel).toContainText("Median NDVI");
-  await expect(panel).toContainText("Calculated NDVI threshold: 0.697");
-  await expect(panel).toContainText("Threshold calibration");
-  await expect(panel.locator('[data-section="vegetation-methodology"]')).toHaveAttribute("open", "");
-  await expect(page.locator("#vegetation-year-control")).toBeHidden();
-
-  const subsequentSwitch = await page.evaluate(async () => {
-    await window.__heatMap.setLayer("heat");
-    const started = performance.now();
-    await window.__heatMap.setLayer("vegetation");
-    return performance.now() - started;
-  });
-  expect(subsequentSwitch).toBeLessThan(100);
-  expect(vegetationRasterRequests.get(page)).toBe(1);
-
-  const accessibilityResults = await new AxeBuilder({ page })
-    .exclude("#map")
-    .withTags(["wcag2a", "wcag2aa"])
-    .analyze();
-  expect(accessibilityResults.violations).toEqual([]);
-});
-
-test("filters all environmental overlays and opens area-weighted municipality summaries", async ({ page }) => {
-  const panel = page.locator("#detail-panel");
-  await page.locator("#municipality-select").selectOption("Beersel");
-  await expect(panel).toHaveAttribute("aria-hidden", "true");
-
-  await page.locator('[data-layer="land-cover"]').click();
-  await expect(panel).toHaveAttribute("aria-hidden", "false");
-  await expect(panel).toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
-  await expect(panel).toContainText("61,22%");
-  expect(await page.evaluate(() => window.__heatMap.map.getSource("land-cover-image").serialize().url)).toContain("land-cover-2020-beersel.png");
-
-  await page.locator('[data-layer="urban-atlas"]').click();
-  await expect(panel).toContainText("Groenbedekking");
-  await expect(panel).toContainText("40%");
-  expect(await page.evaluate(() => window.__heatMap.map.getFilter("urban-atlas-fill"))).toEqual(["==", ["get", "municipality"], "Beersel"]);
-
-  await page.locator('[data-layer="vegetation"]').click();
-  await expect(panel).toContainText("Hoeveel lijkt begroeid?");
-  await expect(panel).toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
-  expect(await page.evaluate(() => window.__heatMap.map.getSource("likely-vegetation-image").serialize().url)).toContain("likely-vegetation-2020-beersel.png");
-
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  await expect(panel).toContainText("23003A001");
-  await expect(panel).not.toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
-  await page.locator("#panel-close").click();
-  await expect(panel).toContainText("Gemeenteoverzicht Â· 39 Statbel-sectoren");
-
-  await page.locator('[data-layer="heat"]').click();
-  await expect(panel).toHaveAttribute("aria-hidden", "true");
-});
-
-test("filters the map and exposes no-data sectors honestly", async ({ page }) => {
-  await page.locator("#municipality-select").selectOption("Halle");
-  await expect(page.locator("#visible-count")).toHaveText("41 sectoren");
-  const search = page.locator("#sector-search");
-  await search.fill("23027A183");
-  await search.press("Enter");
-  const panel = page.locator("#detail-panel");
-  await expect(panel).toContainText("SMEERHOUT");
-  await expect(panel).toContainText("Onvoldoende gegevens");
-  await expect(panel).toContainText("onvoldoende bevolkings- of SES-gegevens");
-  await clickHeatMetric(page, "heat");
-  await expect(panel.locator(".score-orb strong")).toHaveText("n.v.t.");
-  await expect(panel).toContainText("Onvoldoende gegevens");
-  await clickHeatMetric(page, "vulnerability");
-  await expect(panel.locator(".score-orb strong")).toHaveText("n.v.t.");
-  await page.locator("#language-toggle").click();
-  await expect(panel).toContainText("Insufficient data");
-  await expect(panel).toContainText("population or SES data is insufficient");
-  await page.locator("#panel-close").click();
-  await expect(panel).toHaveAttribute("aria-hidden", "true");
-});
-
-test("opens a sector by clicking the rendered overlay", async ({ page }) => {
-  await page.locator("#language-toggle").click();
-  await page.evaluate(() => new Promise((resolve) => {
-    const map = window.__heatMap.map;
-    const timeout = window.setTimeout(resolve, 3_000);
-    map.once("idle", () => {
-      window.clearTimeout(timeout);
-      resolve();
-    });
-    map.triggerRepaint();
-  }));
-  const clickPoint = await findUnobstructedSectorPoint(page, "heat-sectors-fill");
-  expect(clickPoint).not.toBeNull();
-  await page.locator("#map canvas").click({ position: clickPoint });
-  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
-});
-
-test("offers an accessible explanatory layer", async ({ page }) => {
-  await page.locator("#language-toggle").click();
-  await page.locator("#about-button").click();
-  const panel = page.locator("#detail-panel");
-  await expect(panel).toContainText("About this map");
-  await expect(panel).toContainText("How to use the map");
-  await expect(panel).toContainText("What each layer tells you");
-  await expect(panel).toContainText("Land use and green cover");
-  await expect(panel).toContainText("Why 154 sectors?");
-  await expect(panel).toContainText("Statbel defines their codes and boundaries");
-  await expect(panel).toContainText("Official producer");
-  await expect(panel).toContainText("What we add");
-  await expect(panel).toContainText("OpenStreetMap is only the background map");
-  await expect(panel).toContainText("Where did Sentinel-2 observe a strong vegetation signal?");
-  await expect(panel).toContainText("Sources and reference dates");
-  await panel.press("Escape");
-  await expect(page.locator("#about-button")).toBeFocused();
-});
-
-test("keeps the explanatory controls and panel free of automated accessibility violations", async ({ page }) => {
-  for (const metric of ["final", "heat", "vulnerability"]) {
-    await page.locator(`[data-heat-metric="${metric}"]`).click();
-    const controlsResults = await new AxeBuilder({ page })
-      .exclude("#map")
-      .withTags(["wcag2a", "wcag2aa"])
-      .analyze();
-    expect(controlsResults.violations).toEqual([]);
-  }
-
-  await page.locator("#about-button").click();
-  const aboutResults = await new AxeBuilder({ page })
-    .include("#detail-panel")
-    .withTags(["wcag2a", "wcag2aa"])
-    .analyze();
-  expect(aboutResults.violations).toEqual([]);
-});
+  expect(expectedNetworkErrors.leï}¶‰žËkºwµçqÑ•È¡ì¡…ÍQ•áÐè€‰É½•¹‰•‘•­­¥¹œˆô¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÐÀ”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È ˆ¹ÍÕµµ…Éäµ…Éˆ¤¹™¥±Ñ•È¡ì¡…ÍQ•áÐè€‰ÉÑ¥™¥¥…±¥Í•É¥¹œˆô¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÐÀ”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰-ÉÕ¥‘…¡Ñ¥”Ù••Ñ…Ñ¥”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰]•¥±…¹‘•¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰ÁÕ‰±¥•­”Ñ½•…¹œˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰ÁÉ¥Ù…Ñ”Ñ½•…¹œˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰Ñ½•…¹œ½¹‰•­•¹ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰	½ÕÝÑ•ÉÉ•¥¹•¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰	•É•­•¹‘½½È‘•é”Ñ½•Á…ÍÍ¥¹œˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È m‘…Ñ„µÍ•Ñ¥½¸ô‰ÕÉ‰…¸µ…Ñ±…Ìµ½Ñ¡•È‰tœ¤¤¹¹½Ð¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰½Á•¸ˆ°€ˆˆ¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôø€¡ì(€€€•¹Ñ•ÈèÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñ•¹Ñ•È ¤¹Ñ½ÉÉ…ä ¤°(€€€é½½´èÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñi½½´ ¤°(€ô¤¤¤¹Ñ½ÅÕ…°¡µ…ÁMÑ…Ñ•	•™½É”¤ì((€½¹ÍÐÍÕ‰Í•ÅÕ•¹ÑMÝ¥Ñ €ô…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”¡…Íå¹Œ€ ¤€ôøì(€€€…Ý…¥ÐÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹Í•Ñ1…å•È ‰¡•…Ðˆ¤ì(€€€½¹ÍÐÍÑ…ÉÑ•€ôÁ•É™½Éµ…¹”¹¹½Ü ¤ì(€€€…Ý…¥ÐÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹Í•Ñ1…å•È ‰ÕÉ‰…¸µ…Ñ±…Ìˆ¤ì(€€€É•ÑÕÉ¸Á•É™½Éµ…¹”¹¹½Ü ¤€´ÍÑ…ÉÑ•ì(€ô¤ì(€•áÁ•Ð¡ÍÕ‰Í•ÅÕ•¹ÑMÝ¥Ñ ¤¹Ñ½	•1•ÍÍQ¡…¸ ÄÀÀ¤ì((€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ±…¹Õ…”µÑ½±”ˆ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡…Ñ±…Í	ÕÑÑ½¸¤¹Ñ½!…Ù•Q•áÐ ‰UÉ‰…¸Ñ±…Ì€ÈÀÈÄˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µÑ¥Ñ±”ˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰UÉ‰…¸Ñ±…Ì±…¹½Ù•È€ÈÀÈÄˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰É••¸½Ù•É…”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰!•É‰…•½ÕÌÙ••Ñ…Ñ¥½¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰A…ÍÑÕÉ•Ìˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰¹½Ðå•ÐÙ…±¥‘…Ñ•ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È m‘…Ñ„µÍ•Ñ¥½¸ô‰ÕÉ‰…¸µ…Ñ±…ÌµÉ••¸‰tœ¤¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰½Á•¸ˆ°€ˆˆ¤ì((€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ±…¹Õ…”µÑ½±”ˆ¤¹±¥¬ ¤ì(€½¹ÍÐµÕ¹¥¥Á…±¥Ñå½Õ¹ÑÌ€ôì(€€€	••ÉÍ•°è€Ìä°(€€€É½•¹‰½Ìè€Ü°(€€€!…±±”è€ÐÄ°(€€€1¥¹­•‰••¬è€Ü°(€€€A•Á¥¹•¸è€ÄÔ°(€€€€‰M¥¹Ðµ•¹•Í¥ÕÌµI½‘”ˆè€ÈÈ°(€€€€‰M¥¹ÐµA¥•Ñ•ÉÌµ1••ÕÜˆè€ÈÌ°(€ôì(€™½È€¡½¹ÍÐmµÕ¹¥¥Á…±¥Ñä°½Õ¹Ñt½˜=‰©•Ð¹•¹ÑÉ¥•Ì¡µÕ¹¥¥Á…±¥Ñå½Õ¹ÑÌ¤¤ì(€€€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆµÕ¹¥¥Á…±¥ÑäµÍ•±•Ðˆ¤¹Í•±•Ñ=ÁÑ¥½¸¡µÕ¹¥¥Á…±¥Ñä¤ì(€€€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆÙ¥Í¥‰±”µ½Õ¹Ðˆ¤¤¹Ñ½!…Ù•Q•áÐ¡€‘í½Õ¹ÑôÍ•Ñ½É•¹€¤ì(€€€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôøÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñ¥±Ñ•È ‰ÕÉ‰…¸µ…Ñ±…Ìµ™¥±°ˆ¤¤¤¹Ñ½ÅÕ…°¡lˆôôˆ°l‰•Ðˆ°€‰µÕ¹¥¥Á…±¥Ñä‰t°µÕ¹¥¥Á…±¥Ñåt¤ì(€ô)ô¤ì()Ñ•ÍÐ ‰±½…‘Ì±¥­•±äÙ••Ñ…Ñ¥½¸±…é¥±ä…¹ÁÉ•Í•¹ÑÌ…±¥‰É…Ñ•9Y$ÍÑ…Ñ¥ÍÑ¥Ìˆ°…Íå¹Œ€¡ìÁ…”ô¤€ôøì(€•áÁ•Ð¡Ù••Ñ…Ñ¥½¹I…ÍÑ•ÉI•ÅÕ•ÍÑÌ¹•Ð¡Á…”¤¤¹Ñ½	” À¤ì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆµÕ¹¥¥Á…±¥ÑäµÍ•±•Ðˆ¤¹Í•±•Ñ=ÁÑ¥½¸ ‰	••ÉÍ•°ˆ¤ì(€½¹ÍÐÍ•…É €ôÁ…”¹±½…Ñ½È ˆÍ•Ñ½ÈµÍ•…É ˆ¤ì(€…Ý…¥ÐÍ•…É ¹™¥±° ˆÈÌÀÀÍÀÀÄˆ¤ì(€…Ý…¥ÐÍ•…É ¹ÁÉ•ÍÌ ‰¹Ñ•Èˆ¤ì(€…Ý…¥ÐÁ…”¹Ý…¥Ñ½ÉÕ¹Ñ¥½¸  ¤€ôø€…Ý¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹¥Í5½Ù¥¹œ ¤¤ì(€½¹ÍÐÁ…¹•°€ôÁ…”¹±½…Ñ½È ˆ‘•Ñ…¥°µÁ…¹•°ˆ¤ì(€½¹ÍÐµ…ÁMÑ…Ñ•	•™½É”€ô…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôø€¡ì(€€€•¹Ñ•ÈèÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñ•¹Ñ•È ¤¹Ñ½ÉÉ…ä ¤°(€€€é½½´èÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñi½½´ ¤°(€ô¤¤ì((€½¹ÍÐÙ••Ñ…Ñ¥½¹	ÕÑÑ½¸€ôÁ…”¹±½…Ñ½È m‘…Ñ„µ±…å•Èô‰Ù••Ñ…Ñ¥½¸‰tœ¤ì(€…Ý…¥Ð•áÁ•Ð¡Ù••Ñ…Ñ¥½¹	ÕÑÑ½¸¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µ‘¥Í…‰±•ˆ°€‰™…±Í”ˆ¤ì(€½¹ÍÐÍÝ¥Ñ¡MÑ…ÉÑ•€ô…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôøÁ•É™½Éµ…¹”¹¹½Ü ¤¤ì(€…Ý…¥ÐÙ••Ñ…Ñ¥½¹	ÕÑÑ½¸¹±¥¬ ¤ì(€…Ý…¥ÐÁ…”¹Ý…¥Ñ½ÉÕ¹Ñ¥½¸  ¤€ôøÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñ1…å•È ‰±¥­•±äµÙ••Ñ…Ñ¥½¸µÉ…ÍÑ•Èˆ¤(€€€€˜˜Ý¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñ1…å½ÕÑAÉ½Á•ÉÑä ‰±¥­•±äµÙ••Ñ…Ñ¥½¸µÉ…ÍÑ•Èˆ°€‰Ù¥Í¥‰¥±¥Ñäˆ¤€ôôô€‰Ù¥Í¥‰±”ˆ¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ” ¡ÍÑ…ÉÐ¤€ôøÁ•É™½Éµ…¹”¹¹½Ü ¤€´ÍÑ…ÉÐ°ÍÝ¥Ñ¡MÑ…ÉÑ•¤¤¹Ñ½	•1•ÍÍQ¡…¸ Å|ÀÀÀ¤ì(€•áÁ•Ð¡Ù••Ñ…Ñ¥½¹I…ÍÑ•ÉI•ÅÕ•ÍÑÌ¹•Ð¡Á…”¤¤¹Ñ½	” Ä¤ì(€…Ý…¥Ð•áÁ•Ð¡Ù••Ñ…Ñ¥½¹	ÕÑÑ½¸¤¹Ñ½	•½ÕÍ• ¤ì(€…Ý…¥Ð•áÁ•Ð¡Ù••Ñ…Ñ¥½¹	ÕÑÑ½¸¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µÁÉ•ÍÍ•ˆ°€‰ÑÉÕ”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ…Ñ¥Ù”µ±…å•ÈµÑ¥Ñ±”ˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰Y••Ñ…Ñ¥”µ¥¹‘¥…Ñ¥”€ÈÀÈÀˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µÑ¥Ñ±”ˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰Y••Ñ…Ñ¥”µ¥¹‘¥…Ñ¥”€ÈÀÈÀˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µ¹½Ñ”ˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰9Y$ƒŠ&”€À°ØäÜˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µ½¹Ñ•¹Ðˆ¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰]……ÉÍ¡¥©¹±¥©¬‰•É½•¥ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µ½¹Ñ•¹Ðˆ¤¤¹¹½Ð¹Ñ½½¹Ñ…¥¹Q•áÐ ‰=¹‘•È‘”9Y$µ‘É•µÁ•°ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µ½¹Ñ•¹Ðˆ¤¤¹¹½Ð¹Ñ½½¹Ñ…¥¹Q•áÐ ‰U¥Ñ•Í±½Ñ•¸½˜••¸Ý……É¹•µ¥¹œˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µ½¹Ñ•¹Ðˆ¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰=¹•­±•ÕÉ‘”Á¥á•±Ì­Õ¹¹•¸½¹‘•È‘”‘É•µÁ•°±¥•¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±…å•Èµ½¹Ñ•áÐµµ•Ñ„ˆ¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÈÐ©Õ¸€ÈÀÈÀˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±…å•Èµ½¹Ñ•áÐµ½Áäˆ¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰‰•Ý¥©ÍÐ••¸•½±½¥Í¡”•é½¹‘¡•¥ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆµ…À…¹Ù…Ìˆ¤¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µ±…‰•°ˆ°€‰%¹Ñ•É…Ñ¥•Ù”­……ÉÐèY••Ñ…Ñ¥”µ¥¹‘¥…Ñ¥”€ÈÀÈÀ¥¸‘”i•¹¹•Ù…±±•¤ˆ¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôøÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•ÑA…¥¹ÑAÉ½Á•ÉÑä ‰±¥­•±äµÙ••Ñ…Ñ¥½¸µÉ…ÍÑ•Èˆ°€‰É…ÍÑ•Èµ½Á…¥Ñäˆ¤¤¤¹Ñ½	” À¸Øà¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôøÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•ÑA…¥¹ÑAÉ½Á•ÉÑä ‰±¥­•±äµÙ••Ñ…Ñ¥½¸µÉ…ÍÑ•Èˆ°€‰É…ÍÑ•ÈµÉ•Í…µÁ±¥¹œˆ¤¤¤¹Ñ½	” ‰¹•…É•ÍÐˆ¤ì((€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰]……ÉÍ¡¥©¹±¥©¬‰•É½•¥ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÐÜ°Øäˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÈÐ°ÔÄ¡„ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰9Y$¥Ì••¸Í…Ñ•±±¥•Ñµ……ÐÙ½½ÈÉ½•¹¡•¥ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰¹‘•É”½ÁÁ•ÉÙ±…­Ñ”Ù…¸‘”Í•Ñ½Èˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰5•‘¥…¹”9Y$ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÀ°ØÜÜˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰U¥Ñ•Í±½Ñ•¸…­­•É±…¹ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È m‘…Ñ„µÍ•Ñ¥½¸ô‰Ù••Ñ…Ñ¥½¸µµ•Ñ¡½‘½±½ä‰tœ¤¤¹¹½Ð¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰½Á•¸ˆ°€ˆˆ¤ì(€…Ý…¥ÐÁ…¹•°¹±½…Ñ½È m‘…Ñ„µÍ•Ñ¥½¸ô‰Ù••Ñ…Ñ¥½¸µµ•Ñ¡½‘½±½ä‰t€øÍÕµµ…Éäœ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰	•É•­•¹‘”9Y$µ‘É•µÁ•°è€À°ØäÜˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰-…±¥‰É…Ñ¥”Ù…¸‘”‘É•µÁ•°ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰I=U€À°äÈÔˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰LÉ	}5M%0É|ÈÀÈÀÀØÈÑPÄÀÐØÈäˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ¹µ…Á±¥‰É•°µÑÉ°µ…ÑÑÉ¥ˆˆ¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰½Á•É¹¥ÕÌM•¹Ñ¥¹•°´È¥¹™½Éµ…Ñ¥½¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆµÕ¹¥¥Á…±¥ÑäµÍ•±•Ðˆ¤¤¹Ñ½!…Ù•Y…±Õ” ‰	••ÉÍ•°ˆ¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôø€¡ì(€€€•¹Ñ•ÈèÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñ•¹Ñ•È ¤¹Ñ½ÉÉ…ä ¤°(€€€é½½´èÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñi½½´ ¤°(€ô¤¤¤¹Ñ½ÅÕ…°¡µ…ÁMÑ…Ñ•	•™½É”¤ì((€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ±…¹Õ…”µÑ½±”ˆ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Ù••Ñ…Ñ¥½¹	ÕÑÑ½¸¤¹Ñ½!…Ù•Q•áÐ ‰1¥­•±äÙ••Ñ…Ñ¥½¸€ÈÀÈÀˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆµ…Àµ½¹ÑÉ½±ÌµÑ¥Ñ±”ˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰]¡…ÐÝ½Õ±å½Ô±¥­”Ñ¼±½½¬…Ðüˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È m‘…Ñ„µ±…å•Èµ…Ñ•½Éäô‰¡•…Ð‰tœ¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰!•…Ðˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È m‘…Ñ„µ±…å•Èµ…Ñ•½Éäô‰±…¹µÉ••¸‰tœ¤¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰1…¹ÕÍ”…¹É••¸½Ù•Èˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ±••¹µÑ¥Ñ±”ˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰1¥­•±äÙ••Ñ…Ñ¥½¸€ÈÀÈÀˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰1¥­•±äÙ••Ñ…Ñ•ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰5•‘¥…¸9Y$ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰…±Õ±…Ñ•9Y$Ñ¡É•Í¡½±è€À¸ØäÜˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰Q¡É•Í¡½±…±¥‰É…Ñ¥½¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È m‘…Ñ„µÍ•Ñ¥½¸ô‰Ù••Ñ…Ñ¥½¸µµ•Ñ¡½‘½±½ä‰tœ¤¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰½Á•¸ˆ°€ˆˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆÙ••Ñ…Ñ¥½¸µå•…Èµ½¹ÑÉ½°ˆ¤¤¹Ñ½	•!¥‘‘•¸ ¤ì((€½¹ÍÐÍÕ‰Í•ÅÕ•¹ÑMÝ¥Ñ €ô…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”¡…Íå¹Œ€ ¤€ôøì(€€€…Ý…¥ÐÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹Í•Ñ1…å•È ‰¡•…Ðˆ¤ì(€€€½¹ÍÐÍÑ…ÉÑ•€ôÁ•É™½Éµ…¹”¹¹½Ü ¤ì(€€€…Ý…¥ÐÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹Í•Ñ1…å•È ‰Ù••Ñ…Ñ¥½¸ˆ¤ì(€€€É•ÑÕÉ¸Á•É™½Éµ…¹”¹¹½Ü ¤€´ÍÑ…ÉÑ•ì(€ô¤ì(€•áÁ•Ð¡ÍÕ‰Í•ÅÕ•¹ÑMÝ¥Ñ ¤¹Ñ½	•1•ÍÍQ¡…¸ ÄÀÀ¤ì(€•áÁ•Ð¡Ù••Ñ…Ñ¥½¹I…ÍÑ•ÉI•ÅÕ•ÍÑÌ¹•Ð¡Á…”¤¤¹Ñ½	” Ä¤ì((€½¹ÍÐ…•ÍÍ¥‰¥±¥ÑåI•ÍÕ±ÑÌ€ô…Ý…¥Ð¹•Üá•	Õ¥±‘•È¡ìÁ…”ô¤(€€€€¹•á±Õ‘” ˆµ…Àˆ¤(€€€€¹Ý¥Ñ¡Q…Ì¡l‰Ý…œÉ„ˆ°€‰Ý…œÉ…„‰t¤(€€€€¹…¹…±åé” ¤ì(€•áÁ•Ð¡…•ÍÍ¥‰¥±¥ÑåI•ÍÕ±ÑÌ¹Ù¥½±…Ñ¥½¹Ì¤¹Ñ½ÅÕ…°¡mt¤ì)ô¤ì()Ñ•ÍÐ ‰™¥±Ñ•ÉÌ…±°•¹Ù¥É½¹µ•¹Ñ…°½Ù•É±…åÌ…¹½Á•¹Ì…É•„µÝ•¥¡Ñ•µÕ¹¥¥Á…±¥ÑäÍÕµµ…É¥•Ìˆ°…Íå¹Œ€¡ìÁ…”ô¤€ôøì(€½¹ÍÐÁ…¹•°€ôÁ…”¹±½…Ñ½È ˆ‘•Ñ…¥°µÁ…¹•°ˆ¤ì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆµÕ¹¥¥Á…±¥ÑäµÍ•±•Ðˆ¤¹Í•±•Ñ=ÁÑ¥½¸ ‰	••ÉÍ•°ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µ¡¥‘‘•¸ˆ°€‰ÑÉÕ”ˆ¤ì((€…Ý…¥ÐÁ…”¹±½…Ñ½È m‘…Ñ„µ±…å•Èô‰±…¹µ½Ù•È‰tœ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µ¡¥‘‘•¸ˆ°€‰™…±Í”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰•µ••¹Ñ•½Ù•Éé¥¡Ðƒ
+Ü€ÌäMÑ…Ñ‰•°µÍ•Ñ½É•¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆØÄ°ÈÈ”ˆ¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôøÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•ÑM½ÕÉ” ‰±…¹µ½Ù•Èµ¥µ…”ˆ¤¹Í•É¥…±¥é” ¤¹ÕÉ°¤¤¹Ñ½½¹Ñ…¥¸ ‰±…¹µ½Ù•È´ÈÀÈÀµ‰••ÉÍ•°¹Á¹œˆ¤ì((€…Ý…¥ÐÁ…”¹±½…Ñ½È m‘…Ñ„µ±…å•Èô‰ÕÉ‰…¸µ…Ñ±…Ì‰tœ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰É½•¹‰•‘•­­¥¹œˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÐÀ”ˆ¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôøÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•Ñ¥±Ñ•È ‰ÕÉ‰…¸µ…Ñ±…Ìµ™¥±°ˆ¤¤¤¹Ñ½ÅÕ…°¡lˆôôˆ°l‰•Ðˆ°€‰µÕ¹¥¥Á…±¥Ñä‰t°€‰	••ÉÍ•°‰t¤ì((€…Ý…¥ÐÁ…”¹±½…Ñ½È m‘…Ñ„µ±…å•Èô‰Ù••Ñ…Ñ¥½¸‰tœ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰!½•Ù••°±¥©­Ð‰•É½•¥üˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰•µ••¹Ñ•½Ù•Éé¥¡Ðƒ
+Ü€ÌäMÑ…Ñ‰•°µÍ•Ñ½É•¸ˆ¤ì(€•áÁ•Ð¡…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôøÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…À¹•ÑM½ÕÉ” ‰±¥­•±äµÙ••Ñ…Ñ¥½¸µ¥µ…”ˆ¤¹Í•É¥…±¥é” ¤¹ÕÉ°¤¤¹Ñ½½¹Ñ…¥¸ ‰±¥­•±äµÙ••Ñ…Ñ¥½¸´ÈÀÈÀµ‰••ÉÍ•°¹Á¹œˆ¤ì((€½¹ÍÐÍ•…É €ôÁ…”¹±½…Ñ½È ˆÍ•Ñ½ÈµÍ•…É ˆ¤ì(€…Ý…¥ÐÍ•…É ¹™¥±° ˆÈÌÀÀÍÀÀÄˆ¤ì(€…Ý…¥ÐÍ•…É ¹ÁÉ•ÍÌ ‰¹Ñ•Èˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ˆÈÌÀÀÍÀÀÄˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹¹½Ð¹Ñ½½¹Ñ…¥¹Q•áÐ ‰•µ••¹Ñ•½Ù•Éé¥¡Ðƒ
+Ü€ÌäMÑ…Ñ‰•°µÍ•Ñ½É•¸ˆ¤ì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆÁ…¹•°µ±½Í”ˆ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰•µ••¹Ñ•½Ù•Éé¥¡Ðƒ
+Ü€ÌäMÑ…Ñ‰•°µÍ•Ñ½É•¸ˆ¤ì((€…Ý…¥ÐÁ…”¹±½…Ñ½È m‘…Ñ„µ±…å•Èô‰¡•…Ð‰tœ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µ¡¥‘‘•¸ˆ°€‰ÑÉÕ”ˆ¤ì)ô¤ì()Ñ•ÍÐ ‰™¥±Ñ•ÉÌÑ¡”µ…À…¹•áÁ½Í•Ì¹¼µ‘…Ñ„Í•Ñ½ÉÌ¡½¹•ÍÑ±äˆ°…Íå¹Œ€¡ìÁ…”ô¤€ôøì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆµÕ¹¥¥Á…±¥ÑäµÍ•±•Ðˆ¤¹Í•±•Ñ=ÁÑ¥½¸ ‰!…±±”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆÙ¥Í¥‰±”µ½Õ¹Ðˆ¤¤¹Ñ½!…Ù•Q•áÐ ˆÐÄÍ•Ñ½É•¸ˆ¤ì(€½¹ÍÐÍ•…É €ôÁ…”¹±½…Ñ½È ˆÍ•Ñ½ÈµÍ•…É ˆ¤ì(€…Ý…¥ÐÍ•…É ¹™¥±° ˆÈÌÀÈÝÄàÌˆ¤ì(€…Ý…¥ÐÍ•…É ¹ÁÉ•ÍÌ ‰¹Ñ•Èˆ¤ì(€½¹ÍÐÁ…¹•°€ôÁ…”¹±½…Ñ½È ˆ‘•Ñ…¥°µÁ…¹•°ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰M5I!=UPˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰=¹Ù½±‘½•¹‘”••Ù•¹Ìˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰½¹Ù½±‘½•¹‘”‰•Ù½±­¥¹Ì´½˜MLµ••Ù•¹Ìˆ¤ì(€…Ý…¥Ð±¥­!•…Ñ5•ÑÉ¥Œ¡Á…”°€‰¡•…Ðˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È ˆ¹Í½É”µ½ÉˆÍÑÉ½¹œˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰¸¹Ø¹Ð¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰=¹Ù½±‘½•¹‘”••Ù•¹Ìˆ¤ì(€…Ý…¥Ð±¥­!•…Ñ5•ÑÉ¥Œ¡Á…”°€‰ÙÕ±¹•É…‰¥±¥Ñäˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È ˆ¹Í½É”µ½ÉˆÍÑÉ½¹œˆ¤¤¹Ñ½!…Ù•Q•áÐ ‰¸¹Ø¹Ð¸ˆ¤ì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ±…¹Õ…”µÑ½±”ˆ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰%¹ÍÕ™™¥¥•¹Ð‘…Ñ„ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰Á½ÁÕ±…Ñ¥½¸½ÈML‘…Ñ„¥Ì¥¹ÍÕ™™¥¥•¹Ðˆ¤ì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆÁ…¹•°µ±½Í”ˆ¤¹±¥¬ ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µ¡¥‘‘•¸ˆ°€‰ÑÉÕ”ˆ¤ì)ô¤ì()Ñ•ÍÐ ‰½Á•¹Ì„Í•Ñ½È‰ä±¥­¥¹œÑ¡”É•¹‘•É•½Ù•É±…äˆ°…Íå¹Œ€¡ìÁ…”ô¤€ôøì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ±…¹Õ…”µÑ½±”ˆ¤¹±¥¬ ¤ì(€…Ý…¥ÐÁ…”¹•Ù…±Õ…Ñ”  ¤€ôø¹•ÜAÉ½µ¥Í” ¡É•Í½±Ù”¤€ôøì(€€€½¹ÍÐµ…À€ôÝ¥¹‘½Ü¹}}¡•…Ñ5…À¹µ…Àì(€€€½¹ÍÐÑ¥µ•½ÕÐ€ôÝ¥¹‘½Ü¹Í•ÑQ¥µ•½ÕÐ¡É•Í½±Ù”°€Í|ÀÀÀ¤ì(€€€µ…À¹½¹” ‰¥‘±”ˆ°€ ¤€ôøì(€€€€€Ý¥¹‘½Ü¹±•…ÉQ¥µ•½ÕÐ¡Ñ¥µ•½ÕÐ¤ì(€€€€€É•Í½±Ù” ¤ì(€€€ô¤ì(€€€µ…À¹ÑÉ¥•ÉI•Á…¥¹Ð ¤ì(€ô¤¤ì(€½¹ÍÐ±¥­A½¥¹Ð€ô…Ý…¥Ð™¥¹‘U¹½‰ÍÑÉÕÑ•‘M•Ñ½ÉA½¥¹Ð¡Á…”°€‰¡•…ÐµÍ•Ñ½ÉÌµ™¥±°ˆ¤ì(€•áÁ•Ð¡±¥­A½¥¹Ð¤¹¹½Ð¹Ñ½	•9Õ±° ¤ì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆµ…À…¹Ù…Ìˆ¤¹±¥¬¡ìÁ½Í¥Ñ¥½¸è±¥­A½¥¹Ðô¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ‘•Ñ…¥°µÁ…¹•°ˆ¤¤¹Ñ½!…Ù•ÑÑÉ¥‰ÕÑ” ‰…É¥„µ¡¥‘‘•¸ˆ°€‰™…±Í”ˆ¤ì)ô¤ì()Ñ•ÍÐ ‰½™™•ÉÌ…¸…•ÍÍ¥‰±”•áÁ±…¹…Ñ½Éä±…å•Èˆ°…Íå¹Œ€¡ìÁ…”ô¤€ôøì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ±…¹Õ…”µÑ½±”ˆ¤¹±¥¬ ¤ì(€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ…‰½ÕÐµ‰ÕÑÑ½¸ˆ¤¹±¥¬ ¤ì(€½¹ÍÐÁ…¹•°€ôÁ…”¹±½…Ñ½È ˆ‘•Ñ…¥°µÁ…¹•°ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰‰½ÕÐÑ¡¥Ìµ…Àˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰!½ÜÑ¼ÕÍ”Ñ¡”µ…Àˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰]¡…Ð•… ±…å•ÈÑ•±±Ìå½Ôˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰1…¹ÕÍ”…¹É••¸½Ù•Èˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰]¡ä€ÄÔÐÍ•Ñ½ÉÌüˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰MÑ…Ñ‰•°‘•™¥¹•ÌÑ¡•¥È½‘•Ì…¹‰½Õ¹‘…É¥•Ìˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰=™™¥¥…°ÁÉ½‘Õ•Èˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰]¡…ÐÝ”…‘ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰=Á•¹MÑÉ••Ñ5…À¥Ì½¹±äÑ¡”‰…­É½Õ¹µ…Àˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰Q¡¥Ì…ÁÁ±¥…Ñ¥½¸ÕÍ•Ì¹¼½½­¥•Ì°…¹…±åÑ¥Ì°…½Õ¹ÑÌ½ÈÁ•ÉÍ¥ÍÑ•¹Ð¥‘•¹Ñ¥™¥•ÉÌˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰¥Ñ!ÕˆA…•ÌÉ•½É‘ÌÙ¥Í¥Ñ½ÉÌœ%@…‘‘É•ÍÍ•Ìˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰=Á•¹MÑÉ••Ñ5…ÀÉ••¥Ù•Ì½É‘¥¹…ÉäÉ•ÅÕ•ÍÐ¥¹™½Éµ…Ñ¥½¸ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¹±½…Ñ½È …m¡É•˜ô‰µ…¥±Ñ¼éÍÑ•™…¹½‘½¹¹•µ…¥°¹½´‰tœ¤¤¹Ñ½!…Ù•Q•áÐ ‰ÍÑ•™…¹½‘½¹¹•µ…¥°¹½´ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰]¡•É”‘¥M•¹Ñ¥¹•°´È½‰Í•ÉÙ”„ÍÑÉ½¹œÙ••Ñ…Ñ¥½¸Í¥¹…°üˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…¹•°¤¹Ñ½½¹Ñ…¥¹Q•áÐ ‰M½ÕÉ•Ì…¹É•™•É•¹”‘…Ñ•Ìˆ¤ì(€…Ý…¥ÐÁ…¹•°¹ÁÉ•ÍÌ ‰Í…Á”ˆ¤ì(€…Ý…¥Ð•áÁ•Ð¡Á…”¹±½…Ñ½È ˆ…‰½ÕÐµ‰ÕÑÑ½¸ˆ¤¤¹Ñ½	•½ÕÍ• ¤ì)ô¤ì()Ñ•ÍÐ ‰­••ÁÌÑ¡”•áÁ±…¹…Ñ½Éä½¹ÑÉ½±Ì…¹Á…¹•°™É•”½˜…ÕÑ½µ…Ñ•…•ÍÍ¥‰¥±¥ÑäÙ¥½±…Ñ¥½¹Ìˆ°…Íå¹Œ€¡ìÁ…”ô¤€ôøì(€™½È€¡½¹ÍÐµ•ÑÉ¥Œ½˜l‰™¥¹…°ˆ°€‰¡•…Ðˆ°€‰ÙÕ±¹•É…‰¥±¥Ñä‰t¤ì(€€€…Ý…¥ÐÁ…”¹±½…Ñ½È¡m‘…Ñ„µ¡•…Ðµµ•ÑÉ¥Œôˆ‘íµ•ÑÉ¥ô‰u€¤¹±¥¬ ¤ì(€€€½¹ÍÐ½¹ÑÉ½±ÍI•ÍÕ±ÑÌ€ô…Ý…¥Ð¹•Üá•	Õ¥±‘•È¡ìÁ…”ô¤(€€€€€€¹•á±Õ‘” ˆµ…Àˆ¤(€€€€€€¹Ý¥Ñ¡Q…Ì¡l‰Ý…œÉ„ˆ°€‰Ý…œÉ…„‰t¤(€€€€€€¹…¹…±åé” ¤ì(€€€•áÁ•Ð¡½¹ÑÉ½±ÍI•ÍÕ±ÑÌ¹Ù¥½±…Ñ¥½¹Ì¤¹Ñ½ÅÕ…°¡mt¤ì(€ô((€…Ý…¥ÐÁ…”¹±½…Ñ½È ˆ…‰½ÕÐµ‰ÕÑÑ½¸ˆ¤¹±¥¬ ¤ì(€½¹ÍÐ…‰½ÕÑI•ÍÕ±ÑÌ€ô…Ý…¥Ð¹•Üá•	Õ¥±‘•È¡ìÁ…”ô¤(€€€€¹¥¹±Õ‘” ˆ‘•Ñ…¥°µÁ…¹•°ˆ¤(€€€€¹Ý¥Ñ¡Q…Ì¡l‰Ý…œÉ„ˆ°€‰Ý…œÉ…„‰t¤(€€€€¹…¹…±åé” ¤ì(€•áÁ•Ð¡…‰½ÕÑI•ÍÕ±ÑÌ¹Ù¥½±…Ñ¥½¹Ì¤¹Ñ½ÅÕ…°¡mt¤ì)ô¤ì

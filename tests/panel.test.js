@@ -428,6 +428,8 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("Wat wij toevoegen");
     expect(panel.textContent).toContain("OpenStreetMap is alleen de achtergrondkaart");
     expect(panel.textContent).toContain("Waar nam Sentinel-2 een sterk vegetatiesignaal waar?");
+    expect(panel.textContent).toContain("Deze toepassing gebruikt geen cookies, analytics, accounts of blijvende identificatoren");
+    expect(panel.querySelector('a[href="mailto:stefanodonne@gmail.com"]')?.textContent).toBe("stefanodonne@gmail.com");
 
     setLanguage("en");
     api.setLanguage();
@@ -437,6 +439,7 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("Statbel defines their codes and boundaries");
     expect(panel.textContent).toContain("Official producer");
     expect(panel.textContent).toContain("What we add");
+    expect(panel.textContent).toContain("This application uses no cookies, analytics, accounts or persistent identifiers");
   });
 
   it("closes on Escape and reports the close action", () => {

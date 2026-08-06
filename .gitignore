@@ -21,3 +21,4 @@ test-results/
 **/__pycache__/
 **/*.egg-info/
 .venv*/
+/git_passphrase.txt

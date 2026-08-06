@@ -4,6 +4,8 @@ Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevall
 
 The application uses vanilla JavaScript, Vite and MapLibre GL JS. It has no backend, accounts, cookies, browser storage, analytics or live score calculation.
 
+Public POC: <https://khookh.github.io/zenvallei/>
+
 ## Start on this computer
 
 Requirements: Node.js 24 LTS and pnpm 11.
@@ -35,6 +37,8 @@ pnpm verify               # complete local release check
 pnpm security:check       # dependency, secret and local-path scan
 pnpm data:validate        # validate all committed browser-ready data
 pnpm build                # write the static website to dist/
+pnpm build:pages          # build and validate the /zenvallei/ Pages site
+pnpm test:pages           # browser smoke test at the real Pages path
 ```
 
 Prepared assets are committed under `public/data`, so a clone can build and run without the source workbooks or CDSE credentials. Internet access is needed only for the configured basemap tiles.
@@ -79,16 +83,11 @@ The playground reads the preparation-only GeoTIFFs under `.cache/vegetation`. It
 - [Contributing](CONTRIBUTING.md): conventions and required checks.
 - [Third-party data](THIRD_PARTY_DATA.md): source terms and attribution.
 
-## Public deployment status
+## Public deployment
 
-The `dist` output is suitable for a static host, including deployment below a URL subpath. The repository deliberately contains no host-specific workflow yet. Before public launch:
+Verified changes on `main` are deployed through GitHub Actions to <https://khookh.github.io/zenvallei/>. The standard OpenStreetMap tile service is retained for this modest non-commercial POC. It must be replaced through the existing environment configuration before meaningful public traffic.
 
-- select a managed or self-hosted OSM-derived tile provider;
-- configure the documented security headers and compression;
-- confirm that the host or CDN does not add tracking or cookies;
-- complete the third-party-data publication gate in `THIRD_PARTY_DATA.md`.
-
-Vite preview is used only for development and trusted local-network access. It is not the public production server.
+GitHub Pages cannot apply the complete response-header policy used by local preview. A build-time CSP and referrer policy protect the Pages POC; the remaining headers are documented for the next hosting provider. Vite preview remains limited to development and trusted local-network access.
 
 ## Licence
 

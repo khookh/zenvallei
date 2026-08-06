@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { escapeHtml, safeExternalUrl } from "../src/security.js";
-import { buildSecurityHeaders } from "../vite.config.js";
+import { buildContentSecurityPolicy, buildSecurityHeaders } from "../vite.config.js";
 
 describe("static-site security boundaries", () => {
   it("allows only HTTPS source links", () => {
@@ -20,5 +20,11 @@ describe("static-site security boundaries", () => {
     expect(headers["Content-Security-Policy"]).toContain("connect-src 'self' https://tiles.example.org");
     expect(headers["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
+  });
+
+  it("builds a meta-compatible policy without unsupported framing directives", () => {
+    const policy = buildContentSecurityPolicy("https://tiles.example.org/{z}/{x}/{y}.png", { forMeta: true });
+    expect(policy).toContain("connect-src 'self' https://tiles.example.org");
+    expect(policy).not.toContain("frame-ancestors");
   });
 });
