@@ -2,10 +2,10 @@
   "name": "zennevallei-hittekwetsbaarheid",
   "version": "0.1.0",
   "private": true,
-  "license": "Apache-2.0",
+  "license": "MIT",
   "packageManager": "pnpm@11.0.9",
   "type": "module",
-  "description": "Lokale, interactieve hittekwetsbaarheidskaart voor de Zennevallei.",
+  "description": "Interactieve kaart voor hittebestendigheid, landbedekking en groen in de Zennevallei.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -19,6 +19,9 @@
     "vegetation:download": "node scripts/download-vegetation.mjs",
     "vegetation:discover": "node scripts/discover-vegetation.mjs",
     "vegetation:prepare": "node --max-old-space-size=2048 scripts/prepare-vegetation-years.mjs",
+    "brand:prepare": "node scripts/generate-brand-mark.mjs",
+    "playground:ndvi": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-ndvi-playground.ps1",
+    "playground:test": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-ndvi-playground.ps1 -Test",
     "data:validate": "node scripts/validate-generated-data.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -p jsconfig.json",
@@ -31,7 +34,7 @@
     "build:subpath": "vite build --base=/greenwave/ --outDir .cache/subpath-build && node scripts/check-subpath-build.mjs",
     "security:check": "pnpm audit --audit-level high && node scripts/check-repository-secrets.mjs",
     "verify:quick": "pnpm lint && pnpm typecheck && pnpm test && pnpm data:validate && pnpm build && pnpm dist:check",
-    "verify": "pnpm verify:quick && pnpm test:e2e && pnpm build:subpath && pnpm security:check",
+    "verify": "pnpm verify:quick && pnpm playground:test && pnpm test:e2e && pnpm build:subpath && pnpm security:check",
     "test:all": "pnpm verify"
   },
   "engines": {

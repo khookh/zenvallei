@@ -1,3 +1,4 @@
+/** Copernicus LCM-10 categorical raster and Greenwave's prepared area summaries. */
 import { formatNumber, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
@@ -19,6 +20,7 @@ export function createLandCoverLayer({ landCover }) {
 
   return defineLayer({
     id: "land-cover",
+    categoryId: "land-green",
     isAvailable: () => Boolean(landCover?.raster?.available && landCover.raster.imageUrl),
     getUnavailableReasonKey: () => "layers.landCoverUnavailable",
     getLabel: () => t("layers.landCover", { year: year() }),

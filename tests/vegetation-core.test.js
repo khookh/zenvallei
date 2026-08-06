@@ -1,8 +1,11 @@
 /* @vitest-environment node */
 import { describe, expect, it } from "vitest";
 import {
+  VEGETATION_CROPLAND_OVERRIDE_URBAN_ATLAS_CODES,
   VEGETATION_EXCLUDED_LAND_COVER_CODES,
   VEGETATION_EXCLUDED_URBAN_ATLAS_CODES,
+  VEGETATION_GRASSLAND_EXCLUSION_URBAN_ATLAS_CODES,
+  VEGETATION_GRASSLAND_LAND_COVER_CODES,
   VEGETATION_MASKED_SCL_CODES,
   VEGETATION_NEGATIVE_CODES,
   VEGETATION_PALETTE,
@@ -13,6 +16,7 @@ import {
   isValidScenePixel,
   rasterizeProjectedFeatures,
   subpixelVotes,
+  vegetationExclusionReason,
 } from "../scripts/lib/vegetation-core.mjs";
 
 describe("Sentinel-2 vegetation preparation contract", () => {
@@ -20,6 +24,9 @@ describe("Sentinel-2 vegetation preparation contract", () => {
     expect(VEGETATION_POSITIVE_CODES).toEqual(["14110", "14120", "14130", "23000", "31000", "32000"]);
     expect(VEGETATION_NEGATIVE_CODES).toEqual(["11100", "12210"]);
     expect(VEGETATION_EXCLUDED_LAND_COVER_CODES).toEqual([40]);
+    expect(VEGETATION_CROPLAND_OVERRIDE_URBAN_ATLAS_CODES).toEqual(["23000"]);
+    expect(VEGETATION_GRASSLAND_LAND_COVER_CODES).toEqual([30]);
+    expect(VEGETATION_GRASSLAND_EXCLUSION_URBAN_ATLAS_CODES).toEqual(["21000"]);
     expect(VEGETATION_EXCLUDED_URBAN_ATLAS_CODES).toEqual(["50000"]);
     expect(VEGETATION_MASKED_SCL_CODES).toEqual([0, 1, 3, 7, 8, 9, 10, 11]);
     expect(VEGETATION_PALETTE).toEqual({ likelyVegetated: "#238B45", belowThreshold: "#D9DEDA" });
@@ -59,12 +66,23 @@ describe("Sentinel-2 vegetation preparation contract", () => {
     expect(() => calibrateNdviThreshold([0.2], [])).toThrow("geen geldige NDVI-pixels");
   });
 
-  it("excludes LCM cropland and Urban Atlas water, but not Urban Atlas arable land", () => {
-    expect(classifyVegetationPixel(0.9, true, { landCoverCode: 40, urbanAtlasCode: "21000" }, 0.66)).toBe("excluded");
-    expect(classifyVegetationPixel(0.9, true, { landCoverCode: 90, urbanAtlasCode: "50000" }, 0.66)).toBe("excluded");
-    expect(classifyVegetationPixel(0.9, true, { landCoverCode: 30, urbanAtlasCode: "21000" }, 0.66)).toBe("likely-vegetated");
-    expect(classifyVegetationPixel(0.9, false, { landCoverCode: 30, urbanAtlasCode: "31000" }, 0.66)).toBe("no-data");
+  it("applies the agricultural exclusion truth table before NDVI classification", () => {
+    const cases = [
+      [{ landCoverCode: 40, urbanAtlasCode: "21000" }, "cropland", "excluded"],
+      [{ landCoverCode: 40, urbanAtlasCode: "23000" }, null, "likely-vegetated"],
+      [{ landCoverCode: 40 }, "cropland", "excluded"],
+      [{ landCoverCode: 30, urbanAtlasCode: "21000" }, "cropland", "excluded"],
+      [{ landCoverCode: 30, urbanAtlasCode: "23000" }, null, "likely-vegetated"],
+      [{ landCoverCode: 30, urbanAtlasCode: "50000" }, "water", "excluded"],
+      [{ landCoverCode: 40, urbanAtlasCode: "50000" }, "water", "excluded"],
+    ];
+    cases.forEach(([classifications, reason, result]) => {
+      expect(vegetationExclusionReason(classifications)).toBe(reason);
+      expect(classifyVegetationPixel(0.9, true, classifications, 0.66)).toBe(result);
+    });
+    expect(classifyVegetationPixel(0.4, true, { landCoverCode: 40, urbanAtlasCode: "23000" }, 0.66)).toBe("below-threshold");
     expect(classifyVegetationPixel(0.4, true, { landCoverCode: 30, urbanAtlasCode: "31000" }, 0.66)).toBe("below-threshold");
+    expect(classifyVegetationPixel(0.9, false, { landCoverCode: 30, urbanAtlasCode: "31000" }, 0.66)).toBe("no-data");
   });
 
   it("supports the nine-point pure-reference vote rule", () => {

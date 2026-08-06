@@ -6,6 +6,7 @@
  *
  * @typedef {Object} LayerDefinition
  * @property {string} id Stable identifier used by controls and application state.
+ * @property {string} categoryId Stable navigation category identifier.
  * @property {() => boolean} isAvailable Whether the prepared browser asset can be used.
  * @property {() => string} getLabel Current translated layer label.
  * @property {(context: object) => string} getDatasetStatus Current translated status text.
@@ -23,7 +24,7 @@
  * @property {(name: string) => string|null} [getOption] Read a layer-specific option.
  */
 
-/** @typedef {{title: string, note?: string, layout: "scale"|"groups", groups: Array<{title?: string, items: Array<{label: string, color: string, value?: string}>}>}} LegendModel */
+/** @typedef {{title: string, note?: string, footnote?: string, layout: "scale"|"groups", groups: Array<{title?: string, items: Array<{label: string, color: string, value?: string}>}>}} LegendModel */
 /** @typedef {{title: string, subtitle?: string, lines: string[]}} PopupModel */
 /** @typedef {{template: string, [key: string]: unknown}} SectorPanelModel */
 /** @typedef {{id: string, ariaLabel: string, options: Array<{id: string, label: string, active: boolean}>}} SecondaryControlModel */
@@ -52,6 +53,9 @@ const REQUIRED_METHODS = Object.freeze([
 export function defineLayer(definition) {
   if (!definition || typeof definition !== "object") throw new TypeError("Layer definition must be an object.");
   if (!definition.id || typeof definition.id !== "string") throw new TypeError("Layer definition requires a string id.");
+  if (!definition.categoryId || typeof definition.categoryId !== "string") {
+    throw new TypeError(`Layer '${definition.id}' requires a string categoryId.`);
+  }
   REQUIRED_METHODS.forEach((method) => {
     if (typeof definition[method] !== "function") {
       throw new TypeError(`Layer '${definition.id}' is missing ${method}().`);

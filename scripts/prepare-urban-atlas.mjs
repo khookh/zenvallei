@@ -1,3 +1,8 @@
+/**
+ * Clip the official BE001L3 Urban Atlas product to Statbel sectors and compute
+ * hectare totals in equal-area EPSG:3035. Geometry repairs are intentionally
+ * contained here so the browser receives simple validated WGS84 fragments.
+ */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";

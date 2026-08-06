@@ -1,3 +1,4 @@
+/** Official Department of Care sector scores, displayed without recalculation. */
 import {
   DEFAULT_HEAT_METRIC,
   HEAT_METRICS,
@@ -19,6 +20,7 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
 
   return defineLayer({
     id: "heat",
+    categoryId: "heat",
     isAvailable: () => true,
     getLabel: () => activeMetric === DEFAULT_HEAT_METRIC
       ? t("layers.heat")

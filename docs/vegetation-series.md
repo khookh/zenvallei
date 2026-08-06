@@ -1,4 +1,4 @@
-# Likely vegetation series
+# Likely vegetation 2020
 
 This layer answers one narrow question: where did a Sentinel-2 observation show a vegetation-like NDVI signal? It is an indication, not a land-cover inventory and not a confirmed change map.
 
@@ -14,7 +14,7 @@ pnpm data:validate
 pnpm test
 ```
 
-The raw GeoTIFFs and selection report stay under `.cache/vegetation`. Only browser-ready PNG files and `vegetation.json` are committed.
+The raw GeoTIFFs and selection report for 2015 through 2026 stay under `.cache/vegetation` for research in the Python playground. The public map currently publishes only the selected 2020 observation: eight browser-ready PNG files and `vegetation.json`. The PNG files contain green likely-vegetation pixels and transparency only; the full area accounting remains in the JSON statistics.
 
 ## 1. Annual observation selection
 
@@ -34,35 +34,41 @@ The Process API requests Sentinel-2 L2A bottom-of-atmosphere reflectance at 10 m
 
 No-data, saturated, cloud-shadow, unclassified cloud, cloud, cirrus and snow pixels are invalid. Invalid pixels are transparent and their area is reported separately.
 
-## 3. Frozen threshold
+## 3. Threshold calibration
 
-The threshold is calibrated once with the 2023 observation. Urban Atlas 2021 supplies the reference polygons.
+Urban Atlas 2021 supplies the reference polygons for the 2020 observation.
 
 Positive reference classes are public, private and unknown-access green urban areas, pastures, forests and herbaceous vegetation. Negative reference classes are continuous urban fabric and fast transit roads. A 10 m pixel is accepted as a reference only when at least eight of nine subpixel samples belong to the same reference class.
 
-The threshold maximises Youden's J statistic, which balances sensitivity and specificity. The 2023 threshold is applied unchanged to every year. This avoids artificial changes caused by recalibrating each year. The manifest records the distributions, sensitivity, specificity, balanced accuracy and ROC AUC.
+For the selected 2020 Sentinel-2 observation, the threshold that maximises Youden's J statistic is calculated. This balances sensitivity and specificity for the acquisition. The manifest records the threshold, distributions, sensitivity, specificity, balanced accuracy and ROC AUC. If more observations are published later, each will be calibrated independently.
 
 ## 4. Exclusions and percentage
 
-A valid pixel is likely vegetated when its NDVI is at or above the frozen threshold. Two categories are excluded from display:
+A valid pixel is likely vegetated when its NDVI is at or above the 2020 observation threshold. Three categories are excluded from display:
 
-- LCM-10 2020 class 40, Cropland;
+- LCM-10 2020 class 40, Cropland, except where Urban Atlas 2021 identifies class 23000, Pastures;
+- LCM-10 2020 class 30, Grassland, where Urban Atlas 2021 identifies class 21000, Arable land;
 - Urban Atlas 2021 class 50000, Water.
 
-Urban Atlas class 21000, Arable land, is deliberately not the crop mask. The crop definition comes from LCM-10 2020.
+LCM-10 supplies the broad land-cover classes. Urban Atlas corrects their agricultural interpretation in both directions: pasture overrides LCM cropland, while Urban Atlas arable land overrides LCM grassland. Water takes precedence over both agricultural rules.
 
-The headline denominator is the complete valid Sentinel-2 area inside the selected sector or municipality. Cropland and water stay in that denominator even though they are transparent. This prevents an inflated vegetation percentage.
+The headline denominator is the complete Statbel area of the selected sector or municipality. Excluded agriculture, water and missing Sentinel-2 observations therefore reduce the percentage instead of disappearing from the denominator. This prevents an inflated vegetation percentage and makes the metric directly comparable with the area's physical size.
 
 ## 5. Browser assets and aggregation
 
-Each year contains a full Zennevallei raster and seven transparent municipality variants. MapLibre swaps the local image when the municipality filter changes, so only the chosen municipality remains visible over OSM.
+The published 2020 observation contains a full Zennevallei raster and seven transparent municipality variants. MapLibre swaps the local image when the municipality filter changes, so only the chosen municipality remains visible over OSM.
 
 Sector metrics use the projected 10 m grid. Municipality metrics sum the underlying sector areas and recompute percentages from those totals. Selecting a sector replaces the municipality summary until the sector panel is closed.
 
 ## Interpretation limits
 
 - A single date can reflect mowing, drought, crop stage, shadows and atmospheric effects.
-- The fixed 2020 and 2021 masks do not follow later land-cover changes.
-- Older years can have less complete coverage or more cloud. The UI and manifest retain the quality status.
+- The fixed LCM-10 2020 and Urban Atlas 2021 corrections do not follow later land-cover changes.
+- The selected observation can have incomplete coverage or residual cloud. The UI and manifest retain its quality status.
+- If additional years are published later, independently calibrated thresholds will require careful disclosure in comparisons.
 - The layer does not identify vegetation type, ownership, public access or physical land-cover change.
-- A future difference view should compare aligned annual classifications and retain the frozen threshold. It is intentionally not implemented yet.
+- A future difference view is intentionally not implemented yet.
+
+## Explore the source observations in Python
+
+Double-click `Start NDVI Playground.cmd` or run `pnpm playground:ndvi`. The isolated JupyterLab workspace exposes lazy Xarray/Dask loaders for the 12 annual choices and any optional cached alternatives. It also includes examples for maps, distributions, pixel time series and spatially separated modelling arrays. See the [playground guide](../playground/ndvi/README.md).

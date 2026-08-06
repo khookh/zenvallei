@@ -49,18 +49,32 @@ pnpm urban-atlas:prepare -- --source "C:\path\official-urban-atlas-product"
 pnpm vegetation:discover -- --from-year 2015 --to-year 2026
 pnpm vegetation:download -- --all
 pnpm vegetation:prepare
+pnpm brand:prepare
 ```
 
 LCM-10 and Urban Atlas downloads read `CDSE_ACCESS_TOKEN` only during preparation. Sentinel Hub uses temporary `CDSE_SH_CLIENT_ID` and `CDSE_SH_CLIENT_SECRET` environment variables. Never place credentials in `.env`, source code, generated manifests or documentation.
 
 See [Data pipeline](docs/data-pipeline.md) for complete examples and validation rules.
 
+## NDVI playground
+
+Double-click `Start NDVI Playground.cmd`, or run:
+
+```powershell
+pnpm playground:ndvi       # isolated JupyterLab on 127.0.0.1
+pnpm playground:test       # loader and real-cache smoke tests
+```
+
+The playground reads the preparation-only GeoTIFFs under `.cache/vegetation`. It does not expose them to the web application, which currently publishes only the 2020 likely-vegetation observation. See [NDVI playground](playground/ndvi/README.md) for copyable Python examples.
+
 ## Project guides
 
 - [Architecture](docs/architecture.md): responsibilities and data flow.
 - [Add a layer](docs/add-a-layer.md): a complete layer-module example.
 - [Data pipeline](docs/data-pipeline.md): inputs, commands, caching and outputs.
-- [Likely vegetation series](docs/vegetation-series.md): annual selection, NDVI calibration, masks and limitations.
+- [Data inventory](docs/data-inventory.md): sources, scripts, generated assets and Greenwave metrics.
+- [Likely vegetation 2020](docs/vegetation-series.md): observation selection, NDVI calibration, masks and limitations.
+- [NDVI playground](playground/ndvi/README.md): lazy annual stacks and model-ready exports.
 - [Deployment](docs/deployment.md): LAN operation and public-host checklist.
 - [Contributing](CONTRIBUTING.md): conventions and required checks.
 - [Third-party data](THIRD_PARTY_DATA.md): source terms and attribution.
@@ -78,4 +92,4 @@ Vite preview is used only for development and trusted local-network access. It i
 
 ## Licence
 
-Greenwave source code is licensed under Apache 2.0. This licence does not apply to upstream or derived data assets. Their separate terms and required acknowledgements are documented in [THIRD_PARTY_DATA.md](THIRD_PARTY_DATA.md).
+Greenwave source code is licensed under the MIT licence. This licence does not apply to upstream or derived data assets. Their separate terms and required acknowledgements are documented in [THIRD_PARTY_DATA.md](THIRD_PARTY_DATA.md).

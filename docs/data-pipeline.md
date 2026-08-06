@@ -62,7 +62,7 @@ The command verifies the official product variant, EPSG:3035, FUA, reference yea
 
 Outputs: `urban-atlas.geojson` and `urban-atlas.json`.
 
-## Sentinel-2 likely vegetation series
+## Sentinel-2 likely vegetation 2020
 
 Create a non-SPA OAuth client in the Copernicus Sentinel Hub account settings. Supply its values only for the download process:
 
@@ -82,7 +82,7 @@ try {
 
 The discovery command requires both Sentinel tiles and measures cloud and coverage over the actual Zennevallei sector union. It writes the deterministic choice and alternatives to `.cache/vegetation/selection.json`. Weak observations are recorded as warnings.
 
-The download command requests one stitched Sentinel-2 L2A GeoTIFF per selected year in EPSG:32631. Each file contains NDVI and a validity band at 10 m. The cache is accepted only when its CRS, resolution, dimensions, bands, NDVI range and valid-pixel coverage pass validation.
+The download command requests one stitched Sentinel-2 L2A GeoTIFF per selected year in EPSG:32631. Each file contains NDVI and a validity band at 10 m. The cache is accepted only when its CRS, resolution, dimensions, bands, NDVI range and valid-pixel coverage pass validation. These cached years remain available to the Python playground; the browser layer currently publishes only 2020.
 
 Create the browser asset and sector statistics from the verified cache:
 
@@ -90,11 +90,22 @@ Create the browser asset and sector statistics from the verified cache:
 pnpm vegetation:prepare
 ```
 
-The preparation command rasterises Urban Atlas on a 3 x 3 subpixel grid. Calibration pixels require at least eight of nine samples in one reference class. The threshold maximises Youden's J statistic using the 2023 observation and is frozen for every year.
+The preparation command selects the cached 2020 observation and rasterises Urban Atlas on a 3 x 3 subpixel grid. Calibration pixels require at least eight of nine samples in one reference class. The threshold maximises Youden's J statistic using the Urban Atlas reference classes.
 
-Pixels classified as Cropland, code 40, in LCM-10 2020 are transparent. Urban Atlas class 21000, Arable land, is not used as the crop mask. Urban Atlas water is also transparent. Both exclusions stay in the valid-area denominator.
+Pixels classified as Cropland, code 40, in LCM-10 2020 are transparent unless Urban Atlas 2021 classifies them as Pastures, code 23000. LCM-10 Grassland, code 30, is transparent where Urban Atlas identifies Arable land, code 21000. Urban Atlas water is also transparent and takes precedence over the agricultural rules. The headline percentage uses the complete Statbel sector or municipality area. Excluded agriculture, water and missing observations are therefore not vegetation, but remain part of that denominator.
 
-Outputs: one full PNG and seven municipality variants per year, plus `vegetation.json`. Raw GeoTIFFs and OAuth credentials remain outside the browser assets and repository. See [Likely vegetation series](vegetation-series.md) for the complete method.
+Outputs: one full PNG and seven municipality variants for 2020, plus `vegetation.json`. Raw GeoTIFFs for all cached research years and OAuth credentials remain outside the browser assets and repository. See [Likely vegetation 2020](vegetation-series.md) for the complete method.
+
+The browser PNGs colour only pixels classified as likely vegetated. Below-threshold pixels, agricultural exclusions, water, missing observations and areas outside the selected Statbel sectors are transparent. Their areas remain available in `vegetation.json` and the result panel.
+
+To inspect the cached GeoTIFFs directly in Python without changing the website:
+
+```powershell
+pnpm playground:ndvi
+pnpm playground:test
+```
+
+See the [NDVI playground guide](../playground/ndvi/README.md).
 
 ## Contracts and provenance
 

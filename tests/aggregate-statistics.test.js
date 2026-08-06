@@ -14,7 +14,7 @@ describe("municipality statistics", () => {
     } };
     const vegetation = { years: { 2023: { sectorStats: {
       A: { sectorAreaHa: 10, validAreaHa: 10, likelyVegetatedAreaHa: 8, belowThresholdAreaHa: 1, excludedCroplandAreaHa: 1, excludedWaterAreaHa: 0, missingObservationAreaHa: 0, medianNdvi: 0.7 },
-      B: { sectorAreaHa: 30, validAreaHa: 30, likelyVegetatedAreaHa: 6, belowThresholdAreaHa: 20, excludedCroplandAreaHa: 3, excludedWaterAreaHa: 1, missingObservationAreaHa: 0, medianNdvi: 0.5 },
+      B: { sectorAreaHa: 40, validAreaHa: 30, likelyVegetatedAreaHa: 6, belowThresholdAreaHa: 20, excludedCroplandAreaHa: 3, excludedWaterAreaHa: 1, missingObservationAreaHa: 10, medianNdvi: 0.5 },
     } } } };
 
     addMunicipalityStatistics({ scores, landCover, urbanAtlas: null, vegetation });
@@ -23,9 +23,9 @@ describe("municipality statistics", () => {
     expect(landCover.municipalityStats.Test.dominantClassCode).toBe(90);
     expect(vegetation.years[2023].municipalityStats.Test).toMatchObject({
       likelyVegetatedAreaHa: 14,
-      likelyVegetatedPercentage: 35,
+      likelyVegetatedPercentage: 28,
       excludedCroplandAreaHa: 4,
-      excludedCroplandPercentage: 10,
+      excludedCroplandPercentage: 8,
       medianIsAreaWeightedApproximation: true,
     });
   });

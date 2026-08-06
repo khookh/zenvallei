@@ -93,23 +93,40 @@ a:focus-visible {
 }
 
 .brand-mark {
-  display: grid;
-  grid-template-columns: repeat(3, 7px);
-  align-items: end;
-  gap: 4px;
-  width: 31px;
-  height: 34px;
-  transform: skew(-8deg);
+  display: block;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  object-fit: contain;
 }
 
-.brand-mark span { display: block; border-radius: 8px 8px 2px 2px; background: var(--teal-bright); }
-.brand-mark span:nth-child(1) { height: 17px; opacity: 0.68; }
-.brand-mark span:nth-child(2) { height: 27px; }
-.brand-mark span:nth-child(3) { height: 34px; background: #f3cd67; }
+.header-copy {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+}
 
-.header-copy { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-.header-copy h1 { margin: 0; font-size: clamp(1.25rem, 2vw, 1.75rem); letter-spacing: -0.035em; font-weight: 680; }
-.eyebrow { margin: 0; color: #9bd7d3; font-size: 0.73rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.13em; }
+.header-copy h1 {
+  overflow: hidden;
+  margin: 0;
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #a7d9d6;
+  font-size: 0.63rem;
+  font-weight: 760;
+  line-height: 1.2;
+  letter-spacing: 0.105em;
+  text-transform: uppercase;
+}
 
 .header-actions {
   display: flex;
@@ -194,10 +211,16 @@ a:focus-visible {
 .map-controls.is-collapsed .info-button { display: none; }
 .control-kicker, .section-kicker { margin: 0; color: var(--teal); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.13em; }
 
-.layer-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin: 2px 0 8px; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: #edf3f1; }
-.layer-button { min-height: 44px; padding: 5px 7px; border: 0; border-radius: 9px; color: #456168; background: transparent; font-size: 0.65rem; font-weight: 760; line-height: 1.2; }
+.layer-switch { display: grid; gap: 9px; margin: 2px 0 10px; padding: 10px; border: 1px solid var(--line); border-radius: 15px; background: #edf3f1; }
+.layer-category { min-width: 0; }
+.layer-category + .layer-category { padding-top: 9px; border-top: 1px solid rgba(86, 119, 120, 0.17); }
+.layer-category-title { margin: 0 2px 6px; color: #526a70; font-size: 0.61rem; font-weight: 820; line-height: 1.25; text-transform: uppercase; letter-spacing: 0.075em; }
+.layer-category-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.layer-category[data-layer-category="heat"] .layer-category-options { grid-template-columns: 1fr; }
+.layer-category-options .layer-button:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.layer-button { min-height: 44px; padding: 6px 8px; border: 0; border-radius: 10px; color: #456168; background: rgba(255, 255, 255, 0.18); font-size: 0.65rem; font-weight: 760; line-height: 1.2; transition: color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
 .layer-button:hover:not([aria-disabled="true"]) { color: var(--ink); background: rgba(255, 255, 255, 0.72); }
-.layer-button.is-active { color: white; background: var(--teal); box-shadow: 0 3px 10px rgba(11, 110, 105, 0.2); }
+.layer-button.is-active { color: white; background: var(--teal); box-shadow: 0 4px 12px rgba(11, 110, 105, 0.22); }
 .layer-button[aria-busy="true"] { cursor: progress; opacity: 0.76; }
 .layer-button[aria-disabled="true"] { cursor: not-allowed; color: #87999c; opacity: 0.72; }
 .heat-metric-control { margin: 0 0 9px; }
@@ -321,6 +344,7 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .legend:not([open]) summary::after { content: "+"; }
 .legend-summary-note { margin-left: auto; color: #586d72; font-weight: 600; }
 .legend-content { padding: 0 15px 13px; border-top: 1px solid #edf0ee; }
+.legend-footnote { margin: 11px 0 0; padding-top: 10px; border-top: 1px solid #e2e9e6; color: #607579; font-size: 0.64rem; line-height: 1.45; }
 .legend-scale { display: grid; grid-template-columns: repeat(11, minmax(26px, 1fr)); gap: 5px; padding: 11px 0 8px; }
 .legend-item { display: grid; gap: 3px; text-align: center; color: var(--muted); font-size: 0.65rem; }
 .legend-item span { display: block; height: 11px; border-radius: 4px; background: var(--swatch); border: 1px solid rgba(0, 0, 0, 0.06); }
@@ -390,6 +414,11 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .summary-card > span { grid-column: 1 / -1; margin-bottom: 8px; color: var(--muted); font-size: 0.7rem; font-weight: 700; }
 .summary-card strong { color: var(--score-color); font-size: 1.75rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .summary-card small { color: var(--muted); font-size: 0.64rem; }
+.land-cover-summary-grid { grid-template-areas: "combined trees" "built cropland"; }
+.land-cover-combined { grid-area: combined; }
+.land-cover-trees { grid-area: trees; }
+.land-cover-cropland { grid-area: cropland; }
+.land-cover-built { grid-area: built; }
 .score-summary-card p { grid-column: 1 / -1; margin: 11px 0 0; padding-top: 9px; border-top: 1px solid #e4eae7; color: #536a70; font-size: 0.64rem; line-height: 1.42; }
 .land-cover-metric strong { font-size: 1.22rem; }
 .calculation-note { margin: 11px 2px 0; color: #536a70; font-size: 0.69rem; line-height: 1.48; }
@@ -439,6 +468,7 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .vegetation-composition-key i { width: 11px; height: 11px; border: 1px solid rgba(0,0,0,.12); border-radius: 3px; background: var(--swatch); }
 .vegetation-composition-key b { font-weight: 700; }
 .vegetation-composition-key strong { color: var(--ink); font-size: 0.66rem; font-variant-numeric: tabular-nums; }
+.vegetation-definition { margin: 0 0 11px; padding: 11px 12px; border-left: 3px solid var(--teal-bright); border-radius: 4px 11px 11px 4px; color: #36555b; background: #edf7f4; font-size: 0.73rem; line-height: 1.5; }
 .land-cover-swatch { width: 13px; height: 13px; border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 3px; background: var(--swatch); }
 .panel-empty-state, .panel-warning { margin: 0; padding: 14px; border-radius: 12px; color: #496267; background: #eef5f3; font-size: 0.76rem; line-height: 1.5; }
 .panel-warning { margin-top: 14px; color: #6b451e; background: #fff4df; }
@@ -455,12 +485,18 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .about-note p, .about-sources p { color: #496267; font-size: 0.75rem; line-height: 1.55; }
 .about-note p:last-child { margin-bottom: 0; }
 .about-layer-list { display: grid; gap: 10px; }
+.about-layer-category + .about-layer-category { margin-top: 18px; }
+.about-category-title { margin: 0 0 8px; color: #526a70; font-size: 0.66rem; font-weight: 820; text-transform: uppercase; letter-spacing: 0.08em; }
 .about-layer-list article { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fafbf8; }
 .about-layer-list h4 { margin: 7px 0 5px; color: var(--ink); font-size: 0.82rem; }
-.about-layer-list p { margin: 0; color: #496267; font-size: 0.72rem; line-height: 1.5; }
+.about-layer-facts { display: grid; gap: 9px; margin: 12px 0 0; }
+.about-layer-facts div { display: grid; grid-template-columns: 94px minmax(0, 1fr); gap: 10px; padding-top: 8px; border-top: 1px solid rgba(86, 119, 120, 0.14); }
+.about-layer-facts dt { color: #526a70; font-size: 0.61rem; font-weight: 790; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.045em; }
+.about-layer-facts dd { margin: 0; color: #405b61; font-size: 0.72rem; line-height: 1.48; }
 .about-layer-tag { display: inline-flex; padding: 4px 7px; border-radius: 999px; color: var(--teal); background: #e4f1ee; font-size: 0.57rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
 .comparison-caveat { margin: 11px 0 0; padding: 10px 12px; border-radius: 10px; color: #6b451e; background: #fff4df; font-size: 0.7rem; line-height: 1.45; }
 .about-sectors { border-left: 4px solid var(--teal-bright); }
+.about-foundations { border-left: 4px solid #6d98bf; }
 .about-sectors .section-kicker { margin-bottom: 5px; }
 .provenance-list { display: grid; gap: 8px; margin: 0; padding-left: 19px; color: #496267; font-size: 0.72rem; line-height: 1.48; }
 .about-method { margin-top: 8px; }
@@ -530,9 +566,8 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 @media (max-width: 760px) {
   .app-shell { grid-template-rows: 70px 1fr; }
   .app-header { padding: 0 14px; gap: 11px; }
-  .brand-mark { transform: scale(0.88) skew(-8deg); }
-  .header-copy { display: block; }
-  .header-copy h1 { font-size: 1.2rem; }
+  .brand-mark { width: 42px; height: 42px; flex-basis: 42px; }
+  .header-copy h1 { font-size: 1.16rem; }
   .eyebrow { font-size: 0.56rem; }
   .header-status { max-width: 120px; overflow: hidden; padding: 7px 9px; font-size: 0.65rem; text-overflow: ellipsis; }
   .header-actions { gap: 6px; }
@@ -544,13 +579,14 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
   .info-button { width: 44px; min-width: 44px; height: 44px; padding: 0; justify-content: center; }
   .info-button > span:last-child { display: none; }
   .info-glyph { width: 27px; height: 27px; }
-  .layer-switch { margin-bottom: 7px; }
+  .layer-switch { gap: 7px; margin-bottom: 7px; padding: 8px; }
+  .layer-category + .layer-category { padding-top: 7px; }
   .layer-button { padding-inline: 4px; font-size: 0.59rem; }
   .heat-metric-control { margin-bottom: 7px; }
   .heat-metric-control > p { display: none; }
   .heat-metric-button { padding-inline: 3px; font-size: 0.6rem; }
   .layer-context { margin-bottom: 7px; padding: 8px 9px; }
-  .layer-context-copy { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; font-size: 0.66rem; }
+  .layer-context-copy { font-size: 0.66rem; }
   .field-label { margin-top: 8px; }
   select, input[type="search"] { height: 44px; }
   .field-help { display: none; }
@@ -568,7 +604,8 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
     right: 0;
     bottom: 0;
     width: 100%;
-    max-height: 64vh;
+    /* A medium map-sheet detent keeps primary layer navigation tappable. */
+    max-height: 50vh;
     border-radius: 24px 24px 0 0;
     transform: translateY(calc(100% + 20px));
   }
@@ -607,6 +644,7 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
   .field-label { font-size: 0.68rem; }
   .secondary-button { min-height: 40px; }
   .summary-grid { grid-template-columns: 1fr; }
+  .land-cover-summary-grid { grid-template-areas: "combined" "trees" "cropland" "built"; }
   .legend:not([open]) { width: 195px; }
 }
 

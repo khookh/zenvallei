@@ -1,3 +1,4 @@
+/** Prepared Sentinel-2 NDVI indication using an observation-specific Greenwave calibration. */
 import { formatDate, formatNumber, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
 import { defineLayer } from "./layer-contract.js";
@@ -7,7 +8,7 @@ const SOURCE_ID = "likely-vegetation-image";
 
 /** Create the Sentinel-2 NDVI-based likely-vegetation layer. */
 export function createVegetationLayer({ vegetation }) {
-  let activeYear = vegetation?.activeYear ?? 2023;
+  let activeYear = vegetation?.activeYear ?? 2020;
   let activeMunicipality = "";
   let displayedImageUrl = "";
   const year = () => activeYear;
@@ -23,6 +24,7 @@ export function createVegetationLayer({ vegetation }) {
 
   return defineLayer({
     id: "vegetation",
+    categoryId: "land-green",
     isAvailable: () => Boolean(vegetation?.available && imageUrl()),
     getUnavailableReasonKey: () => vegetation?.loadError
       ? "layers.vegetationLoadError"
@@ -36,15 +38,11 @@ export function createVegetationLayer({ vegetation }) {
     getLegendModel: () => ({
       title: t("legend.vegetationTitle", { year: year() }),
       note: `NDVI ≥ ${formatNumber(yearData()?.threshold, 3)}`,
+      footnote: t("legend.vegetationFootnote"),
       layout: "groups",
       groups: [{
         items: [
           { label: t("vegetation.likelyVegetated"), color: vegetation?.palette?.likelyVegetated ?? "#238B45" },
-          { label: t("vegetation.belowThreshold"), color: vegetation?.palette?.belowThreshold ?? "#D9DEDA" },
-          {
-            label: t("vegetation.excludedNoObservation"),
-            color: "repeating-linear-gradient(135deg, #fff 0 3px, #d9deda 3px 6px)",
-          },
         ],
       }],
     }),

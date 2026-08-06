@@ -6,7 +6,7 @@ const SUPPORTED_SCHEMA_VERSIONS = Object.freeze({
   provenance: [1],
   landCover: [1, 2],
   urbanAtlas: [1],
-  vegetation: [1, 2],
+  vegetation: [1, 2, 3, 4],
 });
 
 export function schemaVersionOf(payload) {
@@ -71,6 +71,9 @@ export function validateApplicationData({ geojson, scorePayload, methodology, pr
     throw new Error("urban-atlas.json marks the layer available but lacks its GeoJSON URL or sector statistics.");
   }
   if (vegetation?.available) {
+    if (schemaVersionOf(vegetation) >= 4 && vegetation.definitions?.headlineDenominator !== "complete-statbel-sector-area") {
+      throw new Error("vegetation.json schema version 4 must use the complete Statbel sector area denominator.");
+    }
     const activeYear = vegetation.years?.[vegetation.activeYear];
     if (!activeYear?.imageUrl || !Array.isArray(activeYear.coordinates) || !Number.isFinite(activeYear.threshold)) {
       throw new Error("vegetation.json marks the layer available but lacks its image, coordinates or threshold.");

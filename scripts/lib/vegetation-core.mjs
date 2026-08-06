@@ -7,6 +7,9 @@ export const VEGETATION_POSITIVE_CODES = Object.freeze([
 ]);
 export const VEGETATION_NEGATIVE_CODES = Object.freeze(["11100", "12210"]);
 export const VEGETATION_EXCLUDED_LAND_COVER_CODES = Object.freeze([40]);
+export const VEGETATION_CROPLAND_OVERRIDE_URBAN_ATLAS_CODES = Object.freeze(["23000"]);
+export const VEGETATION_GRASSLAND_LAND_COVER_CODES = Object.freeze([30]);
+export const VEGETATION_GRASSLAND_EXCLUSION_URBAN_ATLAS_CODES = Object.freeze(["21000"]);
 export const VEGETATION_EXCLUDED_URBAN_ATLAS_CODES = Object.freeze(["50000"]);
 export const VEGETATION_MASKED_SCL_CODES = Object.freeze([0, 1, 3, 7, 8, 9, 10, 11]);
 export const VEGETATION_PALETTE = Object.freeze({
@@ -137,10 +140,20 @@ export function calibrateNdviThreshold(positiveValues, negativeValues, { binSize
   };
 }
 
+export function vegetationExclusionReason(classifications) {
+  const urbanAtlasCode = String(classifications?.urbanAtlasCode);
+  if (VEGETATION_EXCLUDED_URBAN_ATLAS_CODES.includes(urbanAtlasCode)) return "water";
+  const landCoverCode = Number(classifications?.landCoverCode);
+  const excludedCropland = VEGETATION_EXCLUDED_LAND_COVER_CODES.includes(landCoverCode)
+    && !VEGETATION_CROPLAND_OVERRIDE_URBAN_ATLAS_CODES.includes(urbanAtlasCode);
+  const excludedArableGrassland = VEGETATION_GRASSLAND_LAND_COVER_CODES.includes(landCoverCode)
+    && VEGETATION_GRASSLAND_EXCLUSION_URBAN_ATLAS_CODES.includes(urbanAtlasCode);
+  return excludedCropland || excludedArableGrassland ? "cropland" : null;
+}
+
 export function classifyVegetationPixel(ndvi, valid, classifications, threshold) {
   if (!valid || !Number.isFinite(ndvi)) return "no-data";
-  if (VEGETATION_EXCLUDED_LAND_COVER_CODES.includes(Number(classifications?.landCoverCode))
-    || VEGETATION_EXCLUDED_URBAN_ATLAS_CODES.includes(String(classifications?.urbanAtlasCode))) return "excluded";
+  if (vegetationExclusionReason(classifications)) return "excluded";
   return ndvi >= threshold ? "likely-vegetated" : "below-threshold";
 }
 

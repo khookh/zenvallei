@@ -112,7 +112,7 @@ const urbanAtlas = {
 
 const vegetation = {
   available: true,
-  activeYear: 2023,
+  activeYear: 2020,
   generatedAt: "2026-08-05T20:00:00.000Z",
   palette: { likelyVegetated: "#238B45", belowThreshold: "#D9DEDA" },
   source: {
@@ -122,9 +122,9 @@ const vegetation = {
     products: [{ id: "S2A_TEST_UFS" }, { id: "S2A_TEST_UES" }],
   },
   years: {
-    2023: {
-      acquisitionDate: "2023-06-24",
-      threshold: 0.66,
+    2020: {
+      acquisitionDate: "2020-06-24",
+      threshold: 0.697,
       calibration: {
         sensitivity: 0.881,
         specificity: 0.797,
@@ -135,16 +135,17 @@ const vegetation = {
       },
       sectorStats: {
         "23003A001": {
+          sectorAreaHa: 60,
           validAreaHa: 51.4,
           likelyVegetatedAreaHa: 27.06,
-          likelyVegetatedPercentage: 52.64,
+          likelyVegetatedPercentage: 45.1,
           belowThresholdAreaHa: 24.34,
-          belowThresholdPercentage: 47.36,
+          belowThresholdPercentage: 40.57,
           excludedArableAreaHa: 0,
           excludedArablePercentage: 0,
           excludedWaterAreaHa: 0,
           excludedWaterPercentage: 0,
-          missingObservationAreaHa: 0,
+          missingObservationAreaHa: 8.6,
           medianNdvi: 0.681,
         },
       },
@@ -310,8 +311,13 @@ describe("progressive detail panel", () => {
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Dominante landbedekking");
     expect(panel.textContent).toContain("Boombedekking");
-    expect(panel.textContent).toContain("Groenbedekking (bomen + gras)");
+    expect(panel.textContent).toContain("Bomen en grasland samen");
     expect(panel.textContent).toContain("61,22%");
+    expect(panel.textContent).toContain("Boombedekking");
+    expect(panel.textContent).toContain("40,82%");
+    expect(panel.textContent).toContain("Akkerland");
+    expect(panel.textContent).toContain("16,33%");
+    expect(panel.textContent).toContain("niet om dezelfde maatstaf als de vegetatie-indicatie");
     expect(panel.textContent).toContain("Bebouwde oppervlakte");
     expect(panel.textContent).toContain("22,45%");
     expect(panel.textContent).toContain("Berekend door deze toepassing");
@@ -322,8 +328,13 @@ describe("progressive detail panel", () => {
     api.setLanguage();
     expect(panel.textContent).toContain("Dominant land cover");
     expect(panel.textContent).toContain("Tree cover");
-    expect(panel.textContent).toContain("Green cover (trees + grass)");
+    expect(panel.textContent).toContain("Trees and grassland combined");
     expect(panel.textContent).toContain("61.22%");
+    expect(panel.textContent).toContain("Tree cover");
+    expect(panel.textContent).toContain("40.82%");
+    expect(panel.textContent).toContain("Cropland");
+    expect(panel.textContent).toContain("16.33%");
+    expect(panel.textContent).toContain("not the same metric as the NDVI-based likely-vegetation indication");
     expect(panel.textContent).toContain("Built-up area");
     expect(panel.textContent).toContain("22.45%");
     expect(panel.textContent).not.toContain("Mapped area");
@@ -374,20 +385,26 @@ describe("progressive detail panel", () => {
     api.open(records["23003A001"], document.querySelector("#trigger"), "vegetation");
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Waarschijnlijk begroeid");
-    expect(panel.textContent).toContain("52,64");
+    expect(panel.textContent).toContain("45,1");
     expect(panel.textContent).toContain("27,06 ha");
+    expect(panel.textContent).toContain("NDVI is een satellietmaat voor groenheid");
+    expect(panel.textContent).toContain("Andere oppervlakte van de sector");
+    expect(panel.textContent).toContain("volledige sectoroppervlakte van 60 ha");
     expect(panel.textContent).toContain("Mediane NDVI");
     expect(panel.textContent).toContain("0,681");
-    expect(panel.textContent).toContain("Uitgesloten landbouwgewassen");
-    expect(panel.textContent).toContain("Berekende NDVI-drempel: 0,66");
+    expect(panel.textContent).toContain("Uitgesloten akkerland");
+    expect(panel.textContent).toContain("Berekende NDVI-drempel: 0,697");
+    expect(panel.textContent).toContain("Kalibratie van de drempel");
     expect(panel.textContent).toContain("ROC AUC 0,911");
     document.querySelector('[data-section="vegetation-methodology"]').open = true;
     setLanguage("en");
     api.setLanguage();
     expect(panel.textContent).toContain("Likely vegetated");
-    expect(panel.textContent).toContain("52.64");
+    expect(panel.textContent).toContain("45.1");
+    expect(panel.textContent).toContain("NDVI is a satellite measure of greenness");
     expect(panel.textContent).toContain("Median NDVI");
-    expect(panel.textContent).toContain("Calculated NDVI threshold: 0.66");
+    expect(panel.textContent).toContain("Calculated NDVI threshold: 0.697");
+    expect(panel.textContent).toContain("Threshold calibration");
     expect(document.querySelector('[data-section="vegetation-methodology"]').open).toBe(true);
   });
 
@@ -401,21 +418,25 @@ describe("progressive detail panel", () => {
     const { api } = fixture({ landCover, urbanAtlas, vegetation, provenance });
     api.openAbout(document.querySelector("#trigger"));
     const panel = document.querySelector("#panel");
-    expect(panel.textContent).toContain("Vier lagen, vier vragen");
-    expect(panel.textContent).toContain("10 m-pixels");
-    expect(panel.textContent).toContain("semi-automatische verwerking en visuele interpretatie");
+    expect(panel.textContent).toContain("Wat elke laag vertelt");
+    expect(panel.textContent).toContain("Landgebruik en groen");
+    expect(panel.textContent).toContain("pixels van 10 m");
+    expect(panel.textContent).toContain("visuele interpretatie");
     expect(panel.textContent).toContain("Waarom 154 sectoren?");
     expect(panel.textContent).toContain("Statbel bepaalt hun codes en grenzen");
-    expect(panel.textContent).toContain("Wie berekende wat?");
+    expect(panel.textContent).toContain("Officiële producent");
+    expect(panel.textContent).toContain("Wat wij toevoegen");
     expect(panel.textContent).toContain("OpenStreetMap is alleen de achtergrondkaart");
     expect(panel.textContent).toContain("Waar nam Sentinel-2 een sterk vegetatiesignaal waar?");
 
     setLanguage("en");
     api.setLanguage();
-    expect(panel.textContent).toContain("Four layers, four questions");
+    expect(panel.textContent).toContain("What each layer tells you");
+    expect(panel.textContent).toContain("Land use and green cover");
     expect(panel.textContent).toContain("Why 154 sectors?");
     expect(panel.textContent).toContain("Statbel defines their codes and boundaries");
-    expect(panel.textContent).toContain("Who calculated what?");
+    expect(panel.textContent).toContain("Official producer");
+    expect(panel.textContent).toContain("What we add");
   });
 
   it("closes on Escape and reports the close action", () => {

@@ -168,9 +168,6 @@ const VEGETATION_FIXTURE = JSON.parse(fs.readFileSync(
   path.resolve(import.meta.dirname, "..", "..", "public", "data", "vegetation.json"),
   "utf8",
 ));
-// Keep the established 2023 values in the detailed regression while a
-// separate interaction below verifies the complete annual selector.
-VEGETATION_FIXTURE.activeYear = 2023;
 
 test.beforeEach(async ({ page }) => {
   const errors = [];
@@ -216,6 +213,11 @@ test("keeps complete map attribution collapsed until requested", async ({ page }
   await expect(attributionButton).toHaveCSS("background-position", "50% 50%");
   await expect(attributionButton).toHaveCSS("background-size", "24px 24px");
   await expect(attributionDetails).toBeHidden();
+
+  // Expanded map controls intentionally occupy most of a narrow screen. The
+  // app's disclosure leaves the map controls, including attribution, reachable.
+  const controlsToggle = page.locator("#map-controls-toggle");
+  if (await controlsToggle.isVisible()) await controlsToggle.click();
 
   await attributionButton.click();
   await expect(attribution).toHaveClass(/maplibregl-compact-show/);
@@ -315,21 +317,49 @@ test.afterEach(async ({ page }) => {
   expect(runtimeErrors.get(page), "De app mag geen browserfouten loggen").toEqual([]);
 });
 
+test("matches the refined hierarchy in Dutch and English", async ({ page }) => {
+  await expect(page.locator(".app-header")).toHaveScreenshot("header-nl.png", { animations: "disabled" });
+  await expect(page.locator("#map-controls")).toHaveScreenshot("controls-nl.png", { animations: "disabled" });
+
+  await page.locator("#language-toggle").click();
+  await expect(page.locator(".app-header")).toHaveScreenshot("header-en.png", { animations: "disabled" });
+  await expect(page.locator("#map-controls")).toHaveScreenshot("controls-en.png", { animations: "disabled" });
+  await page.locator('[data-heat-metric="vulnerability"]').click();
+  await expect(page.locator(".app-header")).toHaveScreenshot("header-vulnerability-en.png", { animations: "disabled" });
+
+  await page.locator("#language-toggle").click();
+  await page.locator("#municipality-select").selectOption("Beersel");
+  await page.locator("#sector-search").fill("23003A001");
+  await page.locator("#sector-search").press("Enter");
+  await page.locator('[data-layer="land-cover"]').click();
+  await expect(page.locator('[aria-labelledby="land-cover-summary-title"]'))
+    .toHaveScreenshot("land-cover-summary-nl.png", { animations: "disabled" });
+});
+
 test("loads all sectors and opens a complete score breakdown from search", async ({ page }) => {
+  await expect(page).toHaveTitle("Zennevallei - heat resilience");
+  await expect(page.locator(".brand-mark")).toBeVisible();
+  await expect(page.locator(".brand-mark")).toHaveAttribute("src", /assets\/zennevallei-river-mark\.png$/);
+  await expect(page.locator(".eyebrow")).toHaveText("Zennevallei");
   await expect(page.locator("[data-layer]")).toHaveCount(4);
+  await expect(page.locator(".layer-category")).toHaveCount(2);
+  await expect(page.locator('[data-layer-category="heat"]')).toContainText("Hitte");
+  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik en groen");
+  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(1);
+  await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(3);
   await expect(page.locator("[data-heat-metric]")).toHaveCount(3);
   await expect(page.locator("#heat-metric-control")).toBeVisible();
   await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('[data-layer="change"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveText("Urban Atlas 2021");
-  await expect(page.locator('[data-layer="vegetation"]')).toHaveText("Vegetatie-indicatie 2023");
+  await expect(page.locator('[data-layer="vegetation"]')).toHaveText("Vegetatie-indicatie 2020");
   expect(vegetationRasterRequests.get(page)).toBe(0);
   await expect(page.locator("#dataset-status")).toContainText("154 Statbel-sectoren · scores 2026");
   await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
   await expect(page.locator("#about-button")).toContainText("Uitleg");
   await expect(page.locator("#layer-context-meta")).toHaveText("Officiële broncijfers · 154 Statbel-sectoren · 2026");
   await expect(page.locator("#layer-context-copy")).toContainText("Departement Zorg");
-  await expect(page.locator("#layer-context-copy")).toContainText("niet door deze app herberekend");
+  await expect(page.locator("#layer-context-copy")).toContainText("wij tonen ze zonder herberekening");
   await expect(page.locator(".control-attribution")).toContainText("Vlaamse overheid · Departement Zorg");
   await expect(page.locator(".control-attribution")).toContainText("Statbel");
   const overlayRenderMs = await page.evaluate(() => performance.getEntriesByName("heat-overlay-first-render")[0]?.duration);
@@ -387,7 +417,7 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await expect(page.locator("#dataset-status")).toContainText("hittescore 2026");
   await expect(page.locator("#legend-title")).toHaveText("Hittescore");
   await expect(page.locator("#layer-context-meta")).toContainText("Officiële hittescore");
-  await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000–2019");
+  await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000-2019");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Hittekwetsbaarheid · Hitte in de Zennevallei");
   await expect(page.locator("#selection-announcement")).toContainText("gewijzigd naar Hitte");
   expect(await sectorColor()).toBe("#96004E");
@@ -445,7 +475,7 @@ test("switches between combined, heat and vulnerability scores without losing ex
 
 test("switches the complete interface to English without resetting exploration state", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
-  await expect(page).toHaveTitle("Hittekwetsbaarheid Zennevallei");
+  await expect(page).toHaveTitle("Zennevallei - heat resilience");
   await expect(page.locator("#language-toggle")).toHaveText("EN");
 
   await page.locator("#municipality-select").selectOption("Beersel");
@@ -468,7 +498,7 @@ test("switches the complete interface to English without resetting exploration s
   await expect(page.locator("#language-toggle")).toHaveAttribute("lang", "nl");
   await expect(page.locator("#language-toggle")).toHaveAttribute("aria-label", "Switch to Dutch");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page).toHaveTitle("Heat Vulnerability Zennevallei");
+  await expect(page).toHaveTitle("Zennevallei - heat resilience");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /statistical sectors/);
   await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
   await expect(page.locator("#visible-count")).toHaveText("39 sectors");
@@ -476,7 +506,7 @@ test("switches the complete interface to English without resetting exploration s
   await expect(search).toHaveAttribute("placeholder", "Name or sector code");
   await expect(page.locator("#legend-content")).toContainText("Insufficient data");
   await expect(page.locator("#layer-context-meta")).toHaveText("Official source values · 154 Statbel sectors · 2026");
-  await expect(page.locator("#layer-context-copy")).toContainText("not recalculated by this app");
+  await expect(page.locator("#layer-context-copy")).toContainText("we display them without recalculation");
   await expect(page.locator(".control-attribution")).toContainText("Flemish Government · Department of Care");
   await expect(panel).toContainText("Scores: Flemish Government · Department of Care (2026)");
   await expect(page.locator(".maplibregl-ctrl-zoom-in")).toHaveAttribute("aria-label", "Zoom in");
@@ -538,13 +568,18 @@ test("switches to Copernicus land cover and preserves the selected sector", asyn
   await expect(page.locator("#legend-title")).toHaveText("Copernicus-landbedekking 2020");
   await expect(page.locator("#dataset-status")).toContainText("Copernicus · raster 2020");
   await expect(page.locator("#layer-context-meta")).toContainText("10 m-pixels · 2020");
-  await expect(page.locator("#layer-context-copy")).toContainText("officiële klassen per Statbel-sector");
+  await expect(page.locator("#layer-context-copy")).toContainText("officiële Copernicus LCM-10-classificatie");
+  await expect(page.locator("#layer-context-copy")).toContainText("Wij knippen het raster uit");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Landbedekking 2020 in de Zennevallei");
   await expect(page.locator("#legend-content")).toContainText("Boombedekking");
   await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Generated using European Union's Copernicus Land Monitoring Service information");
   await expect(panel).toContainText("Dominante landbedekking");
   await expect(panel).toContainText("Boombedekking");
-  await expect(panel).toContainText("Groenbedekking (bomen + gras)");
+  await expect(panel).toContainText("Bomen en grasland samen");
+  await expect(panel.locator(".land-cover-trees")).toContainText("Boombedekking");
+  await expect(panel.locator(".land-cover-trees")).toContainText("40,82%");
+  await expect(panel.locator(".land-cover-cropland")).toContainText("Akkerland");
+  await expect(panel.locator(".land-cover-cropland")).toContainText("16,33%");
   await expect(panel).toContainText("61,22%");
   await expect(panel).toContainText("Bebouwde oppervlakte");
   await expect(panel).toContainText("22,45%");
@@ -581,7 +616,10 @@ test("switches to Copernicus land cover and preserves the selected sector", asyn
   await expect(page.locator("#legend-title")).toHaveText("Copernicus land cover 2020");
   await expect(panel).toContainText("Dominant land cover");
   await expect(panel).toContainText("Tree cover");
-  await expect(panel).toContainText("Green cover (trees + grass)");
+  await expect(panel).toContainText("Trees and grassland combined");
+  await expect(panel.locator(".land-cover-trees")).toContainText("Tree cover");
+  await expect(panel.locator(".land-cover-cropland")).toContainText("Cropland");
+  await expect(panel.locator(".land-cover-cropland")).toContainText("16.33%");
   await expect(panel).toContainText("61.22%");
   await expect(panel).toContainText("Built-up area");
   await expect(panel).toContainText("22.45%");
@@ -614,7 +652,8 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await expect(page.locator("#legend-title")).toHaveText("Urban Atlas-landbedekking 2021");
   await expect(page.locator("#dataset-status")).toContainText("Copernicus · polygonen 2021");
   await expect(page.locator("#layer-context-meta")).toContainText("geïnterpreteerde polygonen · 2021");
-  await expect(page.locator("#layer-context-copy")).toContainText("landbedekking én landgebruik");
+  await expect(page.locator("#layer-context-copy")).toContainText("landbedekking en landgebruik");
+  await expect(page.locator("#layer-context-copy")).toContainText("Wij berekenen groenbedekking");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Urban Atlas 2021 in de Zennevallei");
   await expect(page.locator("#legend-content")).toContainText("Kunstmatige oppervlakken");
   await expect(page.locator("#legend-content")).toContainText("Kruidachtige vegetatie");
@@ -697,29 +736,33 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   expect(vegetationRasterRequests.get(page)).toBe(1);
   await expect(vegetationButton).toBeFocused();
   await expect(vegetationButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("Vegetatie-indicatie 2023");
-  await expect(page.locator("#legend-title")).toHaveText("Vegetatie-indicatie 2023");
-  await expect(page.locator("#legend-note")).toHaveText("NDVI ≥ 0,66");
+  await expect(page.locator("#active-layer-title")).toHaveText("Vegetatie-indicatie 2020");
+  await expect(page.locator("#legend-title")).toHaveText("Vegetatie-indicatie 2020");
+  await expect(page.locator("#legend-note")).toHaveText("NDVI ≥ 0,697");
   await expect(page.locator("#legend-content")).toContainText("Waarschijnlijk begroeid");
-  await expect(page.locator("#legend-content")).toContainText("Onder de NDVI-drempel");
-  await expect(page.locator("#legend-content")).toContainText("Uitgesloten of geen waarneming");
-  await expect(page.locator("#layer-context-meta")).toContainText("24 jun 2023");
-  await expect(page.locator("#layer-context-copy")).toContainText("geen definitieve landbedekkingskaart");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Vegetatie-indicatie 2023 in de Zennevallei");
+  await expect(page.locator("#legend-content")).not.toContainText("Onder de NDVI-drempel");
+  await expect(page.locator("#legend-content")).not.toContainText("Uitgesloten of geen waarneming");
+  await expect(page.locator("#legend-content")).toContainText("Ongekleurde pixels kunnen onder de drempel liggen");
+  await expect(page.locator("#layer-context-meta")).toContainText("24 jun 2020");
+  await expect(page.locator("#layer-context-copy")).toContainText("bewijst geen ecologische gezondheid");
+  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Vegetatie-indicatie 2020 in de Zennevallei");
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-opacity"))).toBe(0.68);
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-resampling"))).toBe("nearest");
 
   await expect(panel).toContainText("Waarschijnlijk begroeid");
-  await expect(panel).toContainText("52,64");
-  await expect(panel).toContainText("27,06 ha");
+  await expect(panel).toContainText("47,69");
+  await expect(panel).toContainText("24,51 ha");
+  await expect(panel).toContainText("NDVI is een satellietmaat voor groenheid");
+  await expect(panel).toContainText("Andere oppervlakte van de sector");
   await expect(panel).toContainText("Mediane NDVI");
-  await expect(panel).toContainText("0,681");
-  await expect(panel).toContainText("Uitgesloten landbouwgewassen");
+  await expect(panel).toContainText("0,677");
+  await expect(panel).toContainText("Uitgesloten akkerland");
   await expect(panel.locator('[data-section="vegetation-methodology"]')).not.toHaveAttribute("open", "");
   await panel.locator('[data-section="vegetation-methodology"] > summary').click();
-  await expect(panel).toContainText("Berekende NDVI-drempel: 0,66");
-  await expect(panel).toContainText("ROC AUC 0,911");
-  await expect(panel).toContainText("S2A_MSIL2A_20230624T104621");
+  await expect(panel).toContainText("Berekende NDVI-drempel: 0,697");
+  await expect(panel).toContainText("Kalibratie van de drempel");
+  await expect(panel).toContainText("ROC AUC 0,925");
+  await expect(panel).toContainText("S2B_MSIL2A_20200624T104629");
   await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Copernicus Sentinel-2 information");
   await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
   expect(await page.evaluate(() => ({
@@ -728,24 +771,17 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   }))).toEqual(mapStateBefore);
 
   await page.locator("#language-toggle").click();
-  await expect(vegetationButton).toHaveText("Likely vegetation 2023");
+  await expect(vegetationButton).toHaveText("Likely vegetation 2020");
   await expect(page.locator("#map-controls-title")).toHaveText("What would you like to look at?");
-  await expect(page.locator("#legend-title")).toHaveText("Likely vegetation 2023");
+  await expect(page.locator('[data-layer-category="heat"]')).toContainText("Heat");
+  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Land use and green cover");
+  await expect(page.locator("#legend-title")).toHaveText("Likely vegetation 2020");
   await expect(panel).toContainText("Likely vegetated");
   await expect(panel).toContainText("Median NDVI");
-  await expect(panel).toContainText("Calculated NDVI threshold: 0.66");
+  await expect(panel).toContainText("Calculated NDVI threshold: 0.697");
+  await expect(panel).toContainText("Threshold calibration");
   await expect(panel.locator('[data-section="vegetation-methodology"]')).toHaveAttribute("open", "");
-
-  await page.locator("#vegetation-year-slider").evaluate((element) => {
-    element.value = element.max;
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await expect(vegetationButton).toHaveText("Likely vegetation 2026");
-  await expect(page.locator("#vegetation-year-output")).toHaveText("2026");
-  await expect(page.locator("#vegetation-year-date")).toContainText("20 Jun 2026");
-  await expect(panel).toContainText("58.68");
-  await expect(panel.locator('[data-section="vegetation-methodology"]')).toHaveAttribute("open", "");
-  await expect.poll(() => vegetationRasterRequests.get(page)).toBe(2);
+  await expect(page.locator("#vegetation-year-control")).toBeHidden();
 
   const subsequentSwitch = await page.evaluate(async () => {
     await window.__heatMap.setLayer("heat");
@@ -754,7 +790,7 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
     return performance.now() - started;
   });
   expect(subsequentSwitch).toBeLessThan(100);
-  expect(vegetationRasterRequests.get(page)).toBe(2);
+  expect(vegetationRasterRequests.get(page)).toBe(1);
 
   const accessibilityResults = await new AxeBuilder({ page })
     .exclude("#map")
@@ -782,7 +818,7 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await page.locator('[data-layer="vegetation"]').click();
   await expect(panel).toContainText("Hoeveel lijkt begroeid?");
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
-  expect(await page.evaluate(() => window.__heatMap.map.getSource("likely-vegetation-image").serialize().url)).toContain("likely-vegetation-2023-beersel.png");
+  expect(await page.evaluate(() => window.__heatMap.map.getSource("likely-vegetation-image").serialize().url)).toContain("likely-vegetation-2020-beersel.png");
 
   const search = page.locator("#sector-search");
   await search.fill("23003A001");
@@ -841,10 +877,12 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   const panel = page.locator("#detail-panel");
   await expect(panel).toContainText("About this map");
   await expect(panel).toContainText("How to use the map");
-  await expect(panel).toContainText("Four layers, four questions");
+  await expect(panel).toContainText("What each layer tells you");
+  await expect(panel).toContainText("Land use and green cover");
   await expect(panel).toContainText("Why 154 sectors?");
   await expect(panel).toContainText("Statbel defines their codes and boundaries");
-  await expect(panel).toContainText("Who calculated what?");
+  await expect(panel).toContainText("Official producer");
+  await expect(panel).toContainText("What we add");
   await expect(panel).toContainText("OpenStreetMap is only the background map");
   await expect(panel).toContainText("Where did Sentinel-2 observe a strong vegetation signal?");
   await expect(panel).toContainText("Sources and reference dates");

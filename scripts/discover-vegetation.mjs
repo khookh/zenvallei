@@ -1,3 +1,8 @@
+/**
+ * Select one comparable annual Sentinel-2 observation using cloud and coverage
+ * evidence over the actual Zennevallei sector union, not scene-level metadata
+ * alone. Credentials are read from the process environment and never written.
+ */
 import fsp from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";

@@ -21,6 +21,11 @@ describe("Dutch–English translations", () => {
     expect(JSON.stringify(TRANSLATIONS)).not.toContain(String.fromCodePoint(0x2014));
   });
 
+  it("does not expose the provisional project name in interface copy", () => {
+    expect(Object.values(TRANSLATIONS.nl).join(" ")).not.toMatch(/greenwave/i);
+    expect(Object.values(TRANSLATIONS.en).join(" ")).not.toMatch(/greenwave/i);
+  });
+
   it("falls back to Dutch for unsupported languages and unknown keys", () => {
     expect(setLanguage("fr")).toBe("nl");
     expect(getLanguage()).toBe("nl");
@@ -58,7 +63,7 @@ describe("Dutch–English translations", () => {
     setLanguage("en");
     applyDocumentTranslations();
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toBe("Heat Vulnerability Zennevallei");
+    expect(document.title).toBe("Zennevallei - heat resilience");
     expect(document.querySelector('meta[name="description"]').content).toContain("154 statistical sectors");
     expect(document.querySelector("span").textContent).toBe("Heat vulnerability");
     expect(document.querySelector("input").placeholder).toBe("Name or sector code");

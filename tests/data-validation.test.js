@@ -24,6 +24,8 @@ describe("browser data contracts", () => {
   it("treats legacy unversioned payloads as version 1", () => {
     expect(schemaVersionOf({})).toBe(1);
     expect(assertSupportedSchema("scores", {})).toBe(1);
+    expect(assertSupportedSchema("vegetation", { schemaVersion: 3 })).toBe(3);
+    expect(assertSupportedSchema("vegetation", { schemaVersion: 4 })).toBe(4);
   });
 
   it("rejects unsupported schema versions with a readable error", () => {
@@ -60,5 +62,27 @@ describe("browser data contracts", () => {
     expect(() => validateApplicationData(payload)).not.toThrow();
     delete payload.vegetation.years[2023].sectorStats.A;
     expect(() => validateApplicationData(payload)).toThrow("contains 0 sector records");
+  });
+
+  it("requires the complete Statbel area denominator for vegetation schema 4", () => {
+    const payload = validPayload();
+    payload.vegetation = {
+      schemaVersion: 4,
+      available: true,
+      activeYear: 2020,
+      availableYears: [2020],
+      definitions: { headlineDenominator: "valid-observed-area" },
+      years: {
+        2020: {
+          imageUrl: "data/vegetation/test.png",
+          coordinates: [[4, 51], [5, 51], [5, 50], [4, 50]],
+          threshold: 0.697,
+          sectorStats: { A: {} },
+        },
+      },
+    };
+    expect(() => validateApplicationData(payload)).toThrow("complete Statbel sector area denominator");
+    payload.vegetation.definitions.headlineDenominator = "complete-statbel-sector-area";
+    expect(() => validateApplicationData(payload)).not.toThrow();
   });
 });

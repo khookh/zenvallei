@@ -1,3 +1,4 @@
+/** Copernicus Urban Atlas polygons and Greenwave's equal-area summaries. */
 import { formatNumber, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
@@ -13,6 +14,7 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
 
   return defineLayer({
     id: "urban-atlas",
+    categoryId: "land-green",
     isAvailable: () => Boolean(!loadFailed && urbanAtlas?.available && urbanAtlas.geojsonUrl),
     getUnavailableReasonKey: () => loadFailed || urbanAtlas?.loadError
       ? "layers.urbanAtlasLoadError"

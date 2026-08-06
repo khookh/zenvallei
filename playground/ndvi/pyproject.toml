@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "greenwave-ndvi"
+version = "0.1.0"
+description = "Standalone NDVI exploration helpers for Greenwave"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["greenwave_ndvi*"]

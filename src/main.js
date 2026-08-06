@@ -5,6 +5,7 @@ import { findSectorFromQuery, loadApplicationData, sectorSearchLabel, sectorsFor
 import { DEFAULT_HEAT_METRIC } from "./heat-metric.js";
 import { DEFAULT_LANGUAGE, applyDocumentTranslations, formatDate, getLanguage, setLanguage, t } from "./i18n.js";
 import { buildLayerRegistry } from "./layers/registry.js";
+import { categoryLabel, LAYER_CATEGORIES } from "./layers/categories.js";
 import { createMapController } from "./map-controller.js";
 import { createDetailPanel } from "./panel.js";
 
@@ -26,7 +27,9 @@ const elements = {
   legend: document.querySelector("#legend-content"),
   legendTitle: document.querySelector("#legend-title"),
   legendNote: document.querySelector("#legend-note"),
-  layerButtons: [...document.querySelectorAll("[data-layer]")],
+  layerSwitch: document.querySelector("#layer-switch"),
+  layerButtons: [],
+  layerCategoryHeadings: [],
   heatMetricControl: document.querySelector("#heat-metric-control"),
   heatMetricSwitch: document.querySelector(".heat-metric-switch"),
   heatMetricButtons: [...document.querySelectorAll("[data-heat-metric]")],
@@ -153,6 +156,9 @@ function showFatalError(error) {
 
 function updateLayerControls() {
   if (!application.layers) return;
+  elements.layerCategoryHeadings.forEach(({ category, heading }) => {
+    heading.textContent = categoryLabel(category);
+  });
   elements.layerButtons.forEach((button) => {
     const layer = application.layers.get(button.dataset.layer);
     const available = Boolean(layer?.isAvailable());
@@ -161,6 +167,46 @@ function updateLayerControls() {
     button.setAttribute("aria-pressed", String(application.activeLayer === layer?.id));
     button.classList.toggle("is-active", application.activeLayer === layer?.id);
   });
+}
+
+function createLayerControls() {
+  const fragment = document.createDocumentFragment();
+  elements.layerButtons = [];
+  elements.layerCategoryHeadings = [];
+
+  LAYER_CATEGORIES.forEach((category) => {
+    const section = document.createElement("section");
+    section.className = "layer-category";
+    section.dataset.layerCategory = category.id;
+
+    const heading = document.createElement("h3");
+    heading.id = `layer-category-${category.id}`;
+    heading.className = "layer-category-title";
+    heading.textContent = categoryLabel(category);
+    elements.layerCategoryHeadings.push({ category, heading });
+
+    const group = document.createElement("div");
+    group.className = "layer-category-options";
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-labelledby", heading.id);
+
+    [...application.layers.values()]
+      .filter((layer) => layer.categoryId === category.id)
+      .forEach((layer) => {
+        const button = document.createElement("button");
+        button.className = "layer-button";
+        button.type = "button";
+        button.dataset.layer = layer.id;
+        button.setAttribute("aria-pressed", "false");
+        group.append(button);
+        elements.layerButtons.push(button);
+      });
+
+    section.append(heading, group);
+    fragment.append(section);
+  });
+
+  elements.layerSwitch.replaceChildren(fragment);
 }
 
 function updateSecondaryControls() {
@@ -177,7 +223,9 @@ function updateSecondaryControls() {
     });
   }
 
-  const showYears = application.activeLayer === "vegetation" && application.data?.vegetation?.available;
+  const showYears = application.activeLayer === "vegetation"
+    && application.data?.vegetation?.available
+    && application.data.vegetation.availableYears?.length > 1;
   elements.vegetationYearControl.hidden = !showYears;
   if (!showYears) return;
   const years = [...application.data.vegetation.availableYears].sort((left, right) => left - right);
@@ -224,6 +272,11 @@ function renderLegend() {
   const model = activeLayer().getLegendModel();
   elements.legendTitle.textContent = model.title;
   elements.legendNote.textContent = model.note ?? "";
+  const footnote = model.footnote ? document.createElement("p") : null;
+  if (footnote) {
+    footnote.className = "legend-footnote";
+    footnote.textContent = model.footnote;
+  }
 
   if (model.layout === "scale") {
     const scale = document.createElement("div");
@@ -232,7 +285,7 @@ function renderLegend() {
     const statuses = document.createElement("div");
     statuses.className = "legend-statuses";
     statuses.append(...(model.groups[1]?.items ?? []).map((item) => createLegendItem(item)));
-    elements.legend.replaceChildren(scale, statuses);
+    elements.legend.replaceChildren(scale, statuses, ...(footnote ? [footnote] : []));
     return;
   }
 
@@ -253,7 +306,7 @@ function renderLegend() {
       wrapper.append(...group.items.map((item) => createLegendItem(item)));
     }
   });
-  elements.legend.replaceChildren(wrapper);
+  elements.legend.replaceChildren(wrapper, ...(footnote ? [footnote] : []));
 }
 
 function populateMunicipalities(provenance) {
@@ -316,6 +369,7 @@ async function start() {
   const data = await loadApplicationData();
   application.data = data;
   application.layers = buildLayerRegistry(data, { initialHeatMetric: application.activeHeatMetric });
+  createLayerControls();
   updateLayerControls();
   updateSecondaryControls();
   updateLayerContext();

@@ -1,3 +1,8 @@
+/**
+ * Validate and window the pinned Copernicus LCM-10 COG. Nearest-neighbour
+ * sampling preserves categorical codes; latitude-weighted pixels provide the
+ * area summaries written to the browser manifest.
+ */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";

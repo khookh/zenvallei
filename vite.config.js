@@ -34,7 +34,10 @@ export function buildSecurityHeaders(tileUrl = DEFAULT_TILE_URL) {
 
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, process.cwd(), "");
-  const tileUrl = environment.VITE_TILE_URL || DEFAULT_TILE_URL;
+  // Programmatic builds, including the deterministic E2E server, configure the
+  // tile origin through the process environment. Explicit process values must
+  // take precedence over values loaded from local .env files.
+  const tileUrl = process.env.VITE_TILE_URL || environment.VITE_TILE_URL || DEFAULT_TILE_URL;
   return {
     optimizeDeps: {
       exclude: ["maplibre-gl"],

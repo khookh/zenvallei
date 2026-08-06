@@ -1,6 +1,6 @@
 # Third-party data and services
 
-The Apache 2.0 licence applies to Greenwave source code. It does not relicense upstream data, derived browser assets, map tiles, names, logos or documentation.
+The MIT licence applies to Greenwave source code. It does not relicense upstream data, derived browser assets, map tiles, names or logos.
 
 ## Government of Flanders, Department of Care
 
@@ -19,7 +19,7 @@ Useful official context: [reuse of government information](https://www.vlaandere
 Used for the compatible 2024 statistical-sector codes, Dutch names and boundaries.
 
 - Source: [Statistical sectors 2024](https://statbel.fgov.be/en/open-data/statistical-sectors-2024)
-- Generated asset: `sectors.geojson` and geometry provenance.
+- Generated assets: `sectors.geojson`, geometry provenance and the dissolved white silhouette in `public/assets/zennevallei-river-mark.png`. The blue river curve is a stylised Greenwave brand element, not hydrographic data.
 - Application attribution: Statbel, statistical sectors dated 1 January 2024.
 
 Statbel states that its open data can be used freely, without charge or restriction, for commercial and non-commercial purposes. See [Statbel Open Data](https://statbel.fgov.be/en/open-data).
@@ -40,11 +40,11 @@ See the [CLMS data policy](https://land.copernicus.eu/en/data-policy). The prove
 
 ## Copernicus Sentinel-2
 
-Used for the 24 June 2023 L2A NDVI observation and the derived likely-vegetation indication.
+Used for the selected 2020 L2A NDVI observation in the public likely-vegetation indication. Selected observations from 2015 through 2026 may remain in the ignored local research cache.
 
 - Source collection: Sentinel-2 L2A through the Copernicus Data Space Sentinel Hub Process API.
-- Input products: `S2A_MSIL2A_20230624T104621_N0510_R051_T31UFS_20240912T071700` and `S2A_MSIL2A_20230624T104621_N0510_R051_T31UES_20240912T071700`.
-- Generated assets: `vegetation/likely-vegetation-2023.png` and `vegetation.json`.
+- Input products: the paired T31UFS and T31UES products recorded for every selected observation in `.cache/vegetation/selection.json` and `vegetation.json`.
+- Generated assets: one full-region and seven municipality-specific PNG files for 2020, plus `vegetation.json`.
 - Application attribution: Derived using European Union Copernicus Sentinel-2 information.
 
 Greenwave calculates NDVI, applies the Sentinel scene-classification mask, calibrates a threshold against Urban Atlas reference classes and aggregates areas by Statbel sector. The result is identified as a derived, single-date vegetation indication and not as an official Copernicus land-cover product.

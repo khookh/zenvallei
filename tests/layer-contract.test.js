@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { LAYER_CATEGORIES, validateLayerCategories } from "../src/layers/categories.js";
 import { createLayerRegistry, defineLayer } from "../src/layers/layer-contract.js";
 import { buildLayerRegistry } from "../src/layers/registry.js";
 
 function validLayer(id) {
   return {
     id,
+    categoryId: "heat",
     isAvailable: () => true,
     getLabel: () => id,
     getDatasetStatus: () => "ready",
@@ -51,5 +53,13 @@ describe("layer module contract", () => {
     expect(registry.get("land-cover").isAvailable()).toBe(false);
     expect(registry.get("urban-atlas").isAvailable()).toBe(false);
     expect(registry.get("vegetation").isAvailable()).toBe(false);
+    expect(LAYER_CATEGORIES.map(({ id }) => id)).toEqual(["heat", "land-green"]);
+    expect(registry.get("heat").categoryId).toBe("heat");
+    expect([...registry.values()].slice(1).every(({ categoryId }) => categoryId === "land-green")).toBe(true);
+  });
+
+  it("rejects layers assigned to an unknown navigation category", () => {
+    const registry = createLayerRegistry([{ ...validLayer("example"), categoryId: "unknown" }]);
+    expect(() => validateLayerCategories(registry)).toThrow("unknown category 'unknown'");
   });
 });

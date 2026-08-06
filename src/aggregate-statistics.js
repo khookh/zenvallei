@@ -97,6 +97,7 @@ function aggregateUrbanAtlas(records, urbanAtlas) {
 }
 
 function aggregateVegetation(records) {
+  const sectorAreaHa = sum(records, "sectorAreaHa");
   const validAreaHa = sum(records, "validAreaHa");
   const likelyAreaHa = sum(records, "likelyVegetatedAreaHa");
   const belowAreaHa = sum(records, "belowThresholdAreaHa");
@@ -104,16 +105,16 @@ function aggregateVegetation(records) {
   const waterAreaHa = sum(records, "excludedWaterAreaHa");
   const weightedMedian = records.reduce((total, record) => total + Number(record.medianNdvi ?? 0) * Number(record.validAreaHa ?? 0), 0);
   return {
-    sectorAreaHa: round(sum(records, "sectorAreaHa")),
+    sectorAreaHa: round(sectorAreaHa),
     validAreaHa: round(validAreaHa),
     likelyVegetatedAreaHa: round(likelyAreaHa),
-    likelyVegetatedPercentage: percentage(likelyAreaHa, validAreaHa),
+    likelyVegetatedPercentage: percentage(likelyAreaHa, sectorAreaHa),
     belowThresholdAreaHa: round(belowAreaHa),
-    belowThresholdPercentage: percentage(belowAreaHa, validAreaHa),
+    belowThresholdPercentage: percentage(belowAreaHa, sectorAreaHa),
     excludedCroplandAreaHa: round(croplandAreaHa),
-    excludedCroplandPercentage: percentage(croplandAreaHa, validAreaHa),
+    excludedCroplandPercentage: percentage(croplandAreaHa, sectorAreaHa),
     excludedWaterAreaHa: round(waterAreaHa),
-    excludedWaterPercentage: percentage(waterAreaHa, validAreaHa),
+    excludedWaterPercentage: percentage(waterAreaHa, sectorAreaHa),
     missingObservationAreaHa: round(sum(records, "missingObservationAreaHa")),
     medianNdvi: validAreaHa > 0 ? round(weightedMedian / validAreaHa, 3) : null,
     medianIsAreaWeightedApproximation: true,

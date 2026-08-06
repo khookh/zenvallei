@@ -52,9 +52,9 @@ function panelHeatMetricSelector(activeMetric) {
     </div>`;
 }
 
-function metricCard(labelKey, value, color = "#0b6e69") {
+function metricCard(labelKey, value, color = "#0b6e69", className = "") {
   return `
-    <div class="summary-card land-cover-metric">
+    <div class="summary-card land-cover-metric ${escapeHtml(className)}">
       <span>${escapeHtml(t(labelKey))}</span>
       <strong style="--score-color:${color}">${escapeHtml(value)}</strong>
     </div>`;
@@ -226,6 +226,10 @@ function landCoverDefinition(landCover, code) {
   return landCover?.classes?.find((entry) => entry.code === code);
 }
 
+function landCoverClassStatistic(stats, code) {
+  return stats?.classes?.find((entry) => entry.code === code) ?? { areaHa: 0, percentage: 0 };
+}
+
 function landCoverClassRows(stats, landCover) {
   return stats.classes.map((entry) => {
     const definition = landCoverDefinition(landCover, entry.code);
@@ -245,6 +249,8 @@ function landCoverClassRows(stats, landCover) {
 function renderLandCoverRecord(record, methodology, landCover, urbanAtlas, vegetation) {
   const stats = scopedStatistics(landCover, record);
   const dominant = landCoverDefinition(landCover, stats?.dominantClassCode);
+  const treeCover = landCoverClassStatistic(stats, 10);
+  const cropland = landCoverClassStatistic(stats, 40);
   const dominantLabel = dominant ? t(`class.${dominant.key}`) : t("landCover.noData");
   const dominantColor = dominant?.color ?? "#b4b4b4";
   return `
@@ -261,9 +267,12 @@ function renderLandCoverRecord(record, methodology, landCover, urbanAtlas, veget
       ${stats ? `
         <section aria-labelledby="land-cover-summary-title">
           <div class="section-heading"><p class="section-kicker">${escapeHtml(t("landCover.eyebrow", { year: landCover.activeYear }))}</p><h3 id="land-cover-summary-title">${escapeHtml(t("landCover.classBreakdown"))}</h3></div>
-          <div class="summary-grid">
-            ${metricCard("landCover.vegetation", t("unit.percentage", { value: formatNumber(stats.vegetationPercentage) }), "#006400")}
-            ${metricCard("landCover.builtUp", t("unit.percentage", { value: formatNumber(stats.builtUpPercentage) }), "#fa0000")}
+          <p class="section-intro">${escapeHtml(t("landCover.summaryExplanation"))}</p>
+          <div class="summary-grid land-cover-summary-grid">
+            ${metricCard("landCover.vegetation", t("unit.percentage", { value: formatNumber(stats.vegetationPercentage) }), "#0b6e69", "land-cover-combined")}
+            ${metricCard("landCover.treeCover", t("unit.percentage", { value: formatNumber(treeCover.percentage) }), "#006400", "land-cover-trees")}
+            ${metricCard("landCover.croplandCover", t("unit.percentage", { value: formatNumber(cropland.percentage) }), "#8b3f91", "land-cover-cropland")}
+            ${metricCard("landCover.builtUp", t("unit.percentage", { value: formatNumber(stats.builtUpPercentage) }), "#c90000", "land-cover-built")}
           </div>
           <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("landCover.derivedNote"))}</span></p>
         </section>
@@ -395,13 +404,11 @@ function vegetationAreaValue(areaHa, percentage) {
 }
 
 function vegetationComposition(stats, vegetation) {
-  const croplandArea = stats.excludedCroplandAreaHa ?? stats.excludedArableAreaHa ?? 0;
-  const croplandPercentage = stats.excludedCroplandPercentage ?? stats.excludedArablePercentage ?? 0;
+  const otherArea = Math.max(0, Number(stats.sectorAreaHa) - Number(stats.likelyVegetatedAreaHa));
+  const otherPercentage = Math.max(0, 100 - Number(stats.likelyVegetatedPercentage));
   const items = [
     { key: "likelyVegetated", area: stats.likelyVegetatedAreaHa, percentage: stats.likelyVegetatedPercentage, color: vegetation.palette.likelyVegetated },
-    { key: "belowThreshold", area: stats.belowThresholdAreaHa, percentage: stats.belowThresholdPercentage, color: vegetation.palette.belowThreshold },
-    { key: "excludedCropland", area: croplandArea, percentage: croplandPercentage, color: "#D9B46C" },
-    { key: "excludedWater", area: stats.excludedWaterAreaHa, percentage: stats.excludedWaterPercentage, color: "#72A9CF" },
+    { key: "otherValidArea", area: otherArea, percentage: otherPercentage, color: "#D9DEDA" },
   ];
   const label = items.map((item) => `${t(`vegetation.${item.key}`)} ${formatNumber(item.percentage)}%`).join(", ");
   return `
@@ -414,7 +421,7 @@ function vegetationComposition(stats, vegetation) {
 }
 
 function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vegetation) {
-  const year = vegetation?.activeYear ?? 2023;
+  const year = vegetation?.activeYear ?? 2020;
   const yearData = vegetation?.years?.[year];
   const stats = scopedStatistics(yearData, record);
   const calibration = yearData?.calibration;
@@ -431,6 +438,7 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
     <div class="panel-body">
       ${stats ? `<section aria-labelledby="vegetation-summary-title">
         <div class="section-heading"><p class="section-kicker">${escapeHtml(t("vegetation.eyebrow", { year }))}</p><h3 id="vegetation-summary-title">${escapeHtml(t("vegetation.summaryTitle"))}</h3></div>
+        <p class="vegetation-definition">${escapeHtml(t("vegetation.ndviDefinition"))}</p>
         <p class="section-intro vegetation-intro">${escapeHtml(t("vegetation.summaryExplanation"))}</p>
         ${vegetationComposition(stats, vegetation)}
       </section>
@@ -445,7 +453,10 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
             ${metricCard("vegetation.missingObservation", t("unit.hectares", { value: formatNumber(stats.missingObservationAreaHa) }), "#52615C")}
           </div>
           ${stats.medianIsAreaWeightedApproximation ? `<p class="calculation-note">${escapeHtml(t("vegetation.municipalityMedianNote"))}</p>` : ""}
-          <p class="urban-atlas-valid-area vegetation-valid-area">${escapeHtml(t("vegetation.validArea", { area: formatNumber(stats.validAreaHa) }))}</p>
+          <p class="urban-atlas-valid-area vegetation-valid-area">${escapeHtml(t("vegetation.validArea", {
+            area: formatNumber(stats.validAreaHa),
+            sectorArea: formatNumber(stats.sectorAreaHa),
+          }))}</p>
           <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("vegetation.derivedNote"))}</span></p>
         </div>
       </details>` : ""}
@@ -487,6 +498,18 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
     </div>`;
 }
 
+function aboutLayerCard(key, label) {
+  return `<article>
+    <span class="about-layer-tag">${escapeHtml(label)}</span>
+    <h4>${escapeHtml(t(`about.${key}Question`))}</h4>
+    <dl class="about-layer-facts">
+      <div><dt>${escapeHtml(t("about.dataLabel"))}</dt><dd>${escapeHtml(t(`about.${key}Text`))}</dd></div>
+      <div><dt>${escapeHtml(t("about.producerLabel"))}</dt><dd>${escapeHtml(t(`about.${key}Producer`))}</dd></div>
+      <div><dt>${escapeHtml(t("about.greenwaveLabel"))}</dt><dd>${escapeHtml(t(`about.${key}Greenwave`))}</dd></div>
+    </dl>
+  </article>`;
+}
+
 function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance) {
   const sectorCount = provenance?.output?.sectorCount ?? 154;
   return `
@@ -506,11 +529,19 @@ function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance)
       </section>
       <section>
         <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.layersKicker"))}</p><h3>${escapeHtml(t("about.layersTitle"))}</h3></div>
-        <div class="about-layer-list">
-          <article><span class="about-layer-tag">${escapeHtml(t("layers.heat"))}</span><h4>${escapeHtml(t("about.heatQuestion"))}</h4><p>${escapeHtml(t("about.heatText"))}</p></article>
-          <article><span class="about-layer-tag">${escapeHtml(t("layers.landCover", { year: landCover?.activeYear ?? 2020 }))}</span><h4>${escapeHtml(t("about.landCoverQuestion"))}</h4><p>${escapeHtml(t("about.landCoverText"))}</p></article>
-          <article><span class="about-layer-tag">${escapeHtml(t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}</span><h4>${escapeHtml(t("about.urbanAtlasQuestion"))}</h4><p>${escapeHtml(t("about.urbanAtlasText"))}</p></article>
-          <article><span class="about-layer-tag">${escapeHtml(t("layers.vegetation", { year: vegetation?.activeYear ?? 2023 }))}</span><h4>${escapeHtml(t("about.vegetationQuestion"))}</h4><p>${escapeHtml(t("about.vegetationText"))}</p></article>
+        <div class="about-layer-category">
+          <h4 class="about-category-title">${escapeHtml(t("about.categoryHeat"))}</h4>
+          <div class="about-layer-list">
+            ${aboutLayerCard("heat", t("layers.heat"))}
+          </div>
+        </div>
+        <div class="about-layer-category">
+          <h4 class="about-category-title">${escapeHtml(t("about.categoryLandGreen"))}</h4>
+          <div class="about-layer-list">
+            ${aboutLayerCard("landCover", t("layers.landCover", { year: landCover?.activeYear ?? 2020 }))}
+            ${aboutLayerCard("urbanAtlas", t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}
+            ${aboutLayerCard("vegetation", t("layers.vegetation", { year: vegetation?.activeYear ?? 2020 }))}
+          </div>
         </div>
         <p class="comparison-caveat">${escapeHtml(t("about.compareCaveat"))}</p>
       </section>
@@ -520,16 +551,11 @@ function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance)
         <p>${escapeHtml(t("about.sectorsText", { count: sectorCount }))}</p>
         <p>${escapeHtml(t("about.sectorsCompatibility"))}</p>
       </section>
-      <section>
-        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.provenanceKicker"))}</p><h3>${escapeHtml(t("about.provenanceTitle"))}</h3></div>
-        <ul class="provenance-list">
-          <li>${escapeHtml(t("about.provenanceHeat"))}</li>
-          <li>${escapeHtml(t("about.provenanceGeometry"))}</li>
-          <li>${escapeHtml(t("about.provenanceLandCover"))}</li>
-          <li>${escapeHtml(t("about.provenanceUrbanAtlas"))}</li>
-          <li>${escapeHtml(t("about.provenanceVegetation"))}</li>
-          <li>${escapeHtml(t("about.provenanceBasemap"))}</li>
-        </ul>
+      <section class="about-note about-foundations">
+        <p class="section-kicker">${escapeHtml(t("about.foundationKicker"))}</p>
+        <h3>${escapeHtml(t("about.foundationTitle"))}</h3>
+        <p>${escapeHtml(t("about.provenanceGeometry"))}</p>
+        <p>${escapeHtml(t("about.provenanceBasemap"))}</p>
       </section>
       <section>
         <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.methodologyKicker"))}</p><h3>${escapeHtml(t("about.methodologyTitle"))}</h3></div>

@@ -44,7 +44,7 @@ describe("LCM-10 preparation core", () => {
     expect(detectRasterContainer(Buffer.from([0x00, 0x00, 0x00, 0x00]))).toBe("unknown");
   });
 
-  it("pins the official palette and defines green cover as trees plus grass only", () => {
+  it("pins the official palette and defines the combined metric as tree cover plus grassland", () => {
     expect(Object.fromEntries(LCM_CLASSES.map(({ code, color }) => [code, color]))).toEqual({
       10: "#006400", 20: "#ffbb22", 30: "#ffff4c", 40: "#f096ff",
       50: "#0096a0", 60: "#00cf75", 70: "#fae6a0", 80: "#b4b4b4",

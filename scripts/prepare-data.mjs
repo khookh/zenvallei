@@ -1,3 +1,8 @@
+/**
+ * Join the official 2026 Department of Care workbook to compatible Statbel
+ * 2024 sector geometry. Source scores are preserved; only identifiers,
+ * projection, display metadata and provenance are prepared for the browser.
+ */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";

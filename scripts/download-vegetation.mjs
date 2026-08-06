@@ -1,3 +1,8 @@
+/**
+ * Download the selected Sentinel-2 L2A observations as preparation-only,
+ * two-band NDVI/validity GeoTIFFs in the common EPSG:32631 10 m grid. OAuth
+ * client credentials remain outside every cache sidecar and browser asset.
+ */
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
