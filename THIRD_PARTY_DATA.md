@@ -10,7 +10,7 @@ Used for the 2026 heat, vulnerability, final and indicator scores.
 - Generated assets: `scores.json` and parts of `methodology.json` and `provenance.json`.
 - Application attribution: Government of Flanders, Department of Care.
 
-Publication gate: the download page makes the workbook publicly available but did not state a dataset-specific open-data licence when checked on 5 August 2026. General Flemish rules allow reuse subject to the conditions selected by the publishing authority. Confirm the applicable licence or obtain written reuse confirmation before pushing the derived score asset to a public repository. Until then, public-repository readiness does not itself authorise publication.
+The score data is published here for this non-commercial proof of concept with clear source attribution. The derived files do not imply endorsement by the Government of Flanders and remain subject to the source authority's applicable reuse conditions.
 
 Useful official context: [reuse of government information](https://www.vlaanderen.be/digitaal-vlaanderen/recht-op-hergebruik-van-overheidsinformatie) and [Flemish model licences](https://www.vlaanderen.be/digitaal-vlaanderen/onze-diensten-en-platformen/open-data/voorwaarden-voor-het-hergebruik-van-overheidsinformatie).
 
@@ -57,7 +57,7 @@ Used only as the configurable runtime basemap. Greenwave does not package OSM ti
 - Licence information: [OpenStreetMap copyright and ODbL](https://www.openstreetmap.org/copyright).
 - Tile-service conditions: [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
-The standard community tile service is intended only for modest local use. Configure an appropriate managed or self-hosted OSM-derived service before public traffic.
+The standard community tile service is used for this modest non-commercial proof of concept. The application does not package or prefetch tiles. Configure an appropriate managed or self-hosted OSM-derived service before meaningful public traffic.
 
 ## Software dependencies
 

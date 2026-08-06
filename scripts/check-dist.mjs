@@ -11,6 +11,7 @@ const forbiddenPatterns = [
   { label: "local Windows user path", pattern: /[A-Z]:\\Users\\[^\\\s]+/i },
   { label: "client secret", pattern: /client_secret\s*[=:]\s*["'][^"']+/i },
 ];
+const forbiddenSecretFile = /(?:^|\/)(?:git_passphrase\.txt|credentials?\.(?:json|txt)|passphrases?\.(?:json|txt)|secrets?\.env)$/i;
 
 async function filesBelow(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -21,6 +22,10 @@ async function filesBelow(directory) {
 }
 
 const files = await filesBelow(distRoot);
+for (const file of files) {
+  const relativePath = path.relative(distRoot, file).replaceAll("\\", "/");
+  if (forbiddenSecretFile.test(relativePath)) throw new Error(`${relativePath} is a forbidden secret filename.`);
+}
 for (const file of files.filter((entry) => textExtensions.has(path.extname(entry)))) {
   const contents = await fs.readFile(file, "utf8");
   forbiddenPatterns.forEach(({ label, pattern }) => {

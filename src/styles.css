@@ -497,6 +497,8 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .comparison-caveat { margin: 11px 0 0; padding: 10px 12px; border-radius: 10px; color: #6b451e; background: #fff4df; font-size: 0.7rem; line-height: 1.45; }
 .about-sectors { border-left: 4px solid var(--teal-bright); }
 .about-foundations { border-left: 4px solid #6d98bf; }
+.about-privacy { border-left: 4px solid #8a6a9f; }
+.about-privacy a { overflow-wrap: anywhere; }
 .about-sectors .section-kicker { margin-bottom: 5px; }
 .provenance-list { display: grid; gap: 8px; margin: 0; padding-left: 19px; color: #496267; font-size: 0.72rem; line-height: 1.48; }
 .about-method { margin-top: 8px; }

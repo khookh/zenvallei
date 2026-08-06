@@ -557,6 +557,14 @@ function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance)
         <p>${escapeHtml(t("about.provenanceGeometry"))}</p>
         <p>${escapeHtml(t("about.provenanceBasemap"))}</p>
       </section>
+      <section class="about-note about-privacy">
+        <p class="section-kicker">${escapeHtml(t("about.privacyKicker"))}</p>
+        <h3>${escapeHtml(t("about.privacyTitle"))}</h3>
+        <p>${escapeHtml(t("about.privacyApplication"))}</p>
+        <p>${escapeHtml(t("about.privacyHosting"))}</p>
+        <p>${escapeHtml(t("about.privacyTiles"))}</p>
+        <p>${escapeHtml(t("about.contactText"))} <a href="mailto:stefanodonne@gmail.com">stefanodonne@gmail.com</a>.</p>
+      </section>
       <section>
         <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.methodologyKicker"))}</p><h3>${escapeHtml(t("about.methodologyTitle"))}</h3></div>
         <details class="detail-accordion about-method" data-section="about-heat-methodology">
