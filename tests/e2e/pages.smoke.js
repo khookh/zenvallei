@@ -12,6 +12,8 @@ test("serves the complete application below the GitHub Pages project path", asyn
 
   await page.goto(".");
   await expect(page).toHaveURL(/\/zenvallei\/$/);
+  await expect(page.locator("#project-intro")).toBeVisible();
+  await expect(page.locator(".project-intro-heading img")).toHaveAttribute("src", "/zenvallei/assets/zennevallei-river-mark.png");
   await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
   await expect(page.locator("#map canvas")).toBeVisible();
   expect(ownResponses.some((url) => url.includes("urban-atlas.geojson"))).toBe(false);
@@ -23,6 +25,7 @@ test("serves the complete application below the GitHub Pages project path", asyn
   expect(policy).toContain("http://127.0.0.1:4181");
   expect(policy).not.toContain("frame-ancestors");
 
+  await page.locator("#project-intro-primary").click();
   await page.locator('[data-layer="urban-atlas"]').click();
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-pressed", "true");
   expect(ownResponses.some((url) => url.includes("/zenvallei/data/urban-atlas.geojson"))).toBe(true);

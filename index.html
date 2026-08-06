@@ -168,6 +168,58 @@
         <div class="sr-only" id="selection-announcement" aria-live="polite"></div>
       </main>
     </div>
+
+    <dialog
+      class="project-intro"
+      id="project-intro"
+      aria-labelledby="project-intro-title"
+      aria-describedby="project-intro-copy"
+    >
+      <div class="project-intro-card">
+        <div class="project-intro-actions">
+          <button
+            class="project-intro-language"
+            id="project-intro-language"
+            type="button"
+            lang="en"
+            aria-label="Schakel naar Engels"
+            title="Schakel naar Engels"
+          >EN</button>
+          <button
+            class="project-intro-close"
+            id="project-intro-close"
+            type="button"
+            aria-label="Sluit projectintroductie"
+            data-i18n-aria-label="intro.close"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+
+        <header class="project-intro-heading">
+          <img src="%BASE_URL%assets/zennevallei-river-mark.png" alt="" aria-hidden="true" />
+          <div>
+            <p data-i18n="intro.kicker">Persoonlijk V0-project</p>
+            <h2 id="project-intro-title" data-i18n="intro.title">Over dit project</h2>
+          </div>
+        </header>
+
+        <div class="project-intro-copy" id="project-intro-copy">
+          <p data-i18n="intro.body1">Dit is mijn persoonlijke V0-project om hittekwetsbaarheid in de Zennevallei te visualiseren en te onderzoeken hoe die samenhangt met nabij groen en bodemverharding, twee factoren die het stedelijk hitte-eilandeffect beïnvloeden.</p>
+          <p data-i18n="intro.body2">De hitte-indicatoren komen voorlopig uitsluitend van het Departement Zorg van de Vlaamse overheid; voor landbedekking, landgebruik en vegetatie experimenteer ik met Copernicus-gegevens, en ik werk aan de integratie van meer relevante gegevens uit Copernicus en andere bronnen.</p>
+          <p data-i18n="intro.body3">Het project staat open voor feedback en samenwerking via GitHub of e-mail; de frontend is in belangrijke mate ontwikkeld met ondersteuning van grote taalmodellen (LLM’s), en het dashboard documenteert de gegevens, hun herkomst en hoe ze worden verwerkt en gebruikt.</p>
+        </div>
+
+        <div class="project-intro-footer">
+          <button class="project-intro-primary" id="project-intro-primary" type="button" autofocus data-i18n="intro.openMap">Kaart openen</button>
+          <div class="project-intro-links">
+            <a href="https://github.com/khookh/zenvallei" target="_blank" rel="noopener noreferrer" data-i18n="intro.github">Bekijk of werk mee op GitHub</a>
+            <a href="mailto:stefanodonne@gmail.com" data-i18n="intro.contact">Stuur feedback</a>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

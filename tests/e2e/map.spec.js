@@ -190,6 +190,48 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
   await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
+  await page.locator("#project-intro-primary").click();
+});
+
+test("introduces the personal V0 project on every load", async ({ page }) => {
+  await page.reload();
+  const dialog = page.locator("#project-intro");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute("open", "");
+  await expect(page.locator("#project-intro-primary")).toBeFocused();
+  await expect(dialog).toContainText("persoonlijke V0-project");
+  await expect(dialog).toContainText("stedelijk hitte-eilandeffect");
+  await expect(dialog).toContainText("Departement Zorg van de Vlaamse overheid");
+  await expect(dialog).toContainText("grote taalmodellen (LLM’s)");
+  await expect(dialog.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(dialog.locator('a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("Stuur feedback");
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
+  await expect(page.locator('[data-layer="heat"]')).toHaveAttribute("aria-pressed", "true");
+
+  const accessibilityResults = await new AxeBuilder({ page })
+    .include("#project-intro")
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze();
+  expect(accessibilityResults.violations).toEqual([]);
+
+  await page.locator("#project-intro-language").click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(dialog).toContainText("personal V0 project");
+  await expect(dialog).toContainText("urban heat-island effect");
+  await expect(dialog).toContainText("large language models (LLMs)");
+  await dialog.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator("#about-button")).toBeFocused();
+  expect(await page.evaluate(() => ({
+    local: localStorage.length,
+    session: sessionStorage.length,
+    cookies: document.cookie,
+  }))).toEqual({ local: 0, session: 0, cookies: "" });
+
+  await page.reload();
+  await expect(dialog).toBeVisible();
+  await page.locator("#project-intro-close").click();
+  await expect(dialog).not.toBeVisible();
 });
 
 test("serves provider-neutral security headers", async ({ page }) => {
@@ -335,6 +377,11 @@ test("matches the refined hierarchy in Dutch and English", async ({ page }) => {
   await page.locator('[data-layer="land-cover"]').click();
   await expect(page.locator('[aria-labelledby="land-cover-summary-title"]'))
     .toHaveScreenshot("land-cover-summary-nl.png", { animations: "disabled" });
+
+  await page.reload();
+  await expect(page.locator("#project-intro")).toHaveScreenshot("project-intro-nl.png", { animations: "disabled" });
+  await page.locator("#project-intro-language").click();
+  await expect(page.locator("#project-intro")).toHaveScreenshot("project-intro-en.png", { animations: "disabled" });
 });
 
 test("loads all sectors and opens a complete score breakdown from search", async ({ page }) => {
@@ -888,10 +935,13 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   await expect(panel).toContainText("Official producer");
   await expect(panel).toContainText("What we add");
   await expect(panel).toContainText("OpenStreetMap is only the background map");
+  await expect(panel).toContainText("A personal and open V0 project");
+  await expect(panel).toContainText("large language models (LLMs)");
+  await expect(panel.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
   await expect(panel).toContainText("This application uses no cookies, analytics, accounts or persistent identifiers");
   await expect(panel).toContainText("GitHub Pages records visitors' IP addresses");
   await expect(panel).toContainText("OpenStreetMap receives ordinary request information");
-  await expect(panel.locator('a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("stefanodonne@gmail.com");
+  await expect(panel.locator('.about-privacy a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("stefanodonne@gmail.com");
   await expect(panel).toContainText("Where did Sentinel-2 observe a strong vegetation signal?");
   await expect(panel).toContainText("Sources and reference dates");
   await panel.press("Escape");

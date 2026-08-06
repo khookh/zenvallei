@@ -557,6 +557,18 @@ function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance)
         <p>${escapeHtml(t("about.provenanceGeometry"))}</p>
         <p>${escapeHtml(t("about.provenanceBasemap"))}</p>
       </section>
+      <section class="about-note about-project">
+        <p class="section-kicker">${escapeHtml(t("about.projectKicker"))}</p>
+        <h3>${escapeHtml(t("about.projectTitle"))}</h3>
+        <p>${escapeHtml(t("intro.body1"))}</p>
+        <p>${escapeHtml(t("intro.body2"))}</p>
+        <p>${escapeHtml(t("intro.body3"))}</p>
+        <p class="about-project-links">
+          <a href="https://github.com/khookh/zenvallei" target="_blank" rel="noopener noreferrer">${escapeHtml(t("intro.github"))}</a>
+          <span aria-hidden="true">·</span>
+          <a href="mailto:stefanodonne@gmail.com">${escapeHtml(t("intro.contact"))}</a>
+        </p>
+      </section>
       <section class="about-note about-privacy">
         <p class="section-kicker">${escapeHtml(t("about.privacyKicker"))}</p>
         <h3>${escapeHtml(t("about.privacyTitle"))}</h3>

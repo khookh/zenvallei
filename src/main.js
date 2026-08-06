@@ -8,6 +8,7 @@ import { buildLayerRegistry } from "./layers/registry.js";
 import { categoryLabel, LAYER_CATEGORIES } from "./layers/categories.js";
 import { createMapController } from "./map-controller.js";
 import { createDetailPanel } from "./panel.js";
+import { createProjectIntro } from "./project-intro.js";
 
 const elements = {
   map: document.querySelector("#map"),
@@ -50,6 +51,10 @@ const elements = {
   errorMessage: document.querySelector("#error-message"),
   announcement: document.querySelector("#selection-announcement"),
   aboutButton: document.querySelector("#about-button"),
+  projectIntro: document.querySelector("#project-intro"),
+  projectIntroClose: document.querySelector("#project-intro-close"),
+  projectIntroPrimary: document.querySelector("#project-intro-primary"),
+  projectIntroLanguage: document.querySelector("#project-intro-language"),
 };
 
 /** @type {{activeLayer: string, activeHeatMetric: string, datasetState: string, [key: string]: any}} */
@@ -65,6 +70,7 @@ const application = {
   activeLayer: "heat",
   activeHeatMetric: DEFAULT_HEAT_METRIC,
   mapControlsCollapsed: false,
+  projectIntro: null,
 };
 
 const activeLayer = () => application.layers?.get(application.activeLayer);
@@ -351,11 +357,23 @@ function applyLanguage(language) {
   }
   application.panel?.setLanguage();
   application.mapController?.setLanguage();
+  application.projectIntro?.setLanguage();
   updateAnnouncement();
 }
 
+application.projectIntro = createProjectIntro({
+  dialog: elements.projectIntro,
+  closeButton: elements.projectIntroClose,
+  primaryButton: elements.projectIntroPrimary,
+  languageButton: elements.projectIntroLanguage,
+  focusAfterClose: elements.aboutButton,
+  getLanguage,
+  translate: t,
+  onLanguageChange: applyLanguage,
+});
 setLanguage(DEFAULT_LANGUAGE);
 applyLanguage(DEFAULT_LANGUAGE);
+application.projectIntro.open();
 elements.languageToggle.addEventListener("click", () => {
   applyLanguage(getLanguage() === "nl" ? "en" : "nl");
 });
