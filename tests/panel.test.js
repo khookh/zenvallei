@@ -317,7 +317,7 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("40,82%");
     expect(panel.textContent).toContain("Akkerland");
     expect(panel.textContent).toContain("16,33%");
-    expect(panel.textContent).toContain("niet om dezelfde maatstaf als de vegetatie-indicatie");
+    expect(panel.textContent).toContain("niet om dezelfde maatstaf als NDVI-vegetatie");
     expect(panel.textContent).toContain("Bebouwde oppervlakte");
     expect(panel.textContent).toContain("22,45%");
     expect(panel.textContent).toContain("Berekend door deze toepassing");
@@ -334,7 +334,7 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("40.82%");
     expect(panel.textContent).toContain("Cropland");
     expect(panel.textContent).toContain("16.33%");
-    expect(panel.textContent).toContain("not the same metric as the NDVI-based likely-vegetation indication");
+    expect(panel.textContent).toContain("not the same metric as NDVI vegetation");
     expect(panel.textContent).toContain("Built-up area");
     expect(panel.textContent).toContain("22.45%");
     expect(panel.textContent).not.toContain("Mapped area");

@@ -1,4 +1,4 @@
-# Likely vegetation 2020
+# NDVI vegetation 2020
 
 This layer answers one narrow question: where did a Sentinel-2 observation show a vegetation-like NDVI signal? It is an indication, not a land-cover inventory and not a confirmed change map.
 

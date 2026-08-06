@@ -40,7 +40,7 @@ See the [CLMS data policy](https://land.copernicus.eu/en/data-policy). The prove
 
 ## Copernicus Sentinel-2
 
-Used for the selected 2020 L2A NDVI observation in the public likely-vegetation indication. Selected observations from 2015 through 2026 may remain in the ignored local research cache.
+Used for the selected 2020 L2A observation in the public NDVI vegetation layer. Selected observations from 2015 through 2026 may remain in the ignored local research cache.
 
 - Source collection: Sentinel-2 L2A through the Copernicus Data Space Sentinel Hub Process API.
 - Input products: the paired T31UFS and T31UES products recorded for every selected observation in `.cache/vegetation/selection.json` and `vegetation.json`.

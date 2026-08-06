@@ -1,6 +1,6 @@
 # Standalone Sentinel-2 NDVI playground
 
-This is a Python-only research workspace for VS Code or JupyterLab. It downloads raw Copernicus Sentinel-2 L2A bands, calculates NDVI locally, uses GeoPandas for spatial work and can export an experimental raster to the local map. Notebook users do not need to understand the web application or its JSON files.
+This is a Python-only research workspace for VS Code. It downloads raw Copernicus Sentinel-2 L2A bands, calculates NDVI locally, uses GeoPandas for spatial work and can export an experimental raster to the local map. Notebook users do not need to understand the web application or its JSON files.
 
 ## Prepare VS Code
 
@@ -13,6 +13,8 @@ playground/ndvi/.venv/Scripts/python.exe -m pip install -e "playground/ndvi[dev]
 
 Dependencies and their exact versions are declared in `pyproject.toml`; no project launcher is required.
 
+Then open this repository in VS Code, open `playground/ndvi/01_halle_ndvi_2020_2021.ipynb`, select `playground/ndvi/.venv/Scripts/python.exe` as the notebook kernel and run the cells. The notebook downloads or reuses 2020 and 2021 data, calculates NDVI and displays both Halle rasters with the same scale.
+
 ## Copernicus credentials
 
 The first raw download needs a Sentinel Hub OAuth client. Either set temporary environment variables before opening VS Code:
@@ -24,6 +26,12 @@ $env:CDSE_SH_CLIENT_SECRET = [System.Net.NetworkCredential]::new("", $secureSecr
 ```
 
 Raw GeoTIFFs are cached under `.cache/vegetation/raw`, so later runs do not need credentials.
+
+Remove the temporary credentials after downloading:
+
+```powershell
+Remove-Item Env:CDSE_SH_CLIENT_ID, Env:CDSE_SH_CLIENT_SECRET -ErrorAction SilentlyContinue
+```
 
 ## Python API
 
@@ -44,13 +52,15 @@ The public helpers return ordinary `Path`, GeoPandas, Xarray and Matplotlib-comp
 
 ## Show an export on the local map
 
-After running an export cell:
+After running an export cell in the notebook:
 
 ```powershell
 pnpm dev:playground-map
 ```
 
 Open `http://127.0.0.1:4173/` and choose **Test** under **Land use and green cover**. This mode serves only the generated manifest and PNG files. Raw Sentinel bands and notebook outputs are ignored and never enter the GitHub Pages build.
+
+Use ordinary `pnpm dev` when you want the same four layers as the public site. The Test layer appears only with `pnpm dev:playground-map` and only after a valid notebook export exists.
 
 ## Verify
 

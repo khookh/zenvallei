@@ -436,7 +436,7 @@ async function main() {
 
   const years = {};
   for (const job of jobs) {
-    console.log(`Verwerk vegetatie-indicatie ${job.year} (${job.selectedDate})...`);
+    console.log(`Verwerk NDVI-vegetatie ${job.year} (${job.selectedDate})...`);
     const raster = job.year === referenceJob.year ? referenceRaster : await readRaster(job.sourcePath);
     if (!sameGrid(referenceRaster.grid, raster.grid)) throw new Error(`Rastergrid voor ${job.year} wijkt af van ${referenceJob.year}.`);
     const calibrationSamples = calibrationValues(raster, urbanAtlasRaster, classCodes);

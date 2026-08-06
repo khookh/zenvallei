@@ -405,7 +405,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('[data-layer="change"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveText("Urban Atlas 2021");
-  await expect(page.locator('[data-layer="vegetation"]')).toHaveText("Vegetatie-indicatie 2020");
+  await expect(page.locator('[data-layer="vegetation"]')).toHaveText("NDVI-vegetatie 2020");
   expect(vegetationRasterRequests.get(page)).toBe(0);
   await expect(page.locator("#dataset-status")).toContainText("154 Statbel-sectoren · scores 2026");
   await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
@@ -769,7 +769,7 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   }
 });
 
-test("loads likely vegetation lazily and presents calibrated NDVI statistics", async ({ page }) => {
+test("loads NDVI vegetation lazily and presents calibrated NDVI statistics", async ({ page }) => {
   expect(vegetationRasterRequests.get(page)).toBe(0);
   await page.locator("#municipality-select").selectOption("Beersel");
   const search = page.locator("#sector-search");
@@ -792,8 +792,8 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   expect(vegetationRasterRequests.get(page)).toBe(1);
   await expect(vegetationButton).toBeFocused();
   await expect(vegetationButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("Vegetatie-indicatie 2020");
-  await expect(page.locator("#legend-title")).toHaveText("Vegetatie-indicatie 2020");
+  await expect(page.locator("#active-layer-title")).toHaveText("NDVI-vegetatie 2020");
+  await expect(page.locator("#legend-title")).toHaveText("NDVI-vegetatie 2020");
   await expect(page.locator("#legend-note")).toHaveText("NDVI ≥ 0,697");
   await expect(page.locator("#legend-content")).toContainText("Waarschijnlijk begroeid");
   await expect(page.locator("#legend-content")).not.toContainText("Onder de NDVI-drempel");
@@ -801,7 +801,7 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   await expect(page.locator("#legend-content")).toContainText("Ongekleurde pixels kunnen onder de drempel liggen");
   await expect(page.locator("#layer-context-meta")).toContainText("24 jun 2020");
   await expect(page.locator("#layer-context-copy")).toContainText("bewijst geen ecologische gezondheid");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Vegetatie-indicatie 2020 in de Zennevallei");
+  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: NDVI-vegetatie 2020 in de Zennevallei");
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-opacity"))).toBe(0.68);
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-resampling"))).toBe("nearest");
 
@@ -827,11 +827,11 @@ test("loads likely vegetation lazily and presents calibrated NDVI statistics", a
   }))).toEqual(mapStateBefore);
 
   await page.locator("#language-toggle").click();
-  await expect(vegetationButton).toHaveText("Likely vegetation 2020");
+  await expect(vegetationButton).toHaveText("NDVI vegetation 2020");
   await expect(page.locator("#map-controls-title")).toHaveText("What would you like to look at?");
   await expect(page.locator('[data-layer-category="heat"]')).toContainText("Heat");
   await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Land use and green cover");
-  await expect(page.locator("#legend-title")).toHaveText("Likely vegetation 2020");
+  await expect(page.locator("#legend-title")).toHaveText("NDVI vegetation 2020");
   await expect(panel).toContainText("Likely vegetated");
   await expect(panel).toContainText("Median NDVI");
   await expect(panel).toContainText("Calculated NDVI threshold: 0.697");

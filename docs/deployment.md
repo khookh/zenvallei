@@ -38,6 +38,16 @@ pnpm test:pages
 
 The Pages build uses `/zenvallei/` for application, worker and data assets. Do not expose Vite preview as the public server.
 
+### Deploy or redeploy GitHub Pages
+
+1. Run `pnpm verify` and `pnpm test:e2e:cross-browser` locally.
+2. Review `git status` and commit the intended files on `main`.
+3. Run `git push origin main`.
+4. In GitHub, open **Actions**, then **Verify and deploy GitHub Pages**, and wait for both the build and deploy jobs to succeed.
+5. Open <https://khookh.github.io/zenvallei/> and smoke-test every layer, both languages and a mobile layout.
+
+For a redeploy without a code change, open the same workflow, choose **Run workflow**, select `main` and run it. Avoid starting several deployments in quick succession. For a local Pages-path check before pushing, run `pnpm build:pages` followed by `pnpm test:pages`.
+
 The eventual host must provide:
 
 - HTTPS;
@@ -77,12 +87,11 @@ GitHub Pages records visitor IP addresses for security. Browser requests to Open
 
 ## Release checklist
 
-1. Run `pnpm install --frozen-lockfile` from a clean clone.
-2. Run `pnpm verify` and `pnpm test:e2e:cross-browser`.
-3. Run the full-history Gitleaks scan and confirm local credential files are ignored and untracked.
-4. Review `THIRD_PARTY_DATA.md` and every visible attribution.
-5. Test desktop, mobile, keyboard navigation and a failed tile connection.
-6. Confirm no application cookies, analytics or browser storage are present.
-7. Merge only after GitHub verification succeeds, then smoke-test all layers and both languages over HTTPS.
+1. Run `pnpm install --frozen-lockfile`, `pnpm verify` and `pnpm test:e2e:cross-browser`.
+2. Confirm local credential files are ignored and untracked.
+3. Review `THIRD_PARTY_DATA.md` and every visible attribution.
+4. Test desktop, mobile, keyboard navigation and a failed tile connection.
+5. Confirm no application cookies, analytics or browser storage are present.
+6. Push `main`, wait for the GitHub workflow to succeed, then smoke-test all layers and both languages over HTTPS.
 
 Rollback by reverting the faulty commit on `main`; the revert deploys the prior static state. Data migrations are not required because there is no server-side state.

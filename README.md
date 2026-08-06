@@ -1,6 +1,6 @@
 # Greenwave
 
-Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. It combines official heat-vulnerability scores from the Government of Flanders with Statbel boundaries, Copernicus LCM-10, Copernicus Urban Atlas, a Sentinel-2 vegetation indication and an OpenStreetMap background.
+Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. It combines official heat-vulnerability scores from the Government of Flanders with Statbel boundaries, Copernicus LCM-10, Copernicus Urban Atlas, Sentinel-2 NDVI vegetation and an OpenStreetMap background.
 
 The interface starts in English. The `NL` button switches the complete interface to Dutch for the current page only.
 
@@ -71,7 +71,7 @@ py -3.11 -m venv playground/ndvi/.venv
 playground/ndvi/.venv/Scripts/python.exe -m pip install -e "playground/ndvi[dev]"
 ```
 
-Select that interpreter as the notebook kernel. The playground downloads raw B04, B08, SCL and data-mask bands, calculates NDVI in Python and can export an ignored local Test layer. `pnpm dev:playground-map` displays the latest export as Test. Raw files and experiments are never published; the public application still contains only the 2020 likely-vegetation observation. See [NDVI playground](playground/ndvi/README.md) for the VS Code workflow and copyable examples.
+Select that interpreter as the notebook kernel. The playground downloads raw B04, B08, SCL and data-mask bands, calculates NDVI in Python and can export an ignored local Test layer. `pnpm dev:playground-map` displays the latest export as Test. Raw files and experiments are never published; the public application still contains only NDVI vegetation for 2020. See [NDVI playground](playground/ndvi/README.md) for the VS Code workflow and copyable examples.
 
 ## Project guides
 
@@ -79,7 +79,7 @@ Select that interpreter as the notebook kernel. The playground downloads raw B04
 - [Add a layer](docs/add-a-layer.md): a complete layer-module example.
 - [Data pipeline](docs/data-pipeline.md): inputs, commands, caching and outputs.
 - [Data inventory](docs/data-inventory.md): sources, scripts, generated assets and Greenwave metrics.
-- [Likely vegetation 2020](docs/vegetation-series.md): observation selection, NDVI calibration, masks and limitations.
+- [NDVI vegetation 2020](docs/vegetation-series.md): observation selection, NDVI calibration, masks and limitations.
 - [NDVI playground](playground/ndvi/README.md): lazy annual stacks and model-ready exports.
 - [Deployment](docs/deployment.md): LAN operation and public-host checklist.
 - [Contributing](CONTRIBUTING.md): conventions and required checks.
