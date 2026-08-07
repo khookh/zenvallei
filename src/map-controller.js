@@ -14,6 +14,33 @@ const COMMON_LAYER_IDS = Object.freeze({
   selected: "heat-sector-selected",
 });
 
+/**
+ * Keep MapLibre camera padding inside a usable viewport. Responsive surfaces
+ * can resize in the same frame as a filter or focus request; passing padding
+ * that temporarily consumes the complete canvas makes fitBounds derive a NaN
+ * centre. The minimum map window also keeps the requested geography visible.
+ */
+export function clampViewportPadding(padding, width, height, minimumMapSize = 120) {
+  const safeWidth = Number.isFinite(width) && width > 0 ? width : minimumMapSize;
+  const safeHeight = Number.isFinite(height) && height > 0 ? height : minimumMapSize;
+  const result = Object.fromEntries(["top", "right", "bottom", "left"].map((key) => [
+    key,
+    Math.max(0, Number.isFinite(padding?.[key]) ? padding[key] : 0),
+  ]));
+
+  const constrainAxis = (startKey, endKey, size) => {
+    const maximumTotal = Math.max(0, size - Math.min(minimumMapSize, size));
+    const total = result[startKey] + result[endKey];
+    if (total <= maximumTotal || total === 0) return;
+    const ratio = maximumTotal / total;
+    result[startKey] *= ratio;
+    result[endKey] *= ratio;
+  };
+  constrainAxis("left", "right", safeWidth);
+  constrainAxis("top", "bottom", safeHeight);
+  return result;
+}
+
 function renderPopup(model) {
   const wrapper = document.createElement("div");
   wrapper.className = "sector-tooltip";
@@ -295,26 +322,45 @@ export function createMapController({
   });
 
   const viewportPadding = () => {
-    if (viewportPaddingOverride) return viewportPaddingOverride;
-    if (window.innerWidth > 760) {
-      return { top: 72, right: window.innerWidth >= 900 && selectedSectorId ? 430 : 28, bottom: 72, left: 28 };
+    const canvas = map.getCanvas();
+    if (viewportPaddingOverride) {
+      return clampViewportPadding(viewportPaddingOverride, canvas.clientWidth, canvas.clientHeight);
     }
-    const canvasBounds = map.getCanvas().getBoundingClientRect();
+    if (window.innerWidth > 760) {
+      return clampViewportPadding(
+        { top: 72, right: window.innerWidth >= 900 && selectedSectorId ? 430 : 28, bottom: 72, left: 28 },
+        canvas.clientWidth,
+        canvas.clientHeight,
+      );
+    }
+    const canvasBounds = canvas.getBoundingClientRect();
     const controlsBounds = document.querySelector(".map-controls")?.getBoundingClientRect();
     const legendBounds = document.querySelector(".legend")?.getBoundingClientRect();
     const top = controlsBounds ? Math.max(24, controlsBounds.bottom - canvasBounds.top + 12) : 24;
     const bottom = legendBounds ? Math.max(62, canvasBounds.bottom - legendBounds.top + 12) : 62;
     const maximumTop = Math.max(24, canvasBounds.height - bottom - 120);
-    return { top: Math.min(top, maximumTop), right: 68, bottom, left: 20 };
+    return clampViewportPadding(
+      { top: Math.min(top, maximumTop), right: 68, bottom, left: 20 },
+      canvas.clientWidth,
+      canvas.clientHeight,
+    );
   };
 
   const fit = (bounds, options = {}) => {
+    const coordinates = bounds.flat();
+    if (coordinates.length !== 4 || coordinates.some((value) => !Number.isFinite(value))) return false;
+    // Stop an earlier responsive camera transition before measuring the canvas.
+    // This avoids overlapping fitBounds calculations while controls or the
+    // result sheet are changing size.
+    map.stop();
+    map.resize();
     map.fitBounds(bounds, {
       padding: viewportPadding(),
       maxZoom: options.maxZoom ?? 15,
       duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 550,
       ...options,
     });
+    return true;
   };
 
   const setLayerOption = (layerId, name, value) => {
