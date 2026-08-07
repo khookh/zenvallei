@@ -55,6 +55,15 @@ async function showControls(page, { minimiseResults = true } = {}) {
     await page.locator("#map-controls-toggle").click();
   }
   await expect(page.locator("#map-controls-body")).toBeVisible();
+  // Opening the adaptive controls preserves the user's previous scroll
+  // position. Tests that immediately choose a top-level layer should start
+  // from the visible layer grid, just as a user would scroll back to it.
+  await controls.evaluate((element) => { element.scrollTop = 0; });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  if (await controls.evaluate((element) => element.classList.contains("is-collapsed"))) {
+    await page.locator("#map-controls-toggle").click();
+    await expect(page.locator("#map-controls-body")).toBeVisible();
+  }
 }
 
 async function mapSurfaceState(page) {

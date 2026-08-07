@@ -977,7 +977,10 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
   left: var(--legend-dock-left, 20px);
   width: min(660px, var(--legend-safe-width, calc(100vw - 120px)));
   max-width: calc(100% - 32px);
-  transition: left 180ms ease, width 180ms ease, bottom 180ms ease;
+  /* Resize to the measured safe rectangle immediately. Interpolating width or
+     position can briefly move the legend through the results panel while the
+     viewport changes, especially on slower devices and CI runners. */
+  transition: bottom 180ms ease;
 }
 .legend-content { min-width: 0; overflow-wrap: anywhere; }
 .legend-scale { grid-template-columns: repeat(11, minmax(18px, 1fr)); }
