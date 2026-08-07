@@ -990,7 +990,7 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
   top: 12px;
   right: var(--map-native-right, 12px);
   bottom: auto;
-  transition: right 180ms ease;
+  transition: none;
 }
 
 .panel-actions {
@@ -1038,7 +1038,19 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .detail-panel.is-peek .panel-actions { position: absolute; top: 2px; right: 2px; margin: 0; }
 .detail-panel.is-peek .panel-actions .panel-close { display: inline-grid; }
 
-.map-shell[data-surface-mode="expanded"] .legend { left: var(--legend-dock-left); }
+.map-shell[data-surface-mode="expanded"] .legend {
+  /* The expanded surfaces have fixed side-panel widths. Anchoring both sides
+     gives the legend a collision-free rectangle before ResizeObserver has
+     produced its first measurement, including on slower Linux browsers. */
+  right: 470px;
+  left: 406px;
+  width: auto;
+  max-width: 660px;
+}
+.map-shell[data-surface-mode="expanded"]:has(.detail-panel[aria-hidden="true"]) .legend { right: 20px; }
+.map-shell[data-surface-mode="expanded"]:has(.map-controls.is-collapsed) .legend { left: 336px; }
+.map-shell[data-surface-mode="expanded"]:has(.detail-panel[aria-hidden="false"]) .maplibregl-ctrl-bottom-right { right: 470px; }
+.map-shell[data-surface-mode="expanded"]:has(.detail-panel[aria-hidden="true"]) .maplibregl-ctrl-bottom-right { right: 12px; }
 .map-shell[data-surface-mode="expanded"] .detail-panel.is-peek { width: min(390px, calc(100vw - 28px)); }
 
 @media (max-width: 1179px) {
