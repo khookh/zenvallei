@@ -3,12 +3,14 @@ import "./styles.css";
 import { MAP_CONFIG } from "./config.js";
 import { findSectorFromQuery, loadApplicationData, sectorSearchLabel, sectorsForMunicipality } from "./data.js";
 import { DEFAULT_HEAT_METRIC } from "./heat-metric.js";
-import { DEFAULT_LANGUAGE, applyDocumentTranslations, formatDate, getLanguage, setLanguage, t } from "./i18n.js";
+import { DEFAULT_LANGUAGE, applyDocumentTranslations, getLanguage, setLanguage, t } from "./i18n.js";
 import { buildLayerRegistry } from "./layers/registry.js";
 import { categoryLabel, LAYER_CATEGORIES } from "./layers/categories.js";
 import { createMapController } from "./map-controller.js";
+import { createMapSurfaceLayout } from "./map-surface-layout.js";
 import { createDetailPanel } from "./panel.js";
 import { createProjectIntro } from "./project-intro.js";
+import { safeExternalUrl } from "./security.js";
 
 const elements = {
   map: document.querySelector("#map"),
@@ -31,21 +33,38 @@ const elements = {
   layerSwitch: document.querySelector("#layer-switch"),
   layerButtons: [],
   layerCategoryHeadings: [],
-  heatMetricControl: document.querySelector("#heat-metric-control"),
-  heatMetricSwitch: document.querySelector(".heat-metric-switch"),
-  heatMetricButtons: [...document.querySelectorAll("[data-heat-metric]")],
-  vegetationYearControl: document.querySelector("#vegetation-year-control"),
-  vegetationYearSlider: document.querySelector("#vegetation-year-slider"),
-  vegetationYearOutput: document.querySelector("#vegetation-year-output"),
-  vegetationYearDate: document.querySelector("#vegetation-year-date"),
-  vegetationYearPrevious: document.querySelector("#vegetation-year-previous"),
-  vegetationYearNext: document.querySelector("#vegetation-year-next"),
+  secondaryControl: document.querySelector("#secondary-control"),
+  secondaryPrompt: document.querySelector("#secondary-control-prompt"),
+  secondarySwitch: document.querySelector("#secondary-switch"),
+  temporalControl: document.querySelector("#temporal-control"),
+  temporalLabel: document.querySelector("#temporal-label"),
+  temporalSlider: document.querySelector("#temporal-slider"),
+  temporalOutput: document.querySelector("#temporal-output"),
+  temporalMarkers: document.querySelector("#timeline-markers"),
+  temporalPrevious: document.querySelector("#temporal-previous"),
+  temporalNext: document.querySelector("#temporal-next"),
   layerContextMeta: document.querySelector("#layer-context-meta"),
   layerContextCopy: document.querySelector("#layer-context-copy"),
+  layerContextNote: document.querySelector("#layer-context-note"),
+  layerContextSources: document.querySelector("#layer-context-sources"),
+  analysisPairing: document.querySelector("#analysis-pairing"),
+  analysisCompare: document.querySelector("#analysis-compare"),
+  analysisPairResult: document.querySelector("#analysis-pair-result"),
+  analysisPairLabel: document.querySelector("#analysis-pair-label"),
+  analysisPairChange: document.querySelector("#analysis-pair-change"),
+  analysisPairRemove: document.querySelector("#analysis-pair-remove"),
+  analysisPickInstruction: document.querySelector("#analysis-pick-instruction"),
+  analysisPickCancel: document.querySelector("#analysis-pick-cancel"),
+  analysisPairingHelp: document.querySelector("#analysis-pairing-help"),
+  analysisPairNote: document.querySelector("#analysis-pair-note"),
   layerHelp: document.querySelector("#layer-help"),
   detailPanel: document.querySelector("#detail-panel"),
   panelContent: document.querySelector("#panel-content"),
   panelClose: document.querySelector("#panel-close"),
+  panelToggle: document.querySelector("#panel-toggle"),
+  panelPeek: document.querySelector("#panel-peek"),
+  panelPeekLabel: document.querySelector("#panel-peek-label"),
+  panelPeekValue: document.querySelector("#panel-peek-value"),
   mapLoading: document.querySelector("#map-loading"),
   errorBanner: document.querySelector("#error-banner"),
   errorMessage: document.querySelector("#error-message"),
@@ -70,6 +89,9 @@ const application = {
   activeLayer: "heat",
   activeHeatMetric: DEFAULT_HEAT_METRIC,
   mapControlsCollapsed: false,
+  analysisPairings: {},
+  analysisPickMode: null,
+  surfaceLayout: null,
   projectIntro: null,
 };
 
@@ -133,13 +155,18 @@ function updateAnnouncement() {
     elements.announcement.textContent = t("announcement.heatMetricChanged", {
       metric: t(`heatMetric.${announcement.metric}`),
     });
-  } else if (announcement.type === "vegetationYear") {
-    elements.announcement.textContent = t("announcement.vegetationYearChanged", { year: announcement.year });
+  } else if (announcement.type === "temporalValue") {
+    elements.announcement.textContent = t("announcement.temporalValueChanged", {
+      layer: application.layers.get(announcement.layerId)?.getLabel() ?? announcement.layerId,
+      value: announcement.value,
+    });
   } else if (announcement.type === "unavailable") {
     elements.announcement.textContent = t("announcement.layerUnavailable", {
       layer: application.layers.get(announcement.layerId)?.getLabel() ?? announcement.layerId,
       reason: t(announcement.reasonKey),
     });
+  } else if (announcement.type === "analysisPairing") {
+    elements.announcement.textContent = t(announcement.key, announcement.parameters);
   } else {
     elements.announcement.textContent = t("announcement.closed");
   }
@@ -162,16 +189,39 @@ function showFatalError(error) {
 
 function updateLayerControls() {
   if (!application.layers) return;
+  elements.layerSwitch.classList.toggle("is-comparison-mode", Boolean(application.analysisPickMode));
   elements.layerCategoryHeadings.forEach(({ category, heading }) => {
     heading.textContent = categoryLabel(category);
   });
   elements.layerButtons.forEach((button) => {
     const layer = application.layers.get(button.dataset.layer);
-    const available = Boolean(layer?.isAvailable());
-    button.textContent = layer?.getLabel() ?? button.dataset.layer;
+    const normallyAvailable = Boolean(layer?.isAvailable());
+    const pick = application.analysisPickMode;
+    const isPrimary = Boolean(pick && layer?.id === pick.primaryLayerId);
+    const isCompatible = Boolean(pick?.targetIds.includes(layer?.id));
+    const available = pick ? isCompatible : normallyAvailable;
+    const label = layer?.getLabel() ?? button.dataset.layer;
+    button.replaceChildren();
+    if (pick && isCompatible) {
+      const icon = document.createElement("span");
+      icon.className = "layer-link-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "↔";
+      const text = document.createElement("span");
+      text.textContent = label;
+      button.append(icon, text);
+      button.setAttribute("aria-label", t("analysisPairing.target", { layer: label }));
+    } else {
+      button.textContent = label;
+      button.removeAttribute("aria-label");
+    }
+    if (isPrimary) button.setAttribute("aria-label", t("analysisPairing.locked", { layer: label }));
     button.setAttribute("aria-disabled", String(!available));
     button.setAttribute("aria-pressed", String(application.activeLayer === layer?.id));
     button.classList.toggle("is-active", application.activeLayer === layer?.id);
+    button.classList.toggle("is-comparison-target", isCompatible);
+    button.classList.toggle("is-comparison-primary", isPrimary);
+    button.classList.toggle("is-comparison-muted", Boolean(pick && !isCompatible && !isPrimary));
   });
 }
 
@@ -215,41 +265,151 @@ function createLayerControls() {
   elements.layerSwitch.replaceChildren(fragment);
 }
 
+function updateAnalysisPairing() {
+  if (!application.layers) return;
+  const layer = activeLayer();
+  const targets = (layer?.getAnalysisTargets?.() ?? [])
+    .map((id) => application.layers.get(id))
+    .filter((candidate) => candidate?.isAvailable());
+  const picking = application.analysisPickMode?.primaryLayerId === layer?.id;
+  const selectedId = targets.some(({ id }) => id === application.analysisPairings[layer.id])
+    ? application.analysisPairings[layer.id]
+    : "";
+  elements.analysisPairing.hidden = targets.length === 0;
+  if (!targets.length) return;
+  elements.analysisCompare.hidden = Boolean(selectedId) || picking;
+  elements.analysisPairResult.hidden = !selectedId || picking;
+  elements.analysisPickInstruction.hidden = !picking;
+  elements.analysisPairNote.hidden = !selectedId || picking;
+  if (selectedId) {
+    elements.analysisPairLabel.textContent = t("analysisPairing.selected", {
+      primary: layer.getLabel(),
+      secondary: application.layers.get(selectedId).getLabel(),
+    });
+    elements.analysisPairNote.textContent = t("analysisPairing.previewNote");
+  }
+  if (picking) {
+    elements.analysisPairingHelp.textContent = t("analysisPairing.instruction", { layer: layer.getLabel() });
+  }
+}
+
+function enterAnalysisPickMode(trigger = elements.analysisCompare) {
+  const layer = activeLayer();
+  const targetIds = (layer?.getAnalysisTargets?.() ?? [])
+    .filter((id) => application.layers.get(id)?.isAvailable());
+  if (!targetIds.length) return;
+  application.analysisPickMode = { primaryLayerId: layer.id, targetIds, returnFocus: trigger };
+  updateLayerControls();
+  updateAnalysisPairing();
+  application.announcement = {
+    type: "analysisPairing",
+    key: "analysisPairing.entered",
+    parameters: { layer: layer.getLabel() },
+  };
+  updateAnnouncement();
+  requestAnimationFrame(() => elements.layerButtons.find((button) => targetIds.includes(button.dataset.layer))?.focus());
+}
+
+function cancelAnalysisPickMode({ restoreFocus = true } = {}) {
+  const returnFocus = application.analysisPickMode?.returnFocus;
+  if (!application.analysisPickMode) return;
+  application.analysisPickMode = null;
+  updateLayerControls();
+  updateAnalysisPairing();
+  application.announcement = { type: "analysisPairing", key: "analysisPairing.cancelled", parameters: {} };
+  updateAnnouncement();
+  if (restoreFocus && returnFocus instanceof HTMLElement) returnFocus.focus();
+}
+
+function selectAnalysisPairing(targetId) {
+  const pick = application.analysisPickMode;
+  if (!pick?.targetIds.includes(targetId)) return false;
+  application.analysisPairings[pick.primaryLayerId] = targetId;
+  const primary = application.layers.get(pick.primaryLayerId);
+  const secondary = application.layers.get(targetId);
+  application.analysisPickMode = null;
+  updateLayerControls();
+  updateAnalysisPairing();
+  application.announcement = {
+    type: "analysisPairing",
+    key: "analysisPairing.chosen",
+    parameters: { primary: primary.getLabel(), secondary: secondary.getLabel() },
+  };
+  updateAnnouncement();
+  elements.analysisPairChange.focus();
+  return true;
+}
+
+function removeAnalysisPairing() {
+  const layer = activeLayer();
+  if (!layer || !application.analysisPairings[layer.id]) return;
+  delete application.analysisPairings[layer.id];
+  updateAnalysisPairing();
+  application.announcement = { type: "analysisPairing", key: "analysisPairing.removed", parameters: {} };
+  updateAnnouncement();
+  elements.analysisCompare.focus();
+}
+
 function updateSecondaryControls() {
   const control = activeLayer()?.getSecondaryControl?.() ?? null;
-  elements.heatMetricControl.hidden = !control;
+  const isHeatMetric = control?.id === "heat-metric";
+  elements.secondaryControl.hidden = !control;
+  elements.secondaryControl.id = isHeatMetric ? "heat-metric-control" : "secondary-control";
+  elements.secondarySwitch.classList.toggle("heat-metric-switch", isHeatMetric);
   if (control) {
-    elements.heatMetricSwitch.setAttribute("aria-label", control.ariaLabel);
-    elements.heatMetricButtons.forEach((button) => {
-      const option = control.options.find((entry) => entry.id === button.dataset.heatMetric);
-      if (!option) return;
+    elements.secondaryPrompt.textContent = control.prompt ?? "";
+    elements.secondarySwitch.setAttribute("aria-label", control.ariaLabel);
+    elements.secondarySwitch.style.setProperty("--option-count", String(control.options.length));
+    elements.secondarySwitch.replaceChildren(...control.options.map((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.secondaryOption = option.id;
+      if (isHeatMetric) button.dataset.heatMetric = option.id;
+      button.className = isHeatMetric ? "heat-metric-button" : "secondary-option-button";
       button.textContent = option.label;
       button.setAttribute("aria-pressed", String(option.active));
       button.classList.toggle("is-active", option.active);
-    });
+      button.disabled = Boolean(option.disabled);
+      if (option.disabled && option.disabledReason) {
+        button.title = option.disabledReason;
+        button.setAttribute("aria-label", `${option.label}. ${option.disabledReason}`);
+      }
+      return button;
+    }));
   }
 
-  const showYears = application.activeLayer === "vegetation"
-    && application.data?.vegetation?.available
-    && application.data.vegetation.availableYears?.length > 1;
-  elements.vegetationYearControl.hidden = !showYears;
-  if (!showYears) return;
-  const years = [...application.data.vegetation.availableYears].sort((left, right) => left - right);
-  const activeYear = Number(application.mapController?.getLayerOption("vegetation", "year")
-    ?? application.data.vegetation.activeYear);
-  const index = Math.max(0, years.indexOf(activeYear));
-  const yearData = application.data.vegetation.years[activeYear];
-  elements.vegetationYearSlider.min = "0";
-  elements.vegetationYearSlider.max = String(Math.max(0, years.length - 1));
-  elements.vegetationYearSlider.value = String(index);
-  elements.vegetationYearSlider.setAttribute("aria-valuetext", String(activeYear));
-  elements.vegetationYearOutput.value = String(activeYear);
-  elements.vegetationYearOutput.textContent = String(activeYear);
-  elements.vegetationYearDate.textContent = t("vegetation.yearObservation", {
-    date: formatDate(yearData?.acquisitionDate),
-  });
-  elements.vegetationYearPrevious.disabled = index === 0;
-  elements.vegetationYearNext.disabled = index === years.length - 1;
+  const temporal = activeLayer()?.getTemporalControl?.() ?? null;
+  const entries = temporal?.items ?? temporal?.values?.map((value) => ({ value, label: String(value) })) ?? [];
+  const showTemporal = entries.length > 1;
+  elements.temporalControl.hidden = !showTemporal;
+  if (!showTemporal) {
+    updateAnalysisPairing();
+    return;
+  }
+  const index = Math.max(0, entries.findIndex(({ value }) => value === temporal.activeValue));
+  const activeEntry = entries[index];
+  elements.temporalLabel.textContent = temporal.label;
+  elements.temporalSlider.min = "0";
+  elements.temporalSlider.max = String(entries.length - 1);
+  elements.temporalSlider.value = String(index);
+  elements.temporalSlider.setAttribute("aria-valuetext", activeEntry.ariaLabel ?? activeEntry.label);
+  elements.temporalOutput.value = String(temporal.activeValue);
+  elements.temporalOutput.textContent = activeEntry.label;
+  elements.temporalMarkers.replaceChildren(...entries.map((entry, markerIndex) => {
+    const marker = document.createElement("span");
+    marker.className = `timeline-marker ${entry.kind ? `is-${entry.kind}` : ""} ${markerIndex === index ? "is-active" : ""}`;
+    marker.style.left = `${entries.length === 1 ? 50 : markerIndex / (entries.length - 1) * 100}%`;
+    marker.title = entry.ariaLabel ?? entry.label;
+    return marker;
+  }));
+  elements.temporalMarkers.hidden = !temporal.items;
+  elements.temporalPrevious.disabled = index === 0;
+  elements.temporalPrevious.setAttribute("aria-label", temporal.previousLabel);
+  elements.temporalPrevious.title = temporal.previousLabel;
+  elements.temporalNext.disabled = index === entries.length - 1;
+  elements.temporalNext.setAttribute("aria-label", temporal.nextLabel);
+  elements.temporalNext.title = temporal.nextLabel;
+  updateAnalysisPairing();
 }
 
 function updateLayerContext() {
@@ -259,6 +419,26 @@ function updateLayerContext() {
   elements.activeLayerTitle.textContent = layer.getLabel();
   elements.layerContextMeta.textContent = context.meta;
   elements.layerContextCopy.textContent = context.text;
+  elements.layerContextNote.textContent = context.note ?? "";
+  elements.layerContextNote.hidden = !context.note;
+  const sources = (context.sources ?? []).flatMap((source) => {
+    const url = safeExternalUrl(source.url);
+    return url ? [{ ...source, url }] : [];
+  });
+  elements.layerContextSources.hidden = sources.length === 0;
+  elements.layerContextSources.replaceChildren();
+  if (sources.length) {
+    elements.layerContextSources.append(`${t("controls.activeSource")} `);
+    sources.forEach((source, index) => {
+      if (index) elements.layerContextSources.append(" · ");
+      const link = document.createElement("a");
+      link.href = source.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = source.label;
+      elements.layerContextSources.append(link);
+    });
+  }
   elements.map.setAttribute("aria-label", t("map.regionForLayer", { layer: layer.getLabel() }));
 }
 
@@ -378,17 +558,37 @@ elements.languageToggle.addEventListener("click", () => {
   applyLanguage(getLanguage() === "nl" ? "en" : "nl");
 });
 elements.mapControlsToggle.addEventListener("click", () => {
-  application.mapControlsCollapsed = !application.mapControlsCollapsed;
-  updateMapControlsDisclosure();
+  if (application.surfaceLayout) {
+    application.surfaceLayout.requestControls(application.mapControlsCollapsed);
+  } else {
+    application.mapControlsCollapsed = !application.mapControlsCollapsed;
+    updateMapControlsDisclosure();
+  }
 });
 
 async function start() {
   performance.mark("heat-map-start");
   const data = await loadApplicationData();
   application.data = data;
+  elements.mapControls.classList.toggle("has-local-layers", Object.keys(data.localLayers ?? {}).length > 0);
+  const extraLayers = [];
+  if (import.meta.env.MODE === "local-data") {
+    extraLayers.push(...(await import("./layers/local-official-layers.js")).createLocalOfficialLayers(data.localLayers));
+    if (data.localLayers.landgebruik) {
+      extraLayers.push((await import("./layers/landgebruik-layer.js")).createLandgebruikLayer({
+        descriptor: data.localLayers.landgebruik,
+      }));
+    }
+    if (data.localLayers["landsat-temperature"]) {
+      extraLayers.push((await import("./layers/landsat-temperature-layer.js")).createLandsatTemperatureLayer({
+        descriptor: data.localLayers["landsat-temperature"],
+      }));
+    }
+  }
   application.layers = buildLayerRegistry(data, {
     initialHeatMetric: application.activeHeatMetric,
     playground: import.meta.env.MODE === "playground",
+    extraLayers,
   });
   createLayerControls();
   updateLayerControls();
@@ -408,20 +608,24 @@ async function start() {
   });
   const sharedPanelData = {
     methodology: data.methodology,
-    landCover: data.landCover,
     urbanAtlas: data.urbanAtlas,
-    vegetation: data.vegetation,
+    income: data.income,
+    localLayers: data.localLayers,
   };
   const panel = createDetailPanel({
     panel: elements.detailPanel,
     content: elements.panelContent,
     closeButton: elements.panelClose,
+    toggleButton: elements.panelToggle,
+    peekButton: elements.panelPeek,
+    peekLabel: elements.panelPeekLabel,
+    peekValue: elements.panelPeekValue,
     getPanelModel: (layerId, record) => application.layers.get(layerId).getPanelModel(record, sharedPanelData),
     getAboutModel: () => ({ ...sharedPanelData, provenance: data.provenance }),
-    onLayerOptionChange: (name, value) => {
-      if (name === "metric") activateHeatMetric(value);
-    },
-    onClose: (closedView) => {
+    onLayerOptionChange: (name, value) => activateLayerOption(name, value),
+    onOpen: () => application.surfaceLayout?.requestPanel("expanded"),
+    onPresentationRequest: (presentation) => application.surfaceLayout?.requestPanel(presentation),
+    onClose: (closedView, returnFocusElement) => {
       selectedSectorId = "";
       application.mapController?.setSelected("");
       application.announcement = { type: "closed" };
@@ -433,6 +637,10 @@ async function start() {
           elements.municipality,
           application.activeLayer,
         ));
+      }
+      application.surfaceLayout?.requestPanel("closed");
+      if (returnFocusElement instanceof HTMLElement && elements.mapControls.contains(returnFocusElement)) {
+        application.surfaceLayout?.requestControls(true);
       }
     },
   });
@@ -452,18 +660,30 @@ async function start() {
     return true;
   }
 
-  function activateVegetationYear(year) {
-    const numericYear = Number(year);
-    if (application.activeLayer !== "vegetation") return false;
-    if (numericYear === application.mapController.getLayerOption("vegetation", "year")) return false;
-    if (!application.mapController.setLayerOption("vegetation", "year", numericYear)) return false;
+  function activateLayerOption(name, value) {
+    if (application.activeLayer === "heat" && name === "metric") return activateHeatMetric(value);
+    const layer = activeLayer();
+    if (!layer || !application.mapController.setLayerOption(layer.id, name, value)) return false;
+    updateSecondaryControls();
+    updateLayerContext();
+    updateDatasetStatus();
+    renderLegend();
+    panel.refresh();
+    return true;
+  }
+
+  function activateTemporalValue(value) {
+    const layer = activeLayer();
+    const temporal = layer?.getTemporalControl?.();
+    if (!temporal || value === application.mapController.getLayerOption(layer.id, temporal.optionName)) return false;
+    if (!application.mapController.setLayerOption(layer.id, temporal.optionName, value)) return false;
     updateLayerControls();
     updateSecondaryControls();
     updateLayerContext();
     updateDatasetStatus();
     renderLegend();
     panel.refresh();
-    application.announcement = { type: "vegetationYear", year: numericYear };
+    application.announcement = { type: "temporalValue", layerId: layer.id, value };
     updateAnnouncement();
     return true;
   }
@@ -500,11 +720,29 @@ async function start() {
       updateLayerControls();
     },
   });
+  application.surfaceLayout = createMapSurfaceLayout({
+    shell: document.querySelector(".map-shell"),
+    controls: elements.mapControls,
+    legend: elements.legendDisclosure,
+    panel: elements.detailPanel,
+    setControlsExpanded(expanded) {
+      application.mapControlsCollapsed = !expanded;
+      updateMapControlsDisclosure({ refreshMap: false });
+    },
+    setLegendExpanded(expanded) {
+      elements.legendDisclosure.toggleAttribute("open", expanded);
+    },
+    setPanelPresentation(presentation) {
+      panel.setPresentation(presentation);
+    },
+    getPanelPresentation: () => panel.getPresentation(),
+    onPaddingChange(padding) {
+      application.mapController?.setViewportPadding(padding);
+      application.mapController?.refreshLayout();
+    },
+  });
   await application.mapController.ready;
-  if (window.matchMedia("(max-width: 760px)").matches) {
-    elements.legendDisclosure.removeAttribute("open");
-    application.mapController.resetView();
-  }
+  application.mapController.setViewportPadding(application.surfaceLayout.getPadding());
   if (import.meta.env.DEV || import.meta.env.MODE === "test") window.__heatMap = application.mapController;
   document.documentElement.dataset.appReady = "true";
   performance.mark("heat-map-ready");
@@ -551,28 +789,62 @@ async function start() {
 
   elements.resetView.addEventListener("click", () => application.mapController.resetView());
   elements.aboutButton.addEventListener("click", () => panel.openAbout(elements.aboutButton));
-  elements.heatMetricButtons.forEach((button) => {
-    button.addEventListener("click", () => activateHeatMetric(button.dataset.heatMetric));
-    button.addEventListener("keydown", (event) => moveSegmentFocus(event, elements.heatMetricButtons, button));
+  elements.secondarySwitch.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-secondary-option]");
+    if (!button || button.disabled) return;
+    const control = activeLayer()?.getSecondaryControl?.();
+    const optionId = button.dataset.secondaryOption;
+    if (control && activateLayerOption(control.optionName, optionId)) {
+      elements.secondarySwitch.querySelector(`[data-secondary-option="${optionId}"]`)?.focus();
+    }
   });
-  const vegetationYears = () => [...(data.vegetation?.availableYears ?? [])].sort((left, right) => left - right);
-  elements.vegetationYearSlider.addEventListener("input", () => {
-    const years = vegetationYears();
-    activateVegetationYear(years[Number(elements.vegetationYearSlider.value)]);
+  elements.secondarySwitch.addEventListener("keydown", (event) => {
+    const buttons = [...elements.secondarySwitch.querySelectorAll("button:not(:disabled)")];
+    const button = event.target.closest("button");
+    if (button) moveSegmentFocus(event, buttons, button);
   });
-  elements.vegetationYearPrevious.addEventListener("click", () => {
-    const years = vegetationYears();
-    const current = application.mapController.getLayerOption("vegetation", "year");
-    activateVegetationYear(years[Math.max(0, years.indexOf(current) - 1)]);
+  elements.analysisCompare.addEventListener("click", () => enterAnalysisPickMode(elements.analysisCompare));
+  elements.analysisPairChange.addEventListener("click", () => enterAnalysisPickMode(elements.analysisPairChange));
+  elements.analysisPairRemove.addEventListener("click", removeAnalysisPairing);
+  elements.analysisPickCancel.addEventListener("click", () => cancelAnalysisPickMode());
+  elements.legendDisclosure.addEventListener("toggle", () => {
+    if (!application.surfaceLayout?.isApplying()) application.surfaceLayout?.requestLegend(elements.legendDisclosure.open);
   });
-  elements.vegetationYearNext.addEventListener("click", () => {
-    const years = vegetationYears();
-    const current = application.mapController.getLayerOption("vegetation", "year");
-    activateVegetationYear(years[Math.min(years.length - 1, years.indexOf(current) + 1)]);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && application.analysisPickMode) {
+      event.preventDefault();
+      cancelAnalysisPickMode();
+    }
+  });
+  const temporalValues = () => {
+    const temporal = activeLayer()?.getTemporalControl?.();
+    return temporal?.items?.map(({ value }) => value) ?? temporal?.values ?? [];
+  };
+  elements.temporalSlider.addEventListener("input", () => {
+    const values = temporalValues();
+    activateTemporalValue(values[Number(elements.temporalSlider.value)]);
+  });
+  elements.temporalPrevious.addEventListener("click", () => {
+    const temporal = activeLayer()?.getTemporalControl?.();
+    if (!temporal) return;
+    const values = temporal.items?.map(({ value }) => value) ?? temporal.values;
+    const current = application.mapController.getLayerOption(activeLayer().id, temporal.optionName);
+    activateTemporalValue(values[Math.max(0, values.indexOf(current) - 1)]);
+  });
+  elements.temporalNext.addEventListener("click", () => {
+    const temporal = activeLayer()?.getTemporalControl?.();
+    if (!temporal) return;
+    const values = temporal.items?.map(({ value }) => value) ?? temporal.values;
+    const current = application.mapController.getLayerOption(activeLayer().id, temporal.optionName);
+    activateTemporalValue(values[Math.min(values.length - 1, values.indexOf(current) + 1)]);
   });
   elements.layerButtons.forEach((button) => {
     button.addEventListener("click", async () => {
       const layerId = button.dataset.layer;
+      if (application.analysisPickMode) {
+        selectAnalysisPairing(layerId);
+        return;
+      }
       const layer = application.layers.get(layerId);
       if (!layer?.isAvailable()) {
         const reasonKey = layer?.getUnavailableReasonKey?.() ?? "error.default";
@@ -596,6 +868,7 @@ async function start() {
         return;
       }
       application.activeLayer = layerId;
+      if (application.analysisPickMode) cancelAnalysisPickMode({ restoreFocus: false });
       elements.layerHelp.textContent = "";
       updateLayerControls();
       updateSecondaryControls();
@@ -611,8 +884,13 @@ async function start() {
       }
       application.announcement = { type: "layer", layerId };
       updateAnnouncement();
+      button.focus({ preventScroll: true });
     });
-    button.addEventListener("keydown", (event) => moveSegmentFocus(event, elements.layerButtons, button));
+    button.addEventListener("keydown", (event) => moveSegmentFocus(
+      event,
+      elements.layerButtons.filter((candidate) => candidate.getAttribute("aria-disabled") !== "true"),
+      button,
+    ));
   });
 
   elements.mapLoading.hidden = true;

@@ -15,10 +15,13 @@ test("shows the latest Python export only in the opt-in local Test layer", async
   });
   await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
   await page.goto("/");
-  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
+  await expect.poll(async () => ({
+    ready: await page.locator("html").getAttribute("data-app-ready"),
+    errors,
+  }), { timeout: 50_000 }).toEqual({ ready: "true", errors: [] });
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.locator("#project-intro-primary").click();
-  await expect(page.locator("[data-layer]")).toHaveCount(5);
+  await expect(page.locator("[data-layer]")).toHaveCount(4);
 
   const testLayer = page.locator('[data-layer="notebook-test"]');
   await expect(testLayer).toHaveText("Test");

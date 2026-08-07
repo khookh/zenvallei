@@ -46,13 +46,18 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: playground/ndvi/pyproject.toml
+          cache-dependency-path: |
+            playground/ndvi/pyproject.toml
+            processing/local-layers/pyproject.toml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Install NDVI playground dependencies
         run: python -m pip install --editable "playground/ndvi[dev]"
+
+      - name: Install local raster preparation dependencies
+        run: python -m pip install --editable "processing/local-layers[test]"
 
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
@@ -61,9 +66,15 @@ jobs:
         id: python_verification
         run: python -m pytest playground/ndvi/tests -q
 
+      - name: Verify local raster preparation
+        run: python -m pytest processing/local-layers/tests -q
+
       - name: Verify application
         id: application_verification
         run: pnpm verify:ci
+
+      - name: Verify local raster map mode
+        run: pnpm test:local-data
 
       - name: Build GitHub Pages artifact
         id: pages_build

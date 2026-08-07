@@ -8,6 +8,7 @@ import { t } from "../i18n.js";
 export const LAYER_CATEGORIES = Object.freeze([
   Object.freeze({ id: "heat", labelKey: "layerCategory.heat" }),
   Object.freeze({ id: "land-green", labelKey: "layerCategory.landGreen" }),
+  Object.freeze({ id: "demography", labelKey: "layerCategory.demography" }),
 ]);
 
 export function categoryLabel(category) {

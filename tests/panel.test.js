@@ -305,49 +305,10 @@ describe("progressive detail panel", () => {
     expect(document.querySelector("#panel").textContent).toContain("Onvoldoende gegevens");
   });
 
-  it("shows Copernicus class statistics and updates them in English", () => {
-    const { api } = fixture({ landCover, urbanAtlas });
-    api.open(records["23003A001"], document.querySelector("#trigger"), "land-cover");
-    const panel = document.querySelector("#panel");
-    expect(panel.textContent).toContain("Dominante landbedekking");
-    expect(panel.textContent).toContain("Boombedekking");
-    expect(panel.textContent).toContain("Bomen en grasland samen");
-    expect(panel.textContent).toContain("61,22%");
-    expect(panel.textContent).toContain("Boombedekking");
-    expect(panel.textContent).toContain("40,82%");
-    expect(panel.textContent).toContain("Akkerland");
-    expect(panel.textContent).toContain("16,33%");
-    expect(panel.textContent).toContain("niet om dezelfde maatstaf als NDVI-vegetatie");
-    expect(panel.textContent).toContain("Bebouwde oppervlakte");
-    expect(panel.textContent).toContain("22,45%");
-    expect(panel.textContent).toContain("Berekend door deze toepassing");
-    expect(panel.textContent).toContain("pixelklassen zijn afkomstig van Copernicus");
-    expect(panel.textContent).not.toContain("Gekarteerd gebied");
-    document.querySelector('[data-section="land-cover-classes"]').open = true;
-    setLanguage("en");
-    api.setLanguage();
-    expect(panel.textContent).toContain("Dominant land cover");
-    expect(panel.textContent).toContain("Tree cover");
-    expect(panel.textContent).toContain("Trees and grassland combined");
-    expect(panel.textContent).toContain("61.22%");
-    expect(panel.textContent).toContain("Tree cover");
-    expect(panel.textContent).toContain("40.82%");
-    expect(panel.textContent).toContain("Cropland");
-    expect(panel.textContent).toContain("16.33%");
-    expect(panel.textContent).toContain("not the same metric as NDVI vegetation");
-    expect(panel.textContent).toContain("Built-up area");
-    expect(panel.textContent).toContain("22.45%");
-    expect(panel.textContent).not.toContain("Mapped area");
-    expect(document.querySelector('[data-section="land-cover-classes"]').open).toBe(true);
-  });
-
-  it("rerenders an open selected sector when the active layer changes", () => {
+  it("rerenders a selected sector and closes dataset-specific details when the layer changes", () => {
     const { api } = fixture({ landCover, urbanAtlas });
     api.open(records["23003A001"], document.querySelector("#trigger"), "heat");
     document.querySelector('[data-section="indicators"]').open = true;
-    api.setActiveLayer("land-cover");
-    expect(document.querySelector("#panel").textContent).toContain("Landbedekking per klasse");
-    expect(document.querySelector('[data-section="land-cover-classes"]').open).toBe(true);
     api.setActiveLayer("urban-atlas");
     expect(document.querySelector("#panel").textContent).toContain("Groenbedekking");
     expect(document.querySelector("#panel").textContent).toContain("40%");
@@ -380,35 +341,7 @@ describe("progressive detail panel", () => {
     expect(document.querySelector('[data-section="urban-atlas-methodology"]').open).toBe(true);
   });
 
-  it("shows Sentinel-2 vegetation statistics and calibration in both languages", () => {
-    const { api } = fixture({ landCover, urbanAtlas, vegetation });
-    api.open(records["23003A001"], document.querySelector("#trigger"), "vegetation");
-    const panel = document.querySelector("#panel");
-    expect(panel.textContent).toContain("Waarschijnlijk begroeid");
-    expect(panel.textContent).toContain("45,1");
-    expect(panel.textContent).toContain("27,06 ha");
-    expect(panel.textContent).toContain("NDVI is een satellietmaat voor groenheid");
-    expect(panel.textContent).toContain("Andere oppervlakte van de sector");
-    expect(panel.textContent).toContain("volledige sectoroppervlakte van 60 ha");
-    expect(panel.textContent).toContain("Mediane NDVI");
-    expect(panel.textContent).toContain("0,681");
-    expect(panel.textContent).toContain("Uitgesloten akkerland");
-    expect(panel.textContent).toContain("Berekende NDVI-drempel: 0,697");
-    expect(panel.textContent).toContain("Kalibratie van de drempel");
-    expect(panel.textContent).toContain("ROC AUC 0,911");
-    document.querySelector('[data-section="vegetation-methodology"]').open = true;
-    setLanguage("en");
-    api.setLanguage();
-    expect(panel.textContent).toContain("Likely vegetated");
-    expect(panel.textContent).toContain("45.1");
-    expect(panel.textContent).toContain("NDVI is a satellite measure of greenness");
-    expect(panel.textContent).toContain("Median NDVI");
-    expect(panel.textContent).toContain("Calculated NDVI threshold: 0.697");
-    expect(panel.textContent).toContain("Threshold calibration");
-    expect(document.querySelector('[data-section="vegetation-methodology"]').open).toBe(true);
-  });
-
-  it("explains the four layers, Statbel sectors and calculation responsibility", () => {
+  it("explains the active layers, Statbel sectors and calculation responsibility", () => {
     const provenance = {
       output: {
         sectorCount: 154,
@@ -420,14 +353,12 @@ describe("progressive detail panel", () => {
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Wat elke laag vertelt");
     expect(panel.textContent).toContain("Landgebruik en groen");
-    expect(panel.textContent).toContain("pixels van 10 m");
     expect(panel.textContent).toContain("visuele interpretatie");
     expect(panel.textContent).toContain("Waarom 154 sectoren?");
     expect(panel.textContent).toContain("Statbel bepaalt hun codes en grenzen");
     expect(panel.textContent).toContain("Officiële producent");
     expect(panel.textContent).toContain("Wat wij toevoegen");
     expect(panel.textContent).toContain("OpenStreetMap is alleen de achtergrondkaart");
-    expect(panel.textContent).toContain("Waar nam Sentinel-2 een sterk vegetatiesignaal waar?");
     expect(panel.textContent).toContain("Een persoonlijk en open V0.1-project");
     expect(panel.textContent).toContain("grote taalmodellen (LLM’s)");
     expect(panel.querySelector('a[href="https://github.com/khookh/zenvallei"]')?.getAttribute("rel")).toBe("noopener noreferrer");
@@ -445,6 +376,49 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("A personal and open V0.1 project");
     expect(panel.textContent).toContain("large language models (LLMs)");
     expect(panel.textContent).toContain("This application uses no cookies, analytics, accounts or persistent identifiers");
+  });
+
+  it("presents Landsat temperature as an overpass measurement with clear coverage", () => {
+    setLanguage("en");
+    const html = renderSectorPanelModel({
+      template: "landsat-temperature",
+      record: records["23003A001"],
+      observation: {
+        id: "landsat-2023-06-13", kind: "heatwave", acquiredAt: "2023-06-13T10:47:00Z",
+        heatwaveIds: ["2023-06"], sceneIds: ["LC08_TEST"],
+      },
+      stats: {
+        medianC: 36.4, meanC: 35.8, p10C: 29.1, p90C: 42.6,
+        clearPercentage: 91.2, cloudAreaHa: 2.5, cloudPercentage: 4.1,
+        otherNoDataAreaHa: 2.8, otherNoDataPercentage: 4.7,
+        medianUncertaintyK: 0.65, pixelCount: 704,
+      },
+      manifest: {
+        heatwaves: [{ id: "2023-06", start: "2023-06-08", end: "2023-06-17" }],
+        source: { productUrl: "https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature" },
+        kmi: { definitionUrl: "https://www.meteo.be/" },
+      },
+    });
+    document.querySelector("#content").innerHTML = html;
+    const text = document.querySelector("#content").textContent;
+    expect(text).toContain("Heatwave observation");
+    expect(text).toContain("36.4");
+    expect(text).toContain("not air temperature");
+    expect(text).toContain("Clear coverage: 91.2%");
+    expect(text).toContain("P10");
+    expect(text).toContain("P90");
+    expect(document.querySelector('[data-section="landsat-methodology"]').hasAttribute("open")).toBe(false);
+
+    setLanguage("nl");
+    const dutch = renderSectorPanelModel({
+      template: "landsat-temperature",
+      record: records["23003A001"],
+      observation: { kind: "reference", acquiredAt: "2023-06-07T10:47:00Z", heatwaveIds: [], sceneIds: [] },
+      stats: { medianC: 24.5, meanC: 24.1, p10C: 19, p90C: 30, clearPercentage: 95, pixelCount: 10 },
+      manifest: { heatwaves: [], source: {}, kmi: {} },
+    });
+    expect(dutch).toContain("Waarneming tijdens een hittegolf");
+    expect(dutch).toContain("geen luchttemperatuur");
   });
 
   it("renders continuous and categorical local notebook summaries without frontend-specific data", () => {
@@ -479,6 +453,81 @@ describe("progressive detail panel", () => {
     expect(categorical).toContain("Class one");
     expect(categorical).toContain("10 ha · 100%");
     expect(categorical).toContain("not part of the public dashboard");
+  });
+
+  it("renders local official rasters with readable summaries and technical coverage only in Methodology", () => {
+    const record = records["23003A001"];
+    const baseManifest = {
+      source: { name: "Official source", url: "https://example.test/source" },
+      years: { 2024: { status: "provisional" }, 2021: { status: "final" } },
+    };
+    setLanguage("en");
+    const soil = renderSectorPanelModel({
+      template: "local-official-raster", datasetId: "jaarbak", record, year: 2024,
+      manifest: baseManifest,
+      stats: { sealedAreaHa: 17.79, sealedPercentage: 34.59, unsealedAreaHa: 33.64, unsealedPercentage: 65.4, validAreaHa: 51.43, validPercentage: 99.99, noDataAreaHa: 0.01, noDataPercentage: 0.01 },
+    });
+    expect(soil).toContain("Sealed and unsealed ground");
+    expect(soil).toContain("artificial material that is wholly or partly impermeable");
+    expect(soil).toContain("The production method changed in 2023");
+    expect(soil).toContain("data-section=\"local-raster-methodology\"");
+    expect(soil.indexOf("Missing coverage")).toBeGreaterThan(soil.indexOf("local-raster-methodology"));
+
+    const greenMap = renderSectorPanelModel({
+      template: "local-official-raster", datasetId: "groenkaart", record, year: 2021,
+      manifest: {
+        ...baseManifest,
+        classesOrScale: { items: [
+          { value: 1, color: "#008000" }, { value: 2, color: "#b6ff00" },
+          { value: 3, color: "#ffff00" }, { value: 4, color: "#b8b8b8" },
+        ] },
+      },
+      stats: { classes: [1, 2, 3, 4].map((code) => ({ code, areaHa: 12.5, percentage: 25 })), validAreaHa: 50, validPercentage: 100, noDataAreaHa: 0, noDataPercentage: 0 },
+    });
+    expect(greenMap).toContain("Vegetation higher than 3 m");
+    expect(greenMap).toContain("Vegetation lower than 3 m");
+    expect(greenMap).toContain("Agricultural parcels");
+    expect(greenMap).not.toContain("--score-color:#ffff00");
+
+  });
+
+  it("leads agricultural use with complete-area percentage and keeps crop shares explicit", () => {
+    setLanguage("en");
+    const html = renderSectorPanelModel({
+      template: "landgebruik", mode: "agriculture", year: 2025,
+      record: records["23027C091"],
+      stats: { classes: [] },
+      parcelStats: {
+        completeAreaHa: 414.29, parcelAreaHa: 296.35, parcelPercentage: 71.53, parcelCount: 163,
+        cropGroups: [{ sourceLabel: "Grasland", areaHa: 180, percentage: 60.74 }],
+      },
+      manifest: {
+        source: {}, classesOrScale: { items: [] },
+        agriculturalDetail: { cropGroups: [{ sourceLabel: "Grasland", color: "#BFFF7F" }], source: {} },
+      },
+    });
+    expect(html).toContain("71.5");
+    expect(html).toContain("296.35 ha across 163 mapped parcels");
+    expect(html).toContain("complete Statbel-defined area");
+    expect(html).toContain("mapped parcel area as their denominator");
+  });
+
+  it("presents Statbel income as a fiscal indicator without fabricating a distribution", () => {
+    setLanguage("en");
+    const html = renderSectorPanelModel({
+      template: "income", year: 2023, record: records["23003A001"],
+      income: { source: { pageUrl: "https://statbel.fgov.be/en/open-data/fiscal-statistics-income-statistical-sector" } },
+      stats: {
+        sourceStatus: "available", medianNetTaxableIncome: 35420, averageNetTaxableIncome: 42110,
+        numberOfDeclarations: 212, interquartileDifference: 18350,
+        interquartileCoefficient: 41, interquartileAsymmetry: 6,
+      },
+    });
+    expect(html).toMatch(/€35,420|35,420\s*€/);
+    expect(html).toContain("not a salary, disposable household income or wealth measure");
+    expect(html).toContain("does not publish a complete income-bracket distribution");
+    expect(html).toContain("not adjusted for inflation");
+    expect(html).toContain("data-section=\"income-methodology\"");
   });
 
   it("closes on Escape and reports the close action", () => {

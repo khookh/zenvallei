@@ -1,14 +1,12 @@
 # Greenwave
 
-Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. It combines official heat-vulnerability scores from the Government of Flanders with Statbel boundaries, Copernicus LCM-10, Copernicus Urban Atlas, Sentinel-2 NDVI vegetation and an OpenStreetMap background.
+Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. The public map shows official heat-vulnerability scores, Copernicus Urban Atlas 2021 and Statbel fiscal income over an OpenStreetMap background. Local mode also adds Landsat surface temperature, JaarBAK soil sealing, Groenkaart Vlaanderen and Landgebruik Vlaanderen with 2025 agricultural parcel detail.
 
-The interface starts in English. The `NL` button switches the complete interface to Dutch for the current page only.
-
-The application uses vanilla JavaScript, Vite and MapLibre GL JS. It has no backend, accounts, cookies, browser storage, analytics or live score calculation.
+The interface starts in English. `NL` switches the complete interface to Dutch for the current page. The application has no backend, accounts, cookies, browser storage, analytics or live score calculation.
 
 Public POC: <https://khookh.github.io/zenvallei/>
 
-## Start on this computer
+## Start locally
 
 Requirements: Node.js 24 LTS and pnpm 11.
 
@@ -17,82 +15,69 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open <http://127.0.0.1:4173/>.
+Open <http://127.0.0.1:4173/>. For the local network, run `Setup Greenwave LAN.cmd` once as administrator, then double-click `Start Greenwave.cmd`. The launcher detects prepared local layers automatically and prints the address for other devices.
 
-## Start for the local network
-
-1. Double-click `Setup Greenwave LAN.cmd` once and approve the Windows prompt.
-2. Double-click `Start Greenwave.cmd` whenever Greenwave is needed.
-3. Open the printed `http://<current-ip>:4173/` address on another device.
-4. Close the launcher window or press Ctrl+C to stop the server.
-
-The same workflow is available as `pnpm lan`. The launcher builds the production bundle, binds only while its window is open and prints the current IP on every start.
-
-## Common commands
+## Common checks
 
 ```powershell
 pnpm test                 # unit and data-logic tests
+pnpm local-data:test      # Python processing tests
 pnpm test:e2e             # desktop and mobile browser regression
-pnpm test:lan             # Windows LAN listener and HTTP integration
-pnpm verify:quick         # lint, types, data, tests, build and bundle checks
+pnpm test:local-data      # deterministic local-layer browser test
+pnpm verify:quick         # lint, types, data, tests and build
 pnpm verify               # complete local release check
-pnpm security:check       # dependency, secret and local-path scan
-pnpm data:validate        # validate all committed browser-ready data
-pnpm build                # write the static website to dist/
-pnpm build:pages          # build and validate the /zenvallei/ Pages site
-pnpm test:pages           # browser smoke test at the real Pages path
+pnpm build:pages          # validate the /zenvallei/ Pages build
 ```
 
-Prepared assets are committed under `public/data`, so a clone can build and run without the source workbooks or CDSE credentials. Internet access is needed only for the configured basemap tiles.
+## Prepare data
 
-## Data preparation
+Heat scores and Urban Atlas are committed as browser-ready derivatives, so a clone can run without source downloads.
 
 ```powershell
-pnpm data:prepare -- --scores "C:\path\Cijfers_hittekwetsbaarheid_2026.xlsx" --sectors "C:\path\statbel-sectors.zip"
-pnpm landcover:prepare
-pnpm landcover:variants
+pnpm data:prepare -- --scores "C:\path\scores.xlsx" --sectors "C:\path\statbel-sectors.zip"
 pnpm urban-atlas:prepare -- --source "C:\path\official-urban-atlas-product"
-pnpm vegetation:discover -- --from-year 2015 --to-year 2026
-pnpm vegetation:download -- --all
-pnpm vegetation:prepare
+pnpm income:prepare       # download and validate Statbel income 2019-2023
 pnpm brand:prepare
 ```
 
-LCM-10 and Urban Atlas downloads read `CDSE_ACCESS_TOKEN` only during preparation. Sentinel Hub uses temporary `CDSE_SH_CLIENT_ID` and `CDSE_SH_CLIENT_SECRET` environment variables. Never place credentials in `.env`, source code, generated manifests or documentation.
+Prepare the local-only sources once:
 
-See [Data pipeline](docs/data-pipeline.md) for complete examples and validation rules.
+```powershell
+pnpm local-data:setup
+pnpm local-data:prepare -- --dataset jaarbak
+pnpm local-data:prepare -- --dataset groenkaart
+pnpm landgebruik:prepare
+pnpm landsat-heat:prepare
+pnpm dev:local-data
+```
 
-## NDVI playground
+The local source rasters, analytical files, parcel vectors and PMTiles stay below `.cache/local-layers` and never enter `dist` or GitHub Pages. See [Local official layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md) and [Landsat surface temperature](docs/landsat-surface-temperature.md).
 
-Open `playground/ndvi` in VS Code and create its standard Python environment once:
+## Python NDVI playground
+
+The standalone research playground is independent from the map layers:
 
 ```powershell
 py -3.11 -m venv playground/ndvi/.venv
 playground/ndvi/.venv/Scripts/python.exe -m pip install -e "playground/ndvi[dev]"
 ```
 
-Select that interpreter as the notebook kernel. The playground downloads raw B04, B08, SCL and data-mask bands, calculates NDVI in Python and can export an ignored local Test layer. `pnpm dev:playground-map` displays the latest export as Test. Raw files and experiments are never published; the public application still contains only NDVI vegetation for 2020. See [NDVI playground](playground/ndvi/README.md) for the VS Code workflow and copyable examples.
+Open `playground/ndvi` in VS Code and select that interpreter as the notebook kernel. It downloads raw Sentinel-2 bands, calculates NDVI in Python and can export an ignored local Test layer. See [the playground guide](playground/ndvi/README.md).
 
-## Project guides
+## Guides
 
-- [Architecture](docs/architecture.md): responsibilities and data flow.
-- [Add a layer](docs/add-a-layer.md): a complete layer-module example.
-- [Data pipeline](docs/data-pipeline.md): inputs, commands, caching and outputs.
-- [Data inventory](docs/data-inventory.md): sources, scripts, generated assets and Greenwave metrics.
-- [NDVI vegetation 2020](docs/vegetation-series.md): observation selection, NDVI calibration, masks and limitations.
-- [NDVI playground](playground/ndvi/README.md): lazy annual stacks and model-ready exports.
-- [Deployment](docs/deployment.md): LAN operation and public-host checklist.
-- [Contributing](CONTRIBUTING.md): conventions and required checks.
-- [Third-party data](THIRD_PARTY_DATA.md): source terms and attribution.
+- [Architecture](docs/architecture.md)
+- [Data inventory](docs/data-inventory.md)
+- [Data pipeline](docs/data-pipeline.md)
+- [Add a layer](docs/add-a-layer.md)
+- [Local official layers](docs/local-official-layers.md)
+- [Landsat surface temperature](docs/landsat-surface-temperature.md)
+- [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md)
+- [Deployment](docs/deployment.md)
+- [Third-party data](THIRD_PARTY_DATA.md)
 
-## Public deployment
+## Deployment and licence
 
-Changes on `main` are checked automatically by **Verify application**. Publishing to <https://khookh.github.io/zenvallei/> is deliberately manual: run **Deploy GitHub Pages** once after verification is green. The deployment repeats all checks and confirms the exact live commit through `release.json`. See the [deployment guide](docs/deployment.md) for the short procedure and failure meanings.
+Pushes to `main` run **Verify application**. Publishing is manual through **Deploy GitHub Pages** after verification is green. See [Deployment](docs/deployment.md).
 
-The standard OpenStreetMap tile service is retained for this modest non-commercial POC. It must be replaced through the existing environment configuration before meaningful public traffic.
-
-GitHub Pages cannot apply the complete response-header policy used by local preview. A build-time CSP and referrer policy protect the Pages POC; the remaining headers are documented for the next hosting provider. Vite preview remains limited to development and trusted local-network access.
-
-## Licence
-
-Greenwave source code is licensed under the MIT licence. This licence does not apply to upstream or derived data assets. Their separate terms and required acknowledgements are documented in [THIRD_PARTY_DATA.md](THIRD_PARTY_DATA.md).
+The source code uses the MIT licence. Upstream and derived data retain their own terms and acknowledgements.

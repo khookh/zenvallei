@@ -53,6 +53,16 @@ export function formatNumber(value, maximumFractionDigits = 2, language = curren
   }).format(value);
 }
 
+export function formatCurrency(value, language = currentLanguage) {
+  if (!Number.isFinite(value)) return t("value.notAvailable", {}, language);
+  return new Intl.NumberFormat(localeFor(language), {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export function formatDate(value, language = currentLanguage) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return t("value.notAvailable", {}, language);

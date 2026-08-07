@@ -11,6 +11,9 @@ importers:
       maplibre-gl:
         specifier: ^6.1.0
         version: 6.1.0
+      pmtiles:
+        specifier: 4.4.1
+        version: 4.4.1
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.12.1
@@ -1135,6 +1138,9 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
+  pmtiles@4.4.1:
+    resolution: {integrity: sha512-5oTeQc/yX/ft1evbpIlnoCZugQuug/iYIAj/ZTqIqzdGek4uZEho99En890EE6NOSI3JTI3IG8R7r8+SltphxA==}
+
   polygon-clipping@0.15.7:
     resolution: {integrity: sha512-nhfdr83ECBg6xtqOAJab1tbksbBAOMUltN60bU+llHVOL0e5Onm1WpAXXWXVB39L8AJFssoIhEVuy/S90MmotA==}
 
@@ -2057,8 +2063,7 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.5
 
-  fflate@0.8.3:
-    optional: true
+  fflate@0.8.3: {}
 
   file-entry-cache@8.0.0:
     dependencies:
@@ -2370,6 +2375,10 @@ snapshots:
       playwright-core: 1.62.1
     optionalDependencies:
       fsevents: 2.3.2
+
+  pmtiles@4.4.1:
+    dependencies:
+      fflate: 0.8.3
 
   polygon-clipping@0.15.7:
     dependencies:

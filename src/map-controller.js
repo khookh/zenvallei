@@ -56,9 +56,44 @@ export function createMapController({
   let activeMunicipality = "";
   let activeLayerId = initialLayerId;
   let selectedSectorId = "";
+  let viewportPaddingOverride = null;
   let basemapErrorReported = false;
   let hoveredId = null;
+  let inspectionTimer = 0;
+  let inspectionRequest = null;
   const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, maxWidth: "260px" });
+
+  const clearInspection = () => {
+    window.clearTimeout(inspectionTimer);
+    inspectionTimer = 0;
+    inspectionRequest?.abort();
+    inspectionRequest = null;
+  };
+
+  const inspectPoint = (lngLat, { immediate = false } = {}) => {
+    const layer = currentLayer();
+    if (!layer?.inspectPoint || !layer?.getPointPopupModel) return false;
+    clearInspection();
+    const run = async () => {
+      const controller = new AbortController();
+      inspectionRequest = controller;
+      try {
+        const result = await layer.inspectPoint(
+          { lng: lngLat.lng, lat: lngLat.lat },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted || layer !== currentLayer()) return;
+        popup.setLngLat(lngLat).setDOMContent(renderPopup(layer.getPointPopupModel(result))).addTo(map);
+      } catch (error) {
+        if (error.name !== "AbortError") popup.remove();
+      } finally {
+        if (inspectionRequest === controller) inspectionRequest = null;
+      }
+    };
+    if (immediate) run();
+    else inspectionTimer = window.setTimeout(run, 90);
+    return true;
+  };
 
   const attributions = [...new Set(
     [...layers.values()].flatMap((layer) => layer.getAttributions?.() ?? []),
@@ -189,28 +224,43 @@ export function createMapController({
         map.on("mousemove", COMMON_LAYER_IDS.hit, (event) => {
           const feature = event.features?.[0];
           if (!feature) return;
-          map.getCanvas().style.cursor = "pointer";
+          map.getCanvas().style.cursor = currentLayer()?.inspectPoint ? "crosshair" : "pointer";
           if (hoveredId && hoveredId !== feature.id) {
             map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
           }
           hoveredId = feature.id;
           map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: true });
-          const record = scores[feature.properties.sectorId];
-          const model = currentLayer().getPopupModel(feature, record);
-          popup.setLngLat(event.lngLat).setDOMContent(renderPopup(model)).addTo(map);
+          if (!inspectPoint(event.lngLat)) {
+            const record = scores[feature.properties.sectorId];
+            const model = currentLayer().getPopupModel(feature, record);
+            popup.setLngLat(event.lngLat).setDOMContent(renderPopup(model)).addTo(map);
+          }
         });
         map.on("mouseleave", COMMON_LAYER_IDS.hit, () => {
+          clearInspection();
           map.getCanvas().style.cursor = "";
           if (hoveredId) map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
           hoveredId = null;
           popup.remove();
         });
-        map.on("click", COMMON_LAYER_IDS.hit, (event) => {
+        map.on("click", COMMON_LAYER_IDS.hit, async (event) => {
           const feature = event.features?.[0];
+          const layer = currentLayer();
+          const inspectedFeature = await layer?.inspectFeature?.(map, event);
+          if (inspectedFeature) {
+            popup.setLngLat(event.lngLat).setDOMContent(renderPopup(inspectedFeature)).addTo(map);
+            return;
+          }
+          const isTouch = event.originalEvent?.pointerType === "touch"
+            || window.matchMedia("(pointer: coarse)").matches;
+          if (isTouch && inspectPoint(event.lngLat, { immediate: true })) return;
           if (feature) onSectorSelect(feature.properties.sectorId, { source: "map" });
         });
 
-        const sourceDeadline = performance.now() + 10_000;
+        // Vite compiles the MapLibre worker on first use in development mode.
+        // Keep the production failure bound strict while allowing that one-time
+        // local compilation to finish on slower Windows machines.
+        const sourceDeadline = performance.now() + (import.meta.env.DEV ? 45_000 : 10_000);
         const waitForSource = () => {
           if (map.getSource(SECTOR_SOURCE_ID)?.loaded?.()) {
             map.triggerRepaint();
@@ -245,6 +295,7 @@ export function createMapController({
   });
 
   const viewportPadding = () => {
+    if (viewportPaddingOverride) return viewportPaddingOverride;
     if (window.innerWidth > 760) {
       return { top: 72, right: window.innerWidth >= 900 && selectedSectorId ? 430 : 28, bottom: 72, left: 28 };
     }
@@ -269,6 +320,7 @@ export function createMapController({
   const setLayerOption = (layerId, name, value) => {
     const layer = layers.get(layerId);
     if (!layer?.setOption?.(map, name, value)) return false;
+    clearInspection();
     popup.remove();
     updateMapAccessibility();
     return true;
@@ -289,11 +341,11 @@ export function createMapController({
         const bounds = geometryBounds(featureById.get(selectedSectorId).geometry);
         const [southwest, northeast] = bounds.map((coordinate) => map.project(coordinate));
         const canvas = map.getCanvas();
-        const panelSpace = window.innerWidth >= 900 ? 430 : 0;
-        const fullyVisible = Math.min(southwest.x, northeast.x) >= 28
-          && Math.max(southwest.x, northeast.x) <= canvas.clientWidth - panelSpace - 28
-          && Math.min(southwest.y, northeast.y) >= 72
-          && Math.max(southwest.y, northeast.y) <= canvas.clientHeight - 72;
+        const padding = viewportPadding();
+        const fullyVisible = Math.min(southwest.x, northeast.x) >= padding.left
+          && Math.max(southwest.x, northeast.x) <= canvas.clientWidth - padding.right
+          && Math.min(southwest.y, northeast.y) >= padding.top
+          && Math.max(southwest.y, northeast.y) <= canvas.clientHeight - padding.bottom;
         if (!fullyVisible) fit(bounds, { maxZoom: 15.5 });
       }
     },
@@ -303,9 +355,27 @@ export function createMapController({
     refreshLayout() {
       map.resize();
     },
+    setViewportPadding(padding) {
+      if (!padding || ["top", "right", "bottom", "left"].some((key) => !Number.isFinite(padding[key]))) {
+        viewportPaddingOverride = null;
+        return;
+      }
+      viewportPaddingOverride = { ...padding };
+    },
     async setLayer(layerId) {
       const requestedLayer = layers.get(layerId);
       if (!requestedLayer?.isAvailable()) return false;
+      // Lazy source creation may overlap with a camera transition requested by
+      // the preceding UI action. A layer change is never navigation, so stop
+      // that transition and restore the complete camera after mounting.
+      const camera = {
+        center: map.getCenter().toArray(),
+        zoom: map.getZoom(),
+        bearing: map.getBearing(),
+        pitch: map.getPitch(),
+        padding: map.getPadding(),
+      };
+      map.stop();
       try {
         if (!await requestedLayer.mount(map, {
           sectorSourceId: SECTOR_SOURCE_ID,
@@ -316,10 +386,12 @@ export function createMapController({
         return false;
       }
       activeLayerId = layerId;
+      clearInspection();
       popup.remove();
       layers.forEach((layer) => layer.setVisible(map, layer.id === activeLayerId));
       applyLayerFilter();
       updateMapAccessibility();
+      map.jumpTo(camera);
       return true;
     },
     getActiveLayer() { return activeLayerId; },
@@ -329,10 +401,12 @@ export function createMapController({
     setHeatMetric(metric) { return setLayerOption("heat", "metric", metric); },
     getHeatMetric() { return layers.get("heat")?.getOption?.("metric") ?? null; },
     setLanguage() {
+      clearInspection();
       popup.remove();
       updateMapAccessibility();
     },
     destroy() {
+      clearInspection();
       attributionObserver.disconnect();
       popup.remove();
       map.remove();

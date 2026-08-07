@@ -1,4 +1,4 @@
-/** Copernicus LCM-10 categorical raster and Greenwave's prepared area summaries. */
+/** @deprecated Retained for possible research reuse; not registered or shipped. */
 import { formatNumber, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";

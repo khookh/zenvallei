@@ -25,7 +25,7 @@ function classAreas(records, collections) {
   return areas;
 }
 
-function aggregateLandCover(records) {
+function _aggregateLandCover(records) {
   const classifiedAreaHa = sum(records, "classifiedAreaHa");
   const areas = classAreas(records, (record) => record.classes ?? []);
   const classes = [...areas.entries()]
@@ -96,7 +96,7 @@ function aggregateUrbanAtlas(records, urbanAtlas) {
   };
 }
 
-function aggregateVegetation(records) {
+function _aggregateVegetation(records) {
   const sectorAreaHa = sum(records, "sectorAreaHa");
   const validAreaHa = sum(records, "validAreaHa");
   const likelyAreaHa = sum(records, "likelyVegetatedAreaHa");
@@ -121,23 +121,17 @@ function aggregateVegetation(records) {
   };
 }
 
+// Deprecated aggregators are retained only to make the retired experiments
+// reproducible. They are not exported or reachable from the active registry.
+void _aggregateLandCover;
+void _aggregateVegetation;
+
 /** Add area-weighted municipality summaries without changing source records. */
-export function addMunicipalityStatistics({ scores, landCover, urbanAtlas, vegetation }) {
+export function addMunicipalityStatistics({ scores, urbanAtlas }) {
   const groups = sectorIdsByMunicipality(scores);
-  if (landCover?.sectorStats) {
-    landCover.municipalityStats = Object.fromEntries([...groups].map(([municipality, ids]) => [
-      municipality, aggregateLandCover(ids.map((id) => landCover.sectorStats[id]).filter(Boolean)),
-    ]));
-  }
   if (urbanAtlas?.sectorStats) {
     urbanAtlas.municipalityStats = Object.fromEntries([...groups].map(([municipality, ids]) => [
       municipality, aggregateUrbanAtlas(ids.map((id) => urbanAtlas.sectorStats[id]).filter(Boolean), urbanAtlas),
     ]));
   }
-  Object.values(vegetation?.years ?? {}).forEach((year) => {
-    if (!year?.sectorStats) return;
-    year.municipalityStats = Object.fromEntries([...groups].map(([municipality, ids]) => [
-      municipality, aggregateVegetation(ids.map((id) => year.sectorStats[id]).filter(Boolean)),
-    ]));
-  });
 }

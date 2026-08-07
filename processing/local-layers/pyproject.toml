@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "greenwave-local-layers"
+version = "0.1.0"
+description = "Reproducible preparation of local official raster layers for Greenwave"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "geopandas==1.1.1",
+  "matplotlib==3.10.5",
+  "numpy==2.3.2",
+  "planetary-computer==1.0.0",
+  "pystac-client==0.9.0",
+  "rasterio==1.4.3",
+  "requests==2.32.4",
+  "rio-pmtiles==1.2.1",
+  "shapely==2.1.1",
+]
+
+[project.optional-dependencies]
+test = ["pytest==8.4.1"]
+
+[project.scripts]
+greenwave-local-layers = "greenwave_local_layers.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

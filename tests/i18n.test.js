@@ -3,6 +3,7 @@ import {
   DEFAULT_LANGUAGE,
   TRANSLATIONS,
   applyDocumentTranslations,
+  formatCurrency,
   formatScore,
   formatNumber,
   getLanguage,
@@ -28,6 +29,23 @@ describe("English–Dutch translations", () => {
   it("does not expose the provisional project name in interface copy", () => {
     expect(Object.values(TRANSLATIONS.nl).join(" ")).not.toMatch(/greenwave/i);
     expect(Object.values(TRANSLATIONS.en).join(" ")).not.toMatch(/greenwave/i);
+  });
+
+  it("uses canonical English authority and product names", () => {
+    const english = Object.values(TRANSLATIONS.en).join(" ");
+    expect(t("authority.departmentCare", {}, "en")).toBe("Department of Care, Government of Flanders");
+    expect(t("authority.departmentEnvironment", {}, "en")).toBe("Department of Environment & Spatial Development, Government of Flanders");
+    expect(t("authority.natureForests", {}, "en")).toBe("Agency for Nature and Forests, Government of Flanders");
+    expect(t("authority.digitalFlanders", {}, "en")).toBe("Digital Flanders Agency");
+    expect(t("authority.agricultureFisheries", {}, "en")).toBe("Agency for Agriculture and Fisheries, Government of Flanders");
+    expect(t("authority.statbel", {}, "en")).toBe("Statbel, the Belgian statistical office");
+    expect(t("authority.copernicusClms", {}, "en")).toBe("Copernicus Land Monitoring Service (CLMS)");
+    expect(t("authority.landsat", {}, "en")).toBe("NASA/USGS Landsat");
+    expect(t("authority.meteorologicalInstitute", {}, "en")).toBe("Royal Meteorological Institute of Belgium (RMI)");
+    expect(t("layers.groenkaart", { year: 2021 }, "en")).toBe("Flanders Green Map 2021");
+    expect(t("layers.landgebruik", {}, "en")).toBe("Flanders land use");
+    ["Flemish Government", "Flemish Department", "Government of Flanders, Department", "ANB and Digital Flanders", "Green Map Flanders", "Land use Flanders"]
+      .forEach((obsolete) => expect(english).not.toContain(obsolete));
   });
 
   it("falls back to English for unsupported languages and unknown keys", () => {
@@ -68,6 +86,8 @@ describe("English–Dutch translations", () => {
     expect(formatScore(null, "en")).toBe("N/A");
     expect(formatNumber(24.5, 2, "nl")).toBe("24,5");
     expect(formatNumber(24.5, 2, "en")).toBe("24.5");
+    expect(formatCurrency(35420, "en")).toMatch(/€35,420|35,420\s*€/);
+    expect(formatCurrency(35420, "nl")).toMatch(/€\s*35\.420|35\.420\s*€/);
   });
 
   it("updates document metadata, language and accessible attributes", () => {

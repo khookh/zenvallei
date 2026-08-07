@@ -5,22 +5,24 @@
   "license": "MIT",
   "packageManager": "pnpm@11.0.9",
   "type": "module",
-  "description": "Interactieve kaart voor hittebestendigheid, landbedekking en groen in de Zennevallei.",
+  "description": "Interactive map for heat resilience, soil sealing and green cover in Zennevallei.",
   "scripts": {
     "dev": "vite",
     "dev:playground-map": "vite --mode playground",
+    "dev:local-data": "vite --mode local-data",
     "build": "vite build",
     "build:pages": "vite build --base=/zenvallei/ && node scripts/check-subpath-build.mjs --root dist --base /zenvallei/ && node scripts/check-dist.mjs",
     "preview": "vite preview",
     "lan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-lan.ps1",
     "lan:check": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-lan.ps1 -Check",
     "data:prepare": "node scripts/prepare-data.mjs",
-    "landcover:prepare": "node scripts/prepare-landcover.mjs",
-    "landcover:variants": "node scripts/prepare-landcover-variants.mjs",
+    "income:prepare": "node scripts/prepare-income.mjs",
     "urban-atlas:prepare": "node scripts/prepare-urban-atlas.mjs",
-    "vegetation:download": "node scripts/download-vegetation.mjs",
-    "vegetation:discover": "node scripts/discover-vegetation.mjs",
-    "vegetation:prepare": "node --max-old-space-size=2048 scripts/prepare-vegetation-years.mjs",
+    "local-data:setup": "py -3.11 -m venv processing/local-layers/.venv && processing\\local-layers\\.venv\\Scripts\\python.exe -m pip install -e \"processing/local-layers[test]\"",
+    "local-data:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers",
+    "landsat-heat:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-temperature",
+    "landgebruik:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landgebruik",
+    "local-data:test": "node scripts/run-local-layer-python.mjs -m pytest processing/local-layers/tests",
     "brand:prepare": "node scripts/generate-brand-mark.mjs",
     "playground:test": "playground\\ndvi\\.venv\\Scripts\\python.exe -m pytest playground/ndvi/tests",
     "data:validate": "node scripts/validate-generated-data.mjs",
@@ -32,6 +34,7 @@
     "test:e2e:cross-browser": "playwright test --config playwright.smoke.config.js",
     "test:pages": "playwright test --config playwright.pages.config.js",
     "test:playground-map": "playwright test --config playwright.playground.config.js",
+    "test:local-data": "playwright test --config playwright.local-data.config.js",
     "test:lan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-lan.ps1",
     "dist:check": "node scripts/check-dist.mjs",
     "build:subpath": "vite build --base=/zenvallei/ --outDir .cache/subpath-build && node scripts/check-subpath-build.mjs --root .cache/subpath-build --base /zenvallei/",
@@ -50,7 +53,8 @@
     ]
   },
   "dependencies": {
-    "maplibre-gl": "^6.1.0"
+    "maplibre-gl": "^6.1.0",
+    "pmtiles": "4.4.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

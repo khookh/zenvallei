@@ -1,64 +1,40 @@
 # Third-party data and services
 
-The MIT licence applies to Greenwave source code. It does not relicense upstream data, derived browser assets, map tiles, names or logos.
+The MIT licence applies to the source code. It does not relicense upstream data, derived assets, map tiles, names or logos.
 
-## Government of Flanders, Department of Care
+## Department of Care, Government of Flanders
 
-Used for the 2026 heat, vulnerability, final and indicator scores.
-
-- Source: [Heat vulnerability map and downloads](https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen)
-- Generated assets: `scores.json` and parts of `methodology.json` and `provenance.json`.
-- Application attribution: Government of Flanders, Department of Care.
-
-The score data is published here for this non-commercial proof of concept with clear source attribution. The derived files do not imply endorsement by the Government of Flanders and remain subject to the source authority's applicable reuse conditions.
-
-Useful official context: [reuse of government information](https://www.vlaanderen.be/digitaal-vlaanderen/recht-op-hergebruik-van-overheidsinformatie) and [Flemish model licences](https://www.vlaanderen.be/digitaal-vlaanderen/onze-diensten-en-platformen/open-data/voorwaarden-voor-het-hergebruik-van-overheidsinformatie).
+The 2026 heat, vulnerability, final and indicator scores come from the [Heat vulnerability map](https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen). `scores.json`, `methodology.json` and `provenance.json` retain that authority and attribution. No official score is recalculated.
 
 ## Statbel
 
-Used for the compatible 2024 statistical-sector codes, Dutch names and boundaries.
+[Statistical sectors 2024](https://statbel.fgov.be/en/open-data/statistical-sectors-2024) supply compatible sector identifiers, Dutch names and boundaries. Derived files are `sectors.geojson`, geometry provenance and the white header silhouette. The blue river is a stylised brand element, not hydrographic data.
 
-- Source: [Statistical sectors 2024](https://statbel.fgov.be/en/open-data/statistical-sectors-2024)
-- Generated assets: `sectors.geojson`, geometry provenance and the dissolved white silhouette in `public/assets/zennevallei-river-mark.png`. The blue river curve is a stylised Greenwave brand element, not hydrographic data.
-- Application attribution: Statbel, statistical sectors dated 1 January 2024.
+[Fiscal statistics by statistical sector](https://statbel.fgov.be/en/open-data/fiscal-statistics-income-statistical-sector) supply median and average net taxable income per declaration and published interquartile indicators for 2019-2023. `income.json` preserves the source values and missing states under Statbel's CC BY 4.0 terms. The application does not reconstruct an income distribution or calculate municipality medians from sector medians.
 
-Statbel states that its open data can be used freely, without charge or restriction, for commercial and non-commercial purposes. See [Statbel Open Data](https://statbel.fgov.be/en/open-data).
+## Copernicus Urban Atlas
 
-## Copernicus Land Monitoring Service
+Urban Atlas 2021 FUA BE001L3 supplies the public land-cover and land-use polygons. DOI: <https://doi.org/10.2909/05ae1ee1-e550-4e66-b74d-4926322d981a>. Derived assets identify modifications and display the required European Union Copernicus acknowledgement. See the [CLMS data policy](https://land.copernicus.eu/en/data-policy).
 
-Used for LCM-10 2020 and Urban Atlas 2021.
+## Local official sources
 
-- LCM-10 DOI: <https://doi.org/10.2909/602507b2-96c7-47bb-b79d-7ba25e97d0a9>
-- Urban Atlas DOI: <https://doi.org/10.2909/05ae1ee1-e550-4e66-b74d-4926322d981a>
-- Generated assets: the land-cover PNG and manifest, and the clipped Urban Atlas GeoJSON and manifest.
+- [JaarBAK](https://www.vlaanderen.be/datavindplaats/catalogus/jaarlijkse-bodemafdekkingskaart-jaarbak-1-m-resolutie-2023), Department of Environment & Spatial Development, Government of Flanders / MercatorNet.
+- [Groenkaart Vlaanderen](https://www.vlaanderen.be/datavindplaats/catalogus/groenkaart-vlaanderen-2021), Agentschap voor Natuur en Bos / Digitaal Vlaanderen. The local attribution uses `Bron: ANB`.
+- [Landsat Collection 2 surface temperature](https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature), NASA/USGS. [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) provides COG access only.
+- [Landgebruik Vlaanderen](https://www.vlaanderen.be/datavindplaats/catalogus/landgebruik-vlaanderen-toestand-2025), Department of Environment & Spatial Development, Government of Flanders.
+- [Landbouwgebruikspercelen 2025](https://www.vlaanderen.be/datavindplaats/catalogus/landbouwgebruikspercelen-2025), Agency for Agriculture and Fisheries, Government of Flanders.
+- [Royal Meteorological Institute of Belgium (RMI/KMI) heatwave periods and definition](https://www.meteo.be/nl/klimaat/klimaatverandering-in-belgie/klimaattrends-in-ukkel/luchttemperatuur/zomer-indices/hittegolven/hittegolven-in-ukkel).
 
-CLMS provides full, open and free access, requires source attribution, requires modifications to be identified and prohibits implying EU endorsement. Greenwave displays the required derivative acknowledgement:
+Their rasters, analytical derivatives and PMTiles are ignored local research inputs and are not distributed by GitHub Pages.
 
-> Generated using European Union's Copernicus Land Monitoring Service information.
+## Sentinel-2 research playground
 
-See the [CLMS data policy](https://land.copernicus.eu/en/data-policy). The provenance manifests record DOIs, product identifiers, access dates and processing details.
-
-## Copernicus Sentinel-2
-
-Used for the selected 2020 L2A observation in the public NDVI vegetation layer. Selected observations from 2015 through 2026 may remain in the ignored local research cache.
-
-- Source collection: Sentinel-2 L2A through the Copernicus Data Space Sentinel Hub Process API.
-- Input products: the paired T31UFS and T31UES products recorded for every selected observation in `.cache/vegetation/selection.json` and `vegetation.json`.
-- Generated assets: one full-region and seven municipality-specific PNG files for 2020, plus `vegetation.json`.
-- Application attribution: Derived using European Union Copernicus Sentinel-2 information.
-
-Greenwave calculates NDVI, applies the Sentinel scene-classification mask, calibrates a threshold against Urban Atlas reference classes and aggregates areas by Statbel sector. The result is identified as a derived, single-date vegetation indication and not as an official Copernicus land-cover product.
+The standalone Python playground can request Sentinel-2 L2A bands through Copernicus Data Space. Its raw files and experimental outputs stay in ignored caches and are not active public datasets.
 
 ## OpenStreetMap
 
-Used only as the configurable runtime basemap. Greenwave does not package OSM tiles.
+The configured basemap uses standard OpenStreetMap tiles for this modest POC and displays `© OpenStreetMap contributors`. Tiles are neither packaged nor prefetched. See [copyright and ODbL](https://www.openstreetmap.org/copyright) and the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
-- Attribution: © OpenStreetMap contributors.
-- Licence information: [OpenStreetMap copyright and ODbL](https://www.openstreetmap.org/copyright).
-- Tile-service conditions: [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+## Software
 
-The standard community tile service is used for this modest non-commercial proof of concept. The application does not package or prefetch tiles. Configure an appropriate managed or self-hosted OSM-derived service before meaningful public traffic.
-
-## Software dependencies
-
-Third-party JavaScript packages retain their own licences. `pnpm-lock.yaml` records the resolved dependency graph. SheetJS is installed from its official 0.20.3 distribution because the public npm registry copy is stale; its URL and integrity are pinned by the lockfile.
+Dependencies retain their own licences. `pnpm-lock.yaml` and the Python lock constraints record the exact dependency graph.

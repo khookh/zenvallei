@@ -1,4 +1,4 @@
-import { formatDate, formatNumber, getLanguage, t } from "./i18n.js";
+import { formatCurrency, formatDate, formatNumber, getLanguage, t } from "./i18n.js";
 import {
   DEFAULT_HEAT_METRIC,
   HEAT_METRICS,
@@ -148,21 +148,15 @@ function heatMetricInterpretation(record, metric) {
   return interpretationFor(record);
 }
 
-function sourceLinks(methodology, landCover, urbanAtlas, vegetation) {
+function sourceLinks(methodology, _landCover, urbanAtlas, _vegetation) {
   const { scores, geometry, osm } = methodology.sources;
-  const copernicus = landCover?.source?.productUrl ? `
-      <li><a href="${safeHref(landCover.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.copernicus"))}</a></li>` : "";
   const urbanAtlasLink = urbanAtlas?.source?.productUrl ? `
       <li><a href="${safeHref(urbanAtlas.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.urbanAtlas"))}</a></li>` : "";
-  const vegetationLink = vegetation?.source?.productUrl ? `
-      <li><a href="${safeHref(vegetation.source.productUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.vegetation"))}</a></li>` : "";
   return `
     <ul class="source-list">
       <li><a href="${safeHref(scores.pageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.scores"))}</a></li>
       <li><a href="${safeHref(geometry.pageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.geometry"))}</a></li>
-      ${copernicus}
       ${urbanAtlasLink}
-      ${vegetationLink}
       <li><a href="${safeHref(osm.copyrightUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("source.basemap"))}</a></li>
     </ul>`;
 }
@@ -246,7 +240,7 @@ function landCoverClassRows(stats, landCover) {
   }).join("");
 }
 
-function renderLandCoverRecord(record, methodology, landCover, urbanAtlas, vegetation) {
+function _renderLandCoverRecord(record, methodology, landCover, urbanAtlas, vegetation) {
   const stats = scopedStatistics(landCover, record);
   const dominant = landCoverDefinition(landCover, stats?.dominantClassCode);
   const treeCover = landCoverClassStatistic(stats, 10);
@@ -281,7 +275,7 @@ function renderLandCoverRecord(record, methodology, landCover, urbanAtlas, veget
           <div class="accordion-content land-cover-classes">${landCoverClassRows(stats, landCover)}</div>
         </details>` : `<p class="panel-empty-state">${escapeHtml(t("landCover.noData"))}</p>`}
       <details class="detail-accordion methodology-accordion" data-section="land-cover-methodology">
-        <summary data-focus-key="land-cover-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("landCover.methodologyTitle"))}</span></summary>
+        <summary data-focus-key="land-cover-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("landCover.methodologyTitle"))}</span></summary>
         <div class="accordion-content methodology-copy">
           <p>${escapeHtml(t("landCover.productionText"))}</p>
           <p>${escapeHtml(t("landCover.methodologyText"))}</p>
@@ -377,7 +371,7 @@ function renderUrbanAtlasRecord(record, methodology, landCover, urbanAtlas, vege
           <div class="accordion-content land-cover-classes">${stats.otherClasses.map((entry) => urbanAtlasRow(entry, urbanAtlas, { showMetricPercentage: false })).join("")}</div>
         </details>` : ""}` : `<p class="panel-empty-state">${escapeHtml(t("urbanAtlas.noData"))}</p>`}
       <details class="detail-accordion methodology-accordion" data-section="urban-atlas-methodology">
-        <summary data-focus-key="urban-atlas-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("urbanAtlas.methodologyTitle"))}</span></summary>
+        <summary data-focus-key="urban-atlas-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("urbanAtlas.methodologyTitle"))}</span></summary>
         <div class="accordion-content methodology-copy">
           <p>${escapeHtml(t("urbanAtlas.productionText"))}</p>
           <p>${escapeHtml(t("urbanAtlas.methodologyText"))}</p>
@@ -420,7 +414,7 @@ function vegetationComposition(stats, vegetation) {
     </div>`;
 }
 
-function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vegetation) {
+function _renderVegetationRecord(record, methodology, landCover, urbanAtlas, vegetation) {
   const year = vegetation?.activeYear ?? 2020;
   const yearData = vegetation?.years?.[year];
   const stats = scopedStatistics(yearData, record);
@@ -465,7 +459,7 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
         coverage: formatNumber(yearData.quality.coveragePercentage, 1),
       }))}</p>` : ""}
       <details class="detail-accordion methodology-accordion" data-section="vegetation-methodology">
-        <summary data-focus-key="vegetation-methodology-summary"><span><small>${escapeHtml(t("landCover.methodologyKicker"))}</small>${escapeHtml(t("vegetation.methodologyTitle"))}</span></summary>
+        <summary data-focus-key="vegetation-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("vegetation.methodologyTitle"))}</span></summary>
         <div class="accordion-content methodology-copy">
           <p>${escapeHtml(t("vegetation.observation", {
             date: formatDate(yearData?.acquisitionDate),
@@ -497,6 +491,11 @@ function renderVegetationRecord(record, methodology, landCover, urbanAtlas, vege
       </details>
     </div>`;
 }
+
+// Kept solely with the retired layer implementations. Neither renderer is
+// routed by the active panel shell or included as an application layer.
+void _renderLandCoverRecord;
+void _renderVegetationRecord;
 
 function translatedNotebookValue(value, fallback = "") {
   if (typeof value === "string") return value;
@@ -543,6 +542,193 @@ function renderNotebookTestRecord(model) {
     </article>`;
 }
 
+function localAreaValue(areaHa, percentage) {
+  return `${t("unit.percentage", { value: formatNumber(percentage) })} · ${t("unit.hectares", { value: formatNumber(areaHa) })}`;
+}
+
+function localSource(manifest) {
+  if (!manifest?.source?.url) return "";
+  return `<p><a href="${safeHref(manifest.source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("localLayers.source"))}: ${escapeHtml(manifest.source.name ?? manifest.datasetId)}</a></p>`;
+}
+
+function localComposition(items, label) {
+  const ariaLabel = items.map((item) => `${item.label} ${formatNumber(item.percentage)}%`).join(", ");
+  return `
+    <div class="local-composition" role="img" aria-label="${escapeHtml(`${label}: ${ariaLabel}`)}">
+      ${items.filter((item) => item.percentage > 0).map((item) => `
+        <span style="width:${Math.max(0, item.percentage)}%;--segment:${escapeHtml(item.color)}"></span>`).join("")}
+    </div>`;
+}
+
+function localClassRow({ label, definition = "", color, areaHa, percentage, secondary = "" }) {
+  return `
+    <div class="local-breakdown-row">
+      <span class="local-breakdown-swatch" style="--swatch:${escapeHtml(color)}" aria-hidden="true"></span>
+      <div class="local-breakdown-label"><strong>${escapeHtml(label)}</strong>${definition ? `<span>${escapeHtml(definition)}</span>` : ""}</div>
+      <div class="local-breakdown-value"><strong>${escapeHtml(t("unit.percentage", { value: formatNumber(percentage) }))}</strong><span>${escapeHtml(t("unit.hectares", { value: formatNumber(areaHa) }))}</span>${secondary ? `<small>${escapeHtml(secondary)}</small>` : ""}</div>
+    </div>`;
+}
+
+function localHero(record, subtitle, heroContent, note) {
+  return `
+    <div class="panel-hero land-cover-hero local-layer-hero">
+      <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
+      <h2 id="panel-title">${escapeHtml(record.sectorName ?? record.municipality)}</h2>
+      <p class="panel-subtitle">${escapeHtml(subtitle)}</p>
+      ${heroContent}
+      <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(note)}</p>
+    </div>`;
+}
+
+function renderJaarbakSummary(stats, record, year) {
+  const composition = [
+    { label: t("jaarbak.sealed"), areaHa: stats.sealedAreaHa, percentage: stats.sealedPercentage, color: "#e8292f" },
+    { label: t("jaarbak.unsealed"), areaHa: stats.unsealedAreaHa, percentage: stats.unsealedPercentage, color: "#8ecf7c" },
+  ];
+  return `
+    ${localHero(record, t("layers.jaarbak", { year }), `
+      <div class="score-hero" style="--hero-color:#e8292f">
+        <div class="score-orb"><strong>${escapeHtml(formatNumber(stats.sealedPercentage))}</strong><span>%</span></div>
+        <div><span class="score-caption">${escapeHtml(t("jaarbak.sealed"))}</span><p>${escapeHtml(t("unit.hectares", { value: formatNumber(stats.sealedAreaHa) }))}</p></div>
+      </div>`, t("jaarbak.contextMeta", { year }))}
+    <div class="panel-body local-layer-body">
+      <section aria-labelledby="jaarbak-summary-title">
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("layers.jaarbak", { year }))}</p><h3 id="jaarbak-summary-title">${escapeHtml(t("jaarbak.summaryTitle"))}</h3></div>
+        <p class="local-layer-definition">${escapeHtml(t("jaarbak.definition"))}</p>
+        ${localComposition(composition, t("jaarbak.summaryTitle"))}
+        <div class="local-breakdown-list">
+          ${composition.map(localClassRow).join("")}
+        </div>
+        <p class="provenance-note"><strong>${escapeHtml(t("localLayers.derivedTitle"))}</strong><span>${escapeHtml(t("jaarbak.derivedNote"))}</span></p>
+        ${year >= 2023 ? `<p class="local-method-warning"><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("jaarbak.methodChangeNote"))}</p>` : ""}
+      </section>`;
+}
+
+function renderGroenkaartSummary(stats, manifest, record, year) {
+  const definitions = new Map((manifest.classesOrScale?.items ?? []).map((item) => [String(item.value), item]));
+  const byCode = new Map((stats.classes ?? []).map((item) => [String(item.code), item]));
+  const keyByCode = { 1: "highGreen", 2: "lowGreen", 3: "agriculture", 4: "nonGreen" };
+  const composition = [1, 2, 3, 4].map((code) => {
+    const item = byCode.get(String(code)) ?? { areaHa: 0, percentage: 0 };
+    const key = keyByCode[code];
+    return {
+      label: t(`groenkaart.${key}`),
+      definition: t(`groenkaart.${key}Definition`),
+      color: definitions.get(String(code))?.color ?? "#657575",
+      areaHa: item.areaHa,
+      percentage: item.percentage,
+    };
+  });
+  const dominant = [...composition].sort((a, b) => b.areaHa - a.areaHa)[0];
+  return `
+    ${localHero(record, t("layers.groenkaart", { year }), `
+      <div class="score-hero">
+        <div class="land-cover-orb" style="--class-color:${escapeHtml(dominant.color)}" aria-hidden="true"></div>
+        <div><span class="score-caption">${escapeHtml(t("groenkaart.dominant"))}</span><p class="land-cover-dominant">${escapeHtml(dominant.label)} · ${escapeHtml(t("unit.percentage", { value: formatNumber(dominant.percentage) }))}</p></div>
+      </div>`, t("groenkaart.contextMeta", { year }))}
+    <div class="panel-body local-layer-body">
+      <section aria-labelledby="groenkaart-summary-title">
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("layers.groenkaart", { year }))}</p><h3 id="groenkaart-summary-title">${escapeHtml(t("groenkaart.summaryTitle"))}</h3></div>
+        ${localComposition(composition, t("groenkaart.summaryTitle"))}
+        <h4 class="local-breakdown-title">${escapeHtml(t("groenkaart.classBreakdown"))}</h4>
+        <div class="local-breakdown-list">${composition.map(localClassRow).join("")}</div>
+        <p class="provenance-note"><strong>${escapeHtml(t("localLayers.derivedTitle"))}</strong><span>${escapeHtml(t("groenkaart.derivedNote"))}</span></p>
+      </section>`;
+}
+
+function renderLocalOfficialRaster(model) {
+  const { datasetId, manifest, record, stats, year } = model;
+  const methodKey = { jaarbak: "jaarbak.methodology", groenkaart: "groenkaart.methodology" }[datasetId];
+  const body = !stats
+    ? `<div class="panel-hero local-layer-hero"><p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p><h2 id="panel-title">${escapeHtml(record.sectorName ?? record.municipality)}</h2></div><div class="panel-body"><p class="panel-empty-state">${escapeHtml(t("localLayers.noData"))}</p>`
+    : datasetId === "jaarbak"
+      ? renderJaarbakSummary(stats, record, year)
+      : renderGroenkaartSummary(stats, manifest, record, year);
+  return `
+    <article class="panel-article local-official-panel">
+      ${body}
+      ${manifest.years?.[year]?.status === "provisional" ? `<p class="panel-warning local-provisional-warning">${escapeHtml(t("localLayers.provisionalYear"))}</p>` : ""}
+      <details class="detail-accordion methodology-accordion" data-section="local-raster-methodology">
+        <summary data-focus-key="local-raster-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("localLayers.methodology"))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t(methodKey))}</p>
+          ${year >= 2023 && datasetId === "jaarbak" ? `<p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("jaarbak.methodChangeNote"))}</p>` : ""}
+          ${stats ? `<h4>${escapeHtml(t("localLayers.coverageTitle"))}</h4><p>${escapeHtml(t("localLayers.completeArea"))} ${escapeHtml(t("localLayers.visualDerivative"))}</p><p>${escapeHtml(t("localLayers.coverageTitle"))}: ${escapeHtml(localAreaValue(stats.validAreaHa, stats.validPercentage))}. ${escapeHtml(t("jaarbak.noData"))}: ${escapeHtml(localAreaValue(stats.noDataAreaHa, stats.noDataPercentage))}.</p>` : ""}
+          ${localSource(manifest)}
+        </div>
+      </details>
+    </div></article>`;
+}
+
+function renderLandgebruik(model) {
+  const { record, manifest, year, mode, stats, parcelStats } = model;
+  const definitions = new Map((manifest?.classesOrScale?.items ?? []).map((item) => [String(item.value), item]));
+  const classes = (stats?.classes ?? []).map((item) => {
+    const definition = definitions.get(String(item.code));
+    return {
+      ...item,
+      label: t(`landgebruik.class.${item.code}`),
+      color: definition?.color ?? "#657575",
+      group: definition?.group ?? "other",
+    };
+  });
+  const dominant = classes.reduce((best, item) => item.areaHa > (best?.areaHa ?? -1) ? item : best, null);
+  const cropColor = new Map((manifest?.agriculturalDetail?.cropGroups ?? []).map((item) => [item.sourceLabel, item.color]));
+  const cropGroups = (parcelStats?.cropGroups ?? []).map((item) => ({
+    ...item,
+    label: t(`landgebruik.cropGroup.${item.sourceLabel}`),
+    color: cropColor.get(item.sourceLabel) ?? "#8f8f8f",
+  }));
+  const groupOrder = ["settlement", "economic", "infrastructure", "recreation", "agriculture", "nature", "water", "other"];
+  const breakdown = groupOrder.map((group) => {
+    const rows = classes.filter((item) => item.group === group);
+    if (!rows.length) return "";
+    return `<section class="landgebruik-breakdown-group"><h4>${escapeHtml(t(`landgebruik.group.${group}`))}</h4><div class="local-breakdown-list">${rows.map(localClassRow).join("")}</div></section>`;
+  }).join("");
+  const agricultural = mode === "agriculture";
+  const hero = agricultural
+    ? localHero(record, t("landgebruik.agriculture2025"), parcelStats ? `
+        <div class="score-hero" style="--hero-color:#9ad7cf">
+          <div class="score-orb local-percentage-orb"><strong>${escapeHtml(formatNumber(parcelStats.parcelPercentage, 1))}</strong><span>%</span></div>
+          <div><span class="score-caption">${escapeHtml(t("landgebruik.parcelShareHeadline"))}</span><p>${escapeHtml(t("landgebruik.parcelAreaSupport", {
+            area: formatNumber(parcelStats.parcelAreaHa), count: parcelStats.parcelCount,
+          }))}</p></div>
+        </div>` : `<p class="panel-empty-state">${escapeHtml(t("landgebruik.noParcels"))}</p>`, t("landgebruik.parcelScale"))
+    : localHero(record, t("landgebruik.referenceYear", { year }), dominant ? `
+        <div class="score-hero">
+          <div class="land-cover-orb" style="--class-color:${escapeHtml(dominant.color)}" aria-hidden="true"></div>
+          <div><span class="score-caption">${escapeHtml(t("landgebruik.dominantClass"))}</span><p class="land-cover-dominant">${escapeHtml(dominant.label)} · ${escapeHtml(formatNumber(dominant.percentage, 1))}%</p></div>
+        </div>` : `<p class="panel-empty-state">${escapeHtml(t("localLayers.noData"))}</p>`, t("landgebruik.contextMeta", { year }));
+  return `
+    <article class="panel-article landgebruik-panel">
+      ${hero}
+      <div class="panel-body local-layer-body">
+        <section aria-labelledby="landgebruik-summary-title">
+          <div class="section-heading"><p class="section-kicker">${escapeHtml(t("layers.landgebruik"))}</p><h3 id="landgebruik-summary-title">${escapeHtml(t(agricultural ? "landgebruik.agriculturePanelTitle" : "landgebruik.panelTitle"))}</h3></div>
+          <p class="local-layer-definition">${escapeHtml(t(agricultural ? "landgebruik.agriculturePanelExplanation" : "landgebruik.panelExplanation"))}</p>
+          ${agricultural && parcelStats ? `
+            ${localComposition(cropGroups, t("landgebruik.cropBreakdown"))}
+            <h4 class="local-breakdown-title">${escapeHtml(t("landgebruik.cropBreakdown"))}</h4>
+            <div class="local-breakdown-list">${cropGroups.map(localClassRow).join("")}</div>` : ""}
+          ${!agricultural && stats ? `
+            ${localComposition(classes, t("landgebruik.composition"))}
+            <h4 class="local-breakdown-title">${escapeHtml(t("landgebruik.composition"))}</h4>
+            <div class="landgebruik-breakdown">${breakdown}</div>` : ""}
+        </section>
+        <details class="detail-accordion methodology-accordion" data-section="landgebruik-methodology">
+          <summary data-focus-key="landgebruik-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("landgebruik.methodologyTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy">
+            <p>${escapeHtml(t("landgebruik.methodology"))}</p>
+            <p>${escapeHtml(t("landgebruik.parcelMethodology"))}</p>
+            <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landgebruik.comparisonWarning"))}</p>
+            ${localSource(manifest)}
+            ${manifest?.agriculturalDetail?.source?.url ? `<p><a href="${safeHref(manifest.agriculturalDetail.source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landgebruik.parcelSourceName"))}</a></p>` : ""}
+          </div>
+        </details>
+      </div>
+    </article>`;
+}
+
 function aboutLayerCard(key, label) {
   return `<article>
     <span class="about-layer-tag">${escapeHtml(label)}</span>
@@ -555,7 +741,53 @@ function aboutLayerCard(key, label) {
   </article>`;
 }
 
-function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance) {
+function localAboutCards(localLayers) {
+  const definitions = [
+    ["jaarbak", "layers.jaarbak"],
+    ["groenkaart", "layers.groenkaart"],
+    ["landgebruik", "layers.landgebruik"],
+  ];
+  return definitions
+    .filter(([datasetId]) => localLayers?.[datasetId])
+    .map(([datasetId, labelKey]) => aboutLayerCard(
+      datasetId,
+      t(labelKey, { year: localLayers[datasetId].defaultYear }),
+    ))
+    .join("");
+}
+
+function localAboutMethodologies(localLayers) {
+  return ["jaarbak", "groenkaart", "landgebruik"]
+    .filter((datasetId) => localLayers?.[datasetId])
+    .map((datasetId) => `
+      <details class="detail-accordion about-method" data-section="about-${datasetId}-methodology">
+        <summary data-focus-key="about-${datasetId}-methodology-summary"><span>${escapeHtml(t(`about.${datasetId}MethodTitle`))}</span></summary>
+        <div class="accordion-content methodology-copy">
+          <p>${escapeHtml(t(`${datasetId}.methodology`))}</p>
+          <p>${escapeHtml(t("localLayers.visualDerivative"))}</p>
+          ${localSource(localLayers[datasetId])}
+        </div>
+      </details>`)
+    .join("");
+}
+
+function localAboutSources(localLayers) {
+  const links = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature"]
+    .filter((datasetId) => localLayers?.[datasetId]?.source?.url || localLayers?.[datasetId]?.source?.productUrl)
+    .map((datasetId) => {
+      const key = datasetId === "landsat-temperature" ? "landsat" : datasetId;
+      const url = localLayers[datasetId].source.url ?? localLayers[datasetId].source.productUrl;
+      return `<li><a href="${safeHref(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(`about.${key}MethodTitle`))}</a></li>`;
+    })
+    .join("");
+  const parcelUrl = localLayers?.landgebruik?.agriculturalDetail?.source?.url;
+  const parcelLink = parcelUrl
+    ? `<li><a href="${safeHref(parcelUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landgebruik.parcelSourceName"))}</a></li>`
+    : "";
+  return links || parcelLink ? `<ul class="source-list">${links}${parcelLink}</ul>` : "";
+}
+
+function renderAbout(methodology, landCover, urbanAtlas, vegetation, income, provenance, localLayers) {
   const sectorCount = provenance?.output?.sectorCount ?? 154;
   return `
     <div class="panel-hero panel-hero--about">
@@ -578,14 +810,20 @@ function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance)
           <h4 class="about-category-title">${escapeHtml(t("about.categoryHeat"))}</h4>
           <div class="about-layer-list">
             ${aboutLayerCard("heat", t("layers.heat"))}
+            ${localLayers?.["landsat-temperature"] ? aboutLayerCard("landsat", t("layers.landsatTemperature")) : ""}
           </div>
         </div>
         <div class="about-layer-category">
           <h4 class="about-category-title">${escapeHtml(t("about.categoryLandGreen"))}</h4>
           <div class="about-layer-list">
-            ${aboutLayerCard("landCover", t("layers.landCover", { year: landCover?.activeYear ?? 2020 }))}
             ${aboutLayerCard("urbanAtlas", t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}
-            ${aboutLayerCard("vegetation", t("layers.vegetation", { year: vegetation?.activeYear ?? 2020 }))}
+            ${localAboutCards(localLayers)}
+          </div>
+        </div>
+        <div class="about-layer-category">
+          <h4 class="about-category-title">${escapeHtml(t("about.categoryDemography"))}</h4>
+          <div class="about-layer-list">
+            ${aboutLayerCard("income", t("layers.income"))}
           </div>
         </div>
         <p class="comparison-caveat">${escapeHtml(t("about.compareCaveat"))}</p>
@@ -628,25 +866,180 @@ function renderAbout(methodology, landCover, urbanAtlas, vegetation, provenance)
           <summary data-focus-key="about-heat-methodology-summary"><span>${escapeHtml(t("about.heatMethodTitle"))}</span></summary>
           <div class="accordion-content methodology-copy"><p>${escapeHtml(t("about.heatMethodText"))}</p><p>${escapeHtml(t("about.noDataText"))}</p></div>
         </details>
-        <details class="detail-accordion about-method" data-section="about-land-cover-methodology">
-          <summary data-focus-key="about-land-cover-methodology-summary"><span>${escapeHtml(t("about.landCoverMethodTitle"))}</span></summary>
-          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("landCover.productionText"))}</p><p>${escapeHtml(t("landCover.methodologyText"))}</p><p>${escapeHtml(t("landCover.comparisonWarning"))}</p></div>
-        </details>
+        ${localLayers?.["landsat-temperature"] ? `<details class="detail-accordion about-method" data-section="about-landsat-methodology">
+          <summary data-focus-key="about-landsat-methodology-summary"><span>${escapeHtml(t("about.landsatMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("landsat.methodology"))}</p><p>${escapeHtml(t("landsat.comparisonCaveat"))}</p></div>
+        </details>` : ""}
         <details class="detail-accordion about-method" data-section="about-urban-atlas-methodology">
           <summary data-focus-key="about-urban-atlas-methodology-summary"><span>${escapeHtml(t("about.urbanAtlasMethodTitle"))}</span></summary>
           <div class="accordion-content methodology-copy"><p>${escapeHtml(t("urbanAtlas.productionText"))}</p><p>${escapeHtml(t("urbanAtlas.methodologyText"))}</p><p>${escapeHtml(t("urbanAtlas.accessWarning"))}</p><p>${escapeHtml(t("urbanAtlas.comparisonWarning"))}</p></div>
         </details>
-        <details class="detail-accordion about-method" data-section="about-vegetation-methodology">
-          <summary data-focus-key="about-vegetation-methodology-summary"><span>${escapeHtml(t("about.vegetationMethodTitle"))}</span></summary>
-          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("vegetation.methodologyText"))}</p><p>${escapeHtml(t("vegetation.calibrationCaveat"))}</p><p>${escapeHtml(t("vegetation.classificationCaveat"))}</p></div>
+        <details class="detail-accordion about-method" data-section="about-income-methodology">
+          <summary data-focus-key="about-income-methodology-summary"><span>${escapeHtml(t("about.incomeMethodTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy"><p>${escapeHtml(t("income.methodology"))}</p><p>${escapeHtml(t("income.nominalWarning"))}</p></div>
         </details>
+        ${localAboutMethodologies(localLayers)}
       </section>
       <section class="about-sources">
         <h3>${escapeHtml(t("about.sourcesTitle"))}</h3>
         ${sourceLinks(methodology, landCover, urbanAtlas, vegetation)}
+        ${income?.source?.pageUrl ? `<ul class="source-list"><li><a href="${safeHref(income.source.pageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("income.sourceName"))}</a></li></ul>` : ""}
+        ${localAboutSources(localLayers)}
         <p class="about-caveat">${escapeHtml(t("about.caveat"))}</p>
       </section>
     </div>`;
+}
+
+function landsatDateTime(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat(getLanguage() === "nl" ? "nl-BE" : "en-GB", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+    timeZone: "Europe/Brussels", timeZoneName: "short",
+  }).format(new Date(value));
+}
+
+function temperaturePosition(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, (value - 15) / 35 * 100));
+}
+
+function landsatDistribution(stats) {
+  const values = [
+    ["p10", stats.p10C], ["median", stats.medianC], ["p90", stats.p90C],
+  ];
+  return `
+    <div class="landsat-distribution" role="img" aria-label="${escapeHtml(t("landsat.distributionAccessible", {
+      p10: formatNumber(stats.p10C, 1), median: formatNumber(stats.medianC, 1), p90: formatNumber(stats.p90C, 1),
+    }))}">
+      <div class="landsat-temperature-ramp" aria-hidden="true">
+        ${values.map(([key, value]) => `<i class="landsat-temperature-marker is-${key}" style="--position:${temperaturePosition(value)}%"></i>`).join("")}
+      </div>
+      <div class="landsat-distribution-values" aria-hidden="true">
+        ${values.map(([key, value]) => `<span class="is-${key}"><b>${escapeHtml(t(`landsat.${key}`))}</b><strong>${escapeHtml(formatNumber(value, 1))} °C</strong></span>`).join("")}
+      </div>
+    </div>`;
+}
+
+function renderLandsatTemperature(model) {
+  const { record, manifest, observation, stats } = model;
+  const kind = "Heatwave";
+  const kindLabel = t("landsat.kindHeatwave");
+  const heatwave = manifest?.heatwaves?.find(({ id }) => observation?.heatwaveIds?.includes(id));
+  const heatwavePeriod = heatwave
+    ? t("landsat.heatwavePeriod", { start: formatDate(heatwave.start), end: formatDate(heatwave.end) })
+    : "";
+  const hasTemperature = Number.isFinite(stats?.medianC);
+  const sourceUrl = safeHref(manifest?.source?.productUrl);
+  return `
+    <article class="panel-article landsat-panel">
+      <div class="panel-hero landsat-hero">
+        <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
+        <h2 id="panel-title">${escapeHtml(record.sectorName ?? record.municipality)}</h2>
+        <p class="landsat-observation-badge is-${kind.toLowerCase()}">${escapeHtml(kindLabel)} · ${escapeHtml(landsatDateTime(observation?.acquiredAt))}</p>
+        ${hasTemperature ? `<div class="score-hero landsat-score-hero">
+          <div class="score-orb"><strong>${escapeHtml(formatNumber(stats.medianC, 1))}</strong><span>°C</span></div>
+          <div><span class="score-caption">${escapeHtml(t("landsat.medianHeadline"))}</span><p>${escapeHtml(t("landsat.clearSkyOnly"))}</p></div>
+        </div>` : `<p class="panel-empty-state">${escapeHtml(t("landsat.noClearData"))}</p>`}
+        ${heatwavePeriod ? `<p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(heatwavePeriod)}</p>` : ""}
+      </div>
+      <div class="panel-body landsat-body">
+        <section aria-labelledby="landsat-summary-title">
+          <div class="section-heading"><p class="section-kicker">${escapeHtml(t("layers.landsatTemperature"))}</p><h3 id="landsat-summary-title">${escapeHtml(t("landsat.summaryTitle"))}</h3></div>
+          <p class="landsat-definition">${escapeHtml(t("landsat.definition"))}</p>
+          ${hasTemperature ? landsatDistribution(stats) : ""}
+          <p class="landsat-coverage"><strong>${escapeHtml(t("landsat.clearCoverage"))}: ${escapeHtml(formatNumber(stats?.clearPercentage ?? 0, 1))}%</strong><span>${escapeHtml(t("landsat.coverageExplanation"))}</span></p>
+          <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("landsat.derivedNote"))}</span></p>
+        </section>
+        <details class="detail-accordion" data-section="landsat-observation-details">
+          <summary data-focus-key="landsat-observation-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("landsat.detailsTitle"))}</span></summary>
+          <div class="accordion-content">
+            <div class="summary-grid landsat-summary-grid">
+              ${metricCard("landsat.mean", Number.isFinite(stats?.meanC) ? `${formatNumber(stats.meanC, 1)} °C` : t("value.notAvailable"), "#71216c")}
+              ${metricCard("landsat.cloudArea", t("landsat.areaPercentage", { area: formatNumber(stats?.cloudAreaHa ?? 0), percentage: formatNumber(stats?.cloudPercentage ?? 0, 1) }), "#53666b")}
+              ${metricCard("landsat.otherMissing", t("landsat.areaPercentage", { area: formatNumber(stats?.otherNoDataAreaHa ?? 0), percentage: formatNumber(stats?.otherNoDataPercentage ?? 0, 1) }), "#53666b")}
+              ${metricCard("landsat.uncertainty", Number.isFinite(stats?.medianUncertaintyK) ? `${formatNumber(stats.medianUncertaintyK, 2)} K` : t("value.notAvailable"), "#53666b")}
+            </div>
+            <p class="calculation-note">${escapeHtml(t("landsat.pixelCount", { count: stats?.pixelCount ?? 0 }))}</p>
+          </div>
+        </details>
+        <details class="detail-accordion methodology-accordion" data-section="landsat-methodology">
+          <summary data-focus-key="landsat-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("localLayers.methodology"))}</span></summary>
+          <div class="accordion-content methodology-copy">
+            <p>${escapeHtml(t("landsat.methodology"))}</p>
+            <p>${escapeHtml(t("landsat.referenceMethod"))}</p>
+            <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landsat.comparisonCaveat"))}</p>
+            <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landsat.asterCaveat"))}</p>
+            <p>${escapeHtml(t("landsat.sceneIds"))}</p>
+            <ul>${(observation?.sceneIds ?? []).map((id) => `<li><code>${escapeHtml(id)}</code></li>`).join("")}</ul>
+            ${sourceUrl ? `<p><a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landsat.officialProduct"))}</a></p>` : ""}
+            ${manifest?.kmi?.definitionUrl ? `<p><a href="${safeHref(manifest.kmi.definitionUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landsat.kmiDefinition"))}</a></p>` : ""}
+          </div>
+        </details>
+      </div>
+    </article>`;
+}
+
+function incomeAsymmetryLabel(value) {
+  if (!Number.isFinite(value) || Math.abs(value) < 1) return t("income.asymmetryBalanced");
+  return t(value > 0 ? "income.asymmetryRight" : "income.asymmetryLeft");
+}
+
+function incomeMetricCard(labelKey, value, explanationKey) {
+  return `
+    <div class="summary-card income-summary-card">
+      <span>${escapeHtml(t(labelKey))}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <p>${escapeHtml(t(explanationKey))}</p>
+    </div>`;
+}
+
+function renderIncome(model) {
+  const { record, income, year, stats } = model;
+  const available = stats?.sourceStatus === "available" && Number.isFinite(stats.medianNetTaxableIncome);
+  const sourceUrl = safeHref(income?.source?.pageUrl);
+  const heroValue = available
+    ? `<div class="income-hero-metric"><strong>${escapeHtml(formatCurrency(stats.medianNetTaxableIncome))}</strong><span>${escapeHtml(t("income.medianHeadline"))}</span></div>`
+    : `<p class="panel-empty-state">${escapeHtml(t("income.noData"))}</p>`;
+  return `
+    <article class="panel-article income-panel">
+      <div class="panel-hero income-hero">
+        <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
+        <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+        <p class="panel-subtitle">${escapeHtml(t("income.referenceYear", { year }))}</p>
+        ${heroValue}
+        <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("income.sourceName"))}</p>
+      </div>
+      <div class="panel-body income-body">
+        <section aria-labelledby="income-summary-title">
+          <div class="section-heading"><p class="section-kicker">${escapeHtml(t("layers.income"))}</p><h3 id="income-summary-title">${escapeHtml(t("income.medianHeadline"))}</h3></div>
+          <p class="local-layer-definition">${escapeHtml(t("income.definition"))}</p>
+          ${available ? `
+            <div class="summary-grid income-summary-grid">
+              ${incomeMetricCard("income.average", formatCurrency(stats.averageNetTaxableIncome), "income.averageExplanation")}
+              ${incomeMetricCard("income.declarations", formatNumber(stats.numberOfDeclarations, 0), "income.declarationsExplanation")}
+            </div>
+            <section class="income-spread" aria-labelledby="income-spread-title">
+              <h4 id="income-spread-title">${escapeHtml(t("income.spreadTitle"))}</h4>
+              <div class="local-breakdown-list">
+                <div class="income-spread-row"><span>${escapeHtml(t("income.interquartileDifference"))}</span><strong>${escapeHtml(formatCurrency(stats.interquartileDifference))}</strong><small>${escapeHtml(t("income.interquartileDifferenceExplanation"))}</small></div>
+                <div class="income-spread-row"><span>${escapeHtml(t("income.interquartileCoefficient"))}</span><strong>${escapeHtml(`${formatNumber(stats.interquartileCoefficient, 0)}%`)}</strong><small>${escapeHtml(t("income.interquartileCoefficientExplanation"))}</small></div>
+                <div class="income-spread-row"><span>${escapeHtml(t("income.interquartileAsymmetry"))}</span><strong>${escapeHtml(`${formatNumber(stats.interquartileAsymmetry, 0)}%`)}</strong><small><b>${escapeHtml(incomeAsymmetryLabel(stats.interquartileAsymmetry))}</b> ${escapeHtml(t("income.interquartileAsymmetryExplanation"))}</small></div>
+              </div>
+              <p class="calculation-note">${escapeHtml(t("income.distributionUnavailable"))}</p>
+            </section>
+            <p class="provenance-note"><strong>${escapeHtml(t("localLayers.derivedTitle"))}</strong><span>${escapeHtml(t("income.derivedNote"))}</span></p>`
+            : `<p class="panel-empty-state income-missing-copy">${escapeHtml(t("income.notPublishedExplanation"))}</p>`}
+        </section>
+        <details class="detail-accordion methodology-accordion" data-section="income-methodology">
+          <summary data-focus-key="income-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("income.methodologyTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy">
+            <p>${escapeHtml(t("income.methodology"))}</p>
+            <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("income.nominalWarning"))}</p>
+            ${sourceUrl ? `<p><a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("income.sourceName"))}</a></p>` : ""}
+          </div>
+        </details>
+      </div>
+    </article>`;
 }
 
 function renderMetricSummary(model) {
@@ -670,16 +1063,14 @@ export function renderSectorPanelModel(model) {
   if (model.template === "heat") {
     return renderHeatRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation, model.heatMetric);
   }
-  if (model.template === "land-cover") {
-    return renderLandCoverRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
-  }
   if (model.template === "urban-atlas") {
     return renderUrbanAtlasRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
   }
-  if (model.template === "vegetation") {
-    return renderVegetationRecord(model.record, model.methodology, model.landCover, model.urbanAtlas, model.vegetation);
-  }
   if (model.template === "notebook-test") return renderNotebookTestRecord(model);
+  if (model.template === "local-official-raster") return renderLocalOfficialRaster(model);
+  if (model.template === "landgebruik") return renderLandgebruik(model);
+  if (model.template === "landsat-temperature") return renderLandsatTemperature(model);
+  if (model.template === "income") return renderIncome(model);
   if (model.template === "metric-summary") return renderMetricSummary(model);
   throw new Error(`Unknown sector panel template '${model.template}'.`);
 }
@@ -688,10 +1079,16 @@ export function createDetailPanel({
   panel,
   content,
   closeButton,
+  toggleButton = document.createElement("button"),
+  peekButton = document.createElement("button"),
+  peekLabel = document.createElement("span"),
+  peekValue = document.createElement("strong"),
   getPanelModel,
   getAboutModel,
   heatMetric = DEFAULT_HEAT_METRIC,
   onLayerOptionChange,
+  onOpen,
+  onPresentationRequest,
   onClose,
 }) {
   if (typeof getPanelModel !== "function" || typeof getAboutModel !== "function") {
@@ -701,19 +1098,56 @@ export function createDetailPanel({
   let returnFocusElement = null;
   let currentView = null;
   let activeHeatMetric = normalizeHeatMetric(heatMetric);
+  let presentation = "closed";
+  let openSectionIds = new Set();
 
-  const captureRenderState = () => ({
-    openSections: [...content.querySelectorAll("details[open][data-section]")].map((element) => element.dataset.section),
-    hadExpandedSection: Boolean(content.querySelector("details[open]")),
-    focusKey: content.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null,
-  });
+  const updatePeekSummary = () => {
+    const title = content.querySelector("h2")?.textContent?.trim() ?? "";
+    const value = content.querySelector(".income-hero-metric strong, .score-orb strong, .land-cover-dominant, .panel-subtitle")
+      ?.textContent?.trim() ?? "";
+    peekLabel.textContent = title;
+    peekValue.textContent = value;
+  };
+
+  const applyPresentation = (nextPresentation) => {
+    if (!currentView && nextPresentation !== "closed") return;
+    presentation = nextPresentation;
+    const visible = nextPresentation !== "closed";
+    const peek = nextPresentation === "peek";
+    panel.classList.toggle("is-open", visible);
+    panel.classList.toggle("is-peek", peek);
+    panel.setAttribute("aria-hidden", String(!visible));
+    content.hidden = peek;
+    peekButton.hidden = !peek;
+    toggleButton.hidden = !visible || peek;
+    toggleButton.setAttribute("aria-expanded", String(!peek));
+    const minimiseLabel = t("panel.minimise");
+    const expandLabel = t("panel.expand");
+    toggleButton.setAttribute("aria-label", minimiseLabel);
+    toggleButton.title = minimiseLabel;
+    peekButton.setAttribute("aria-label", expandLabel);
+    peekButton.title = expandLabel;
+    if (visible) updatePeekSummary();
+  };
+
+  const captureRenderState = () => {
+    content.querySelectorAll("details[data-section]").forEach((element) => {
+      if (element.open) openSectionIds.add(element.dataset.section);
+      else openSectionIds.delete(element.dataset.section);
+    });
+    return {
+      openSections: [...openSectionIds],
+      hadExpandedSection: openSectionIds.size > 0,
+      focusKey: content.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null,
+    };
+  };
 
   const renderCurrentView = ({ preserveState = true, focusPanel = false } = {}) => {
     if (!currentView) return;
     const renderState = preserveState ? captureRenderState() : { openSections: [], hadExpandedSection: false, focusKey: null };
     if (currentView.type === "about") {
       const model = getAboutModel();
-      content.innerHTML = renderAbout(model.methodology, model.landCover, model.urbanAtlas, model.vegetation, model.provenance);
+      content.innerHTML = renderAbout(model.methodology, model.landCover, model.urbanAtlas, model.vegetation, model.income, model.provenance, model.localLayers);
     } else {
       content.innerHTML = renderSectorPanelModel(getPanelModel(currentView.layerId, currentView.record, {
         heatMetric: activeHeatMetric,
@@ -728,6 +1162,7 @@ export function createDetailPanel({
         restoredSection = true;
       }
     });
+    openSectionIds = new Set(renderState.openSections);
     if (renderState.hadExpandedSection && !restoredSection) content.querySelector("details[data-section]")?.setAttribute("open", "");
     if (renderState.focusKey) {
       [...content.querySelectorAll("[data-focus-key]")]
@@ -736,43 +1171,56 @@ export function createDetailPanel({
     } else if (focusPanel) {
       requestAnimationFrame(() => panel.focus({ preventScroll: true }));
     }
+    updatePeekSummary();
   };
 
   const close = ({ restoreFocus = true } = {}) => {
     const closedView = currentView;
     currentView = null;
-    panel.classList.remove("is-open");
-    panel.setAttribute("aria-hidden", "true");
-    onClose?.(closedView);
-    if (restoreFocus && returnFocusElement instanceof HTMLElement) returnFocusElement.focus();
+    applyPresentation("closed");
+    onClose?.(closedView, returnFocusElement);
+    if (restoreFocus && returnFocusElement instanceof HTMLElement) {
+      requestAnimationFrame(() => returnFocusElement.focus({ preventScroll: true }));
+    }
   };
 
   const show = (view, triggerElement) => {
     returnFocusElement = triggerElement instanceof HTMLElement ? triggerElement : document.activeElement;
     currentView = view;
+    openSectionIds = new Set();
     renderCurrentView({ preserveState: false, focusPanel: true });
-    panel.classList.add("is-open");
-    panel.setAttribute("aria-hidden", "false");
+    applyPresentation("expanded");
+    panel.scrollTop = 0;
+    onOpen?.();
   };
 
   const open = (record, triggerElement = null, layerId = "heat") => show({ type: "record", record, layerId }, triggerElement);
   const openAbout = (triggerElement = null) => show({ type: "about" }, triggerElement);
   const setPanelLanguage = () => {
-    if (currentView && panel.classList.contains("is-open")) renderCurrentView({ preserveState: true });
+    if (currentView && presentation !== "closed") {
+      renderCurrentView({ preserveState: true });
+      applyPresentation(presentation);
+    }
   };
   const setActiveLayer = (layerId) => {
     if (currentView?.type !== "record") return;
+    const changedLayer = currentView.layerId !== layerId;
     currentView.layerId = layerId;
-    if (panel.classList.contains("is-open")) renderCurrentView({ preserveState: true });
+    if (presentation !== "closed") {
+      renderCurrentView({ preserveState: !changedLayer });
+      if (changedLayer) panel.scrollTop = 0;
+    }
   };
   const setHeatMetric = (metric) => {
     activeHeatMetric = normalizeHeatMetric(metric);
-    if (currentView?.type === "record" && currentView.layerId === "heat" && panel.classList.contains("is-open")) {
+    if (currentView?.type === "record" && currentView.layerId === "heat" && presentation !== "closed") {
       renderCurrentView({ preserveState: true });
     }
   };
 
   closeButton.addEventListener("click", () => close());
+  toggleButton.addEventListener("click", () => onPresentationRequest?.("peek", toggleButton));
+  peekButton.addEventListener("click", () => onPresentationRequest?.("expanded", peekButton));
   panel.addEventListener("keydown", (event) => {
     if (event.key === "Escape") close();
   });
@@ -781,6 +1229,12 @@ export function createDetailPanel({
     if (!button) return;
     onLayerOptionChange?.("metric", button.dataset.panelHeatMetric, button);
   });
+  content.addEventListener("toggle", (event) => {
+    const section = event.target.closest?.("details[data-section]");
+    if (!section) return;
+    if (section.open) openSectionIds.add(section.dataset.section);
+    else openSectionIds.delete(section.dataset.section);
+  }, true);
   content.addEventListener("keydown", (event) => {
     const button = event.target.closest("[data-panel-heat-metric]");
     if (!button || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -798,7 +1252,9 @@ export function createDetailPanel({
     setActiveLayer,
     setHeatMetric,
     refresh: () => renderCurrentView({ preserveState: true }),
-    isOpen: () => panel.classList.contains("is-open"),
+    setPresentation: applyPresentation,
+    getPresentation: () => presentation,
+    isOpen: () => presentation !== "closed",
     isMunicipalitySummary: () => currentView?.type === "record" && currentView.record.scope === "municipality",
   };
 }

@@ -11,7 +11,7 @@
  * @property {() => boolean} isAvailable Whether the prepared browser asset can be used.
  * @property {() => string} getLabel Current translated layer label.
  * @property {(context: object) => string} getDatasetStatus Current translated status text.
- * @property {(context: object) => {meta: string, text: string}} getContext First-glance explanation.
+ * @property {(context: object) => {meta: string, text: string, note?: string, sources?: Array<{label:string,url:string}>}} getContext First-glance explanation.
  * @property {() => LegendModel} getLegendModel Plain data consumed by the legend UI.
  * @property {(feature: object, record: object) => PopupModel} getPopupModel Plain popup content.
  * @property {(record: object, shared: object) => SectorPanelModel} getPanelModel Plain panel content.
@@ -21,14 +21,19 @@
  * @property {() => string[]} [getAttributions] Safe attribution HTML fragments.
  * @property {() => string} [getUnavailableReasonKey] Translation key for unavailable assets.
  * @property {() => SecondaryControlModel|null} [getSecondaryControl] Optional nested control.
+ * @property {() => TemporalControlModel|null} [getTemporalControl] Optional discrete temporal control.
+ * @property {() => string[]} [getAnalysisTargets] Optional layer IDs for future cross-layer analysis.
  * @property {(map: object, name: string, value: string) => boolean} [setOption] Update a layer-specific option.
  * @property {(name: string) => string|null} [getOption] Read a layer-specific option.
+ * @property {(point: {lng:number,lat:number}, context?: {signal?:AbortSignal}) => Promise<object>} [inspectPoint] Optional local pixel or feature inspection.
+ * @property {(result: object) => PopupModel} [getPointPopupModel] Format an inspected point without exposing HTML.
  */
 
 /** @typedef {{title: string, note?: string, footnote?: string, layout: "scale"|"groups", groups: Array<{title?: string, items: Array<{label: string, color: string, value?: string}>}>}} LegendModel */
 /** @typedef {{title: string, subtitle?: string, lines: string[]}} PopupModel */
 /** @typedef {{template: string, [key: string]: unknown}} SectorPanelModel */
-/** @typedef {{id: string, ariaLabel: string, options: Array<{id: string, label: string, active: boolean}>}} SecondaryControlModel */
+/** @typedef {{id: string, optionName: string, prompt?: string, ariaLabel: string, options: Array<{id: string, label: string, active: boolean, disabled?: boolean, disabledReason?: string}>}} SecondaryControlModel */
+/** @typedef {{optionName: string, values?: Array<string|number>, items?: Array<{value:string|number,label:string,ariaLabel?:string,kind?:string}>, activeValue: string|number, label: string, note?: string, auxiliaryNote?: string, previousLabel: string, nextLabel: string}} TemporalControlModel */
 /** @typedef {{sectorSourceId: string, beforeLayerId?: string}} MapLayerContext */
 
 const REQUIRED_METHODS = Object.freeze([

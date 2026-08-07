@@ -16,14 +16,13 @@ function browserAssetPath(assetUrl) {
   return path.join(publicRoot, assetUrl.replace(/^\//, ""));
 }
 
-const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation] = await Promise.all([
+const [geojson, scorePayload, methodology, provenance, urbanAtlas, income] = await Promise.all([
   readJson("sectors.geojson"),
   readJson("scores.json"),
   readJson("methodology.json"),
   readJson("provenance.json"),
-  readJson("land-cover.json"),
   readJson("urban-atlas.json"),
-  readJson("vegetation.json"),
+  readJson("income.json"),
 ]);
 
 const { sectorIds } = validateApplicationData({
@@ -31,29 +30,26 @@ const { sectorIds } = validateApplicationData({
   scorePayload,
   methodology,
   provenance,
-  landCover,
   urbanAtlas,
-  vegetation,
+  income,
 });
 
 if (sectorIds.size !== 154) throw new Error(`Expected 154 Zennevallei sectors, received ${sectorIds.size}.`);
-for (const [name, stats] of [["land cover", landCover.sectorStats], ["Urban Atlas", urbanAtlas.sectorStats]]) {
+for (const [name, stats] of [["Urban Atlas", urbanAtlas.sectorStats]]) {
   const ids = Object.keys(stats ?? {});
   if (ids.length !== sectorIds.size || ids.some((sectorId) => !sectorIds.has(sectorId))) {
     throw new Error(`${name} statistics do not match the 154 sector identifiers.`);
   }
 }
 
-await fs.access(browserAssetPath(landCover.raster.imageUrl));
-for (const assetUrl of Object.values(landCover.raster.rasterVariants ?? {})) await fs.access(browserAssetPath(assetUrl));
-await fs.access(browserAssetPath(urbanAtlas.geojsonUrl));
-for (const year of vegetation.availableYears ?? [vegetation.activeYear]) {
-  const yearData = vegetation.years?.[year];
-  const vegetationIds = Object.keys(yearData?.sectorStats ?? {});
-  if (vegetationIds.length !== sectorIds.size || vegetationIds.some((sectorId) => !sectorIds.has(sectorId))) {
-    throw new Error(`Likely-vegetation statistics for ${year} do not match the 154 sector identifiers.`);
+for (const year of income.availableYears) {
+  const stats = income.years[year].sectorStats;
+  const available = Object.values(stats).filter(({ sourceStatus }) => sourceStatus === "available").length;
+  const matched = Object.values(stats).filter(({ sourceStatus }) => sourceStatus !== "sector-unmatched").length;
+  if (available !== 141 || matched !== 150) {
+    throw new Error(`Statbel income ${year} expected 141 medians and 150 joins; received ${available} and ${matched}.`);
   }
-  await fs.access(browserAssetPath(yearData.imageUrl));
-  for (const assetUrl of Object.values(yearData.rasterVariants ?? {})) await fs.access(browserAssetPath(assetUrl));
 }
+
+await fs.access(browserAssetPath(urbanAtlas.geojsonUrl));
 console.log(`Validated ${sectorIds.size} sectors and all prepared browser assets.`);

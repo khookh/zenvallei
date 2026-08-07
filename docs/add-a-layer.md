@@ -25,7 +25,7 @@ Validate identifiers, coordinate system, class codes and sector coverage during 
 
 ## 2. Create the layer module
 
-Use the existing heat, LCM, Urban Atlas and Sentinel-2 vegetation modules as working examples. A polygon module follows this shape:
+Use the existing heat, Urban Atlas and Landsat temperature modules as working examples. A polygon module follows this shape:
 
 ```js
 import { t } from "../i18n.js";
@@ -92,7 +92,7 @@ export function createTreeCanopyLayer({ manifest }) {
 }
 ```
 
-Add a reusable panel template only when existing templates cannot express the new statistics. Keep HTML and focus behavior in the UI renderer, not in the dataset module.
+Add a reusable panel template only when existing templates cannot express the new statistics. Keep HTML and focus behaviour in the UI renderer, not in the dataset module.
 
 ## 3. Register and translate
 
@@ -107,7 +107,7 @@ At minimum, test:
 - schema and sector-ID validation;
 - unique layer ID and complete translation keys;
 - exact palette and legend entries;
-- unavailable and corrupt asset behavior;
+- unavailable and corrupt asset behaviour;
 - municipality filtering;
 - popup and panel values in Dutch and English;
 - lazy loading and switching without losing viewport or selection.

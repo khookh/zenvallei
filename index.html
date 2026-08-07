@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#0b2f3a" />
     <meta
       name="description"
-      content="Interactive map of heat vulnerability, land cover, land use and vegetation for the 154 Statbel sectors in Zennevallei."
+      content="Interactive map of heat vulnerability and Urban Atlas land use for the 154 Statbel sectors in Zennevallei."
     />
     <title>Zennevallei - heat resilience</title>
   </head>
@@ -73,29 +73,45 @@
 
           <div class="map-controls-body" id="map-controls-body">
           <div class="layer-switch" id="layer-switch" aria-label="Map layer" data-i18n-aria-label="layers.region"></div>
-          <div class="heat-metric-control" id="heat-metric-control">
-            <p data-i18n="heatMetric.prompt">Show score</p>
-            <div class="heat-metric-switch" role="group" aria-label="Heat vulnerability score" data-i18n-aria-label="heatMetric.region">
-              <button class="heat-metric-button is-active" type="button" data-heat-metric="final" aria-pressed="true" data-i18n="heatMetric.final">Combined</button>
-              <button class="heat-metric-button" type="button" data-heat-metric="heat" aria-pressed="false" data-i18n="heatMetric.heat">Heat</button>
-              <button class="heat-metric-button" type="button" data-heat-metric="vulnerability" aria-pressed="false" data-i18n="heatMetric.vulnerability">Vulnerability</button>
-            </div>
+          <div class="secondary-control" id="secondary-control" hidden>
+            <p id="secondary-control-prompt">Show score</p>
+            <div class="secondary-switch" id="secondary-switch" role="group" aria-label="Layer options"></div>
           </div>
-          <div class="vegetation-year-control" id="vegetation-year-control" hidden>
-            <div class="vegetation-year-heading">
-              <label for="vegetation-year-slider" data-i18n="vegetation.yearPrompt">Observation year</label>
-              <output id="vegetation-year-output" for="vegetation-year-slider">2023</output>
+          <div class="temporal-control" id="temporal-control" hidden>
+            <div class="temporal-heading">
+              <label for="temporal-slider" id="temporal-label">Observation year</label>
+              <output id="temporal-output" for="temporal-slider">2020</output>
             </div>
-            <div class="vegetation-year-slider-row">
-              <button id="vegetation-year-previous" type="button" aria-label="Previous observation year" data-i18n-aria-label="vegetation.previousYear">‹</button>
-              <input id="vegetation-year-slider" type="range" min="2023" max="2023" step="1" value="2023" aria-describedby="vegetation-year-date" />
-              <button id="vegetation-year-next" type="button" aria-label="Next observation year" data-i18n-aria-label="vegetation.nextYear">›</button>
+            <div class="temporal-slider-row">
+              <button id="temporal-previous" type="button" aria-label="Previous year">‹</button>
+              <input id="temporal-slider" type="range" min="0" max="0" step="1" value="0" aria-labelledby="temporal-label" />
+              <button id="temporal-next" type="button" aria-label="Next year">›</button>
             </div>
-            <p id="vegetation-year-date" class="vegetation-year-date"></p>
+            <div class="timeline-markers" id="timeline-markers" aria-hidden="true"></div>
+          </div>
+          <div class="analysis-pairing" id="analysis-pairing" hidden>
+            <button class="analysis-compare-button" id="analysis-compare" type="button">
+              <span class="analysis-link-icon" aria-hidden="true">↔</span>
+              <span data-i18n="analysisPairing.compare">Compare</span>
+            </button>
+            <div class="analysis-pair-result" id="analysis-pair-result" hidden>
+              <strong id="analysis-pair-label"></strong>
+              <div class="analysis-pair-actions">
+                <button id="analysis-pair-change" type="button" data-i18n="analysisPairing.change">Change</button>
+                <button id="analysis-pair-remove" type="button" data-i18n="analysisPairing.remove">Remove</button>
+              </div>
+            </div>
+            <div class="analysis-pick-instruction" id="analysis-pick-instruction" hidden>
+              <p id="analysis-pairing-help" aria-live="polite"></p>
+              <button id="analysis-pick-cancel" type="button" data-i18n="analysisPairing.cancel">Cancel</button>
+            </div>
+            <p class="analysis-pair-note" id="analysis-pair-note" aria-live="polite"></p>
           </div>
           <section class="layer-context" id="layer-context" aria-live="polite" aria-atomic="true">
             <p class="layer-context-meta" id="layer-context-meta"></p>
             <p class="layer-context-copy" id="layer-context-copy"></p>
+            <p class="layer-context-note" id="layer-context-note" hidden></p>
+            <p class="layer-context-sources" id="layer-context-sources" hidden></p>
           </section>
           <p class="layer-help" id="layer-help" aria-live="polite"></p>
 
@@ -129,14 +145,6 @@
             </button>
             <span id="visible-count" class="visible-count">Loading sectors…</span>
           </div>
-          <p class="control-attribution">
-            <span data-i18n="controls.sourceData">Source data:</span>
-            <a href="https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen" target="_blank" rel="noopener noreferrer" data-i18n="source.organization">Flemish Government · Department of Care</a>
-            <span aria-hidden="true">·</span>
-            <a href="https://statbel.fgov.be/en/open-data/statistical-sectors-2024" target="_blank" rel="noopener noreferrer">Statbel</a>
-            <span aria-hidden="true">·</span>
-            <a href="https://land.copernicus.eu/en/products/global-dynamic-land-cover/land-cover-2020-raster-10-m-global-annual" target="_blank" rel="noopener noreferrer">Copernicus CLMS</a>
-          </p>
           </div>
         </section>
 
@@ -149,8 +157,17 @@
         </details>
 
         <aside class="detail-panel" id="detail-panel" aria-hidden="true" aria-labelledby="panel-title" tabindex="-1">
-          <button class="panel-close" id="panel-close" type="button" aria-label="Close details" data-i18n-aria-label="panel.close">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          <div class="panel-actions">
+            <button class="panel-toggle" id="panel-toggle" type="button" aria-expanded="true" aria-label="Minimise results" title="Minimise results">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+            <button class="panel-close" id="panel-close" type="button" aria-label="Close details" data-i18n-aria-label="panel.close">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+            </button>
+          </div>
+          <button class="panel-peek" id="panel-peek" type="button" aria-label="Expand results" hidden>
+            <span id="panel-peek-label"></span>
+            <strong id="panel-peek-value"></strong>
           </button>
           <div id="panel-content"></div>
         </aside>
@@ -206,7 +223,7 @@
 
         <div class="project-intro-copy" id="project-intro-copy">
           <p data-i18n="intro.body1">This is version 0.1 of my personal project, which visualises heat vulnerability in Zennevallei and explores how it relates to nearby green space and soil sealing, two factors that influence the urban heat-island effect.</p>
-          <p data-i18n="intro.body2">For now, the heat indicators come exclusively from the Flemish Government’s Department of Care; for land cover, land use and vegetation, I am experimenting with Copernicus data and working to incorporate more relevant data from Copernicus and other sources.</p>
+          <p data-i18n="intro.body2">For now, the heat indicators come exclusively from the Department of Care, Government of Flanders; for land cover, land use and vegetation, I am experimenting with Copernicus data and working to incorporate more relevant data from Copernicus and other sources.</p>
           <p data-i18n="intro.body3">The project is open to feedback and collaboration through GitHub or email; the frontend was developed extensively with assistance from large language models (LLMs), and the dashboard documents the data, where it comes from and how it is processed and used.</p>
         </div>
 

@@ -8,7 +8,9 @@ Run `Setup Greenwave LAN.cmd` once. It asks for administrator approval and creat
 - Private and Public Windows network profiles;
 - remote address restricted to `LocalSubnet`.
 
-Then use `Start Greenwave.cmd`. It installs from the lockfile, builds `dist`, detects the current IPv4 address and starts Vite preview on `0.0.0.0:4173`.
+Then use `Start Greenwave.cmd`. It installs from the lockfile, detects the current IPv4 address, builds the appropriate mode and starts the compiled application through Vite preview on `0.0.0.0:4173`. When `.cache/local-layers/index.json` exists, the launcher enables prepared Landsat temperature, JaarBAK, Groenkaart Vlaanderen and Landgebruik Vlaanderen layers. Only their small catalogue is read at startup; a full manifest and PMTiles archive is requested after selecting that layer. Without the catalogue, the launcher serves the three public layers: heat vulnerability, Urban Atlas and Statbel median taxable income.
+
+Preparing official local datasets remains a separate, one-time operation because downloads and geospatial processing are substantial. The launcher never downloads or replaces scientific data during ordinary startup.
 
 Remove the firewall rule when it is no longer wanted:
 

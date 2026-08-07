@@ -30,34 +30,43 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       return { available: false, loadError: error.message };
     }
   };
-  const [geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation, notebookTest] = await Promise.all([
+  const loadLocalLayers = async () => {
+    if (import.meta.env.MODE !== "local-data") return {};
+    const root = `${prefix}__local-data__/`;
+    try {
+      const indexResponse = await fetch(`${root}index.json`, { cache: "no-store" });
+      if (!indexResponse.ok) return {};
+      const index = await indexResponse.json();
+      if (index.schemaVersion !== 2 || !index.datasets || typeof index.datasets !== "object") return {};
+      return Object.fromEntries(Object.entries(index.datasets).flatMap(([id, descriptor]) => {
+        if (!descriptor || descriptor.datasetId !== id
+          || !/^[a-z0-9-]+\/manifest\.json$/i.test(descriptor.manifestUrl ?? "")) return [];
+        return [[id, {
+          ...descriptor,
+          manifestUrl: `${root}${descriptor.manifestUrl}`,
+          assetRoot: root,
+          available: true,
+        }]];
+      }));
+    } catch {
+      return {};
+    }
+  };
+  const [geojson, scorePayload, methodology, provenance, urbanAtlas, income, notebookTest, localLayers] = await Promise.all([
     loadJson("sectors.geojson"),
     loadJson("scores.json"),
     loadJson("methodology.json"),
     loadJson("provenance.json"),
-    loadOptionalJson("land-cover.json"),
     loadOptionalJson("urban-atlas.json", { tolerateErrors: true }),
-    loadOptionalJson("vegetation.json", { tolerateErrors: true }),
+    loadJson("income.json"),
     loadNotebookTest(),
+    loadLocalLayers(),
   ]);
   const resolveAssetUrl = (assetUrl) => {
     if (!assetUrl || /^(?:https?:)?\/\//.test(assetUrl)) return assetUrl;
     return `${prefix}${assetUrl.replace(/^\//, "")}`;
   };
-  if (landCover?.raster) {
-    landCover.raster.imageUrl = resolveAssetUrl(landCover.raster.imageUrl);
-    Object.entries(landCover.raster.rasterVariants ?? {}).forEach(([key, value]) => {
-      landCover.raster.rasterVariants[key] = resolveAssetUrl(value);
-    });
-  }
-  if (landCover?.change) landCover.change.imageUrl = resolveAssetUrl(landCover.change.imageUrl);
   if (urbanAtlas?.geojsonUrl) urbanAtlas.geojsonUrl = resolveAssetUrl(urbanAtlas.geojsonUrl);
-  Object.values(vegetation?.years ?? {}).forEach((year) => {
-    if (year?.imageUrl) year.imageUrl = resolveAssetUrl(year.imageUrl);
-    Object.entries(year?.rasterVariants ?? {}).forEach(([key, value]) => {
-      year.rasterVariants[key] = resolveAssetUrl(value);
-    });
-  });
   const resolveNotebookUrl = (assetUrl) => {
     if (!assetUrl || !/^[a-z0-9-]+\.png$/i.test(assetUrl)) return null;
     return `${prefix}__playground__/${assetUrl}`;
@@ -68,9 +77,9 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       notebookTest.rasterVariants[key] = resolveNotebookUrl(value);
     });
   }
-  validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation });
-  addMunicipalityStatistics({ scores: scorePayload.sectors, landCover, urbanAtlas, vegetation });
-  return { geojson, scores: scorePayload.sectors, methodology, provenance, landCover, urbanAtlas, vegetation, notebookTest };
+  validateApplicationData({ geojson, scorePayload, methodology, provenance, urbanAtlas, income });
+  addMunicipalityStatistics({ scores: scorePayload.sectors, urbanAtlas });
+  return { geojson, scores: scorePayload.sectors, methodology, provenance, urbanAtlas, income, notebookTest, localLayers };
 }
 
 export function sectorsForMunicipality(scores, municipality = "") {

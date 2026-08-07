@@ -21,7 +21,7 @@ if (!mainAsset) throw new Error("Could not locate the subpath JavaScript bundle.
 const relativeAsset = mainAsset.startsWith(configuredBase) ? mainAsset.slice(configuredBase.length) : mainAsset.replace(/^\//, "");
 const script = await fs.readFile(path.join(buildRoot, relativeAsset), "utf8");
 if (!script.includes(configuredBase)) throw new Error("Runtime data URLs do not contain the configured Vite base path.");
-for (const expected of ["sectors.geojson", "scores.json", "urban-atlas.json", "vegetation.json"]) {
+for (const expected of ["sectors.geojson", "scores.json", "urban-atlas.json"]) {
   if (!script.includes(expected)) throw new Error(`Runtime bundle does not reference ${expected}.`);
 }
 console.log(`Subpath build uses ${configuredBase} for application and data assets.`);

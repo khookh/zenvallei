@@ -9,8 +9,10 @@ import {
 } from "../heat-metric.js";
 import { formatScore, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
+import { authorityLink } from "../source-authorities.js";
 
 const MAP_LAYER_ID = "heat-sectors-fill";
+const SOURCE_URL = "https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen";
 
 /** Create the official heat-vulnerability sector layer. */
 export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_HEAT_METRIC }) {
@@ -40,6 +42,7 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
       return {
         meta: t(keys[0], { count: sectorCount }),
         text: t(keys[1], { count: sectorCount }),
+        sources: [authorityLink("departmentCare", SOURCE_URL)],
       };
     },
     getLegendModel: () => ({
@@ -86,9 +89,7 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
       template: "heat",
       record,
       methodology,
-      landCover: shared.landCover,
       urbanAtlas: shared.urbanAtlas,
-      vegetation: shared.vegetation,
       heatMetric: activeMetric,
     }),
     mount(map, { sectorSourceId }) {
@@ -112,6 +113,8 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
     },
     getSecondaryControl: () => ({
       id: "heat-metric",
+      optionName: "metric",
+      prompt: t("heatMetric.prompt"),
       ariaLabel: t("heatMetric.region"),
       options: HEAT_METRICS.map((metric) => ({
         id: metric,
@@ -119,6 +122,7 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
         active: metric === activeMetric,
       })),
     }),
+    getAnalysisTargets: () => ["income"],
     setOption(map, name, value) {
       if (name !== "metric" || !HEAT_METRICS.includes(value)) return false;
       activeMetric = value;

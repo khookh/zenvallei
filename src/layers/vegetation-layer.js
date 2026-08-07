@@ -1,4 +1,4 @@
-/** Prepared Sentinel-2 NDVI indication using an observation-specific Greenwave calibration. */
+/** @deprecated Retained for possible research reuse; not registered or shipped. */
 import { formatDate, formatNumber, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
 import { defineLayer } from "./layer-contract.js";
@@ -64,6 +64,15 @@ export function createVegetationLayer({ vegetation }) {
       landCover: shared.landCover,
       urbanAtlas: shared.urbanAtlas,
       vegetation,
+    }),
+    getTemporalControl: () => ({
+      optionName: "year",
+      values: [...(vegetation?.availableYears ?? [])].sort((left, right) => left - right),
+      activeValue: activeYear,
+      label: t("vegetation.yearPrompt"),
+      note: t("vegetation.yearObservation", { date: formatDate(yearData()?.acquisitionDate) }),
+      previousLabel: t("vegetation.previousYear"),
+      nextLabel: t("vegetation.nextYear"),
     }),
     mount(map, { beforeLayerId }) {
       if (map.getLayer(MAP_LAYER_ID)) return true;

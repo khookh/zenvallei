@@ -4,9 +4,8 @@ const SUPPORTED_SCHEMA_VERSIONS = Object.freeze({
   scores: [1],
   methodology: [1],
   provenance: [1],
-  landCover: [1, 2],
   urbanAtlas: [1],
-  vegetation: [1, 2, 3, 4],
+  income: [1],
 });
 
 export function schemaVersionOf(payload) {
@@ -41,13 +40,12 @@ function assertFeatureCollection(geojson) {
 }
 
 /** Validate contracts at the browser boundary before MapLibre receives data. */
-export function validateApplicationData({ geojson, scorePayload, methodology, provenance, landCover, urbanAtlas, vegetation }) {
+export function validateApplicationData({ geojson, scorePayload, methodology, provenance, urbanAtlas, income }) {
   assertSupportedSchema("scores", scorePayload);
   assertSupportedSchema("methodology", methodology);
   assertSupportedSchema("provenance", provenance);
-  if (landCover) assertSupportedSchema("landCover", landCover);
   if (urbanAtlas && !urbanAtlas.loadError) assertSupportedSchema("urbanAtlas", urbanAtlas);
-  if (vegetation && !vegetation.loadError) assertSupportedSchema("vegetation", vegetation);
+  assertSupportedSchema("income", income);
 
   const sectorIds = assertFeatureCollection(geojson);
   const scores = scorePayload?.sectors;
@@ -64,32 +62,27 @@ export function validateApplicationData({ geojson, scorePayload, methodology, pr
   if (provenance?.output?.sectorCount !== sectorIds.size) {
     throw new Error(`provenance.json reports ${provenance?.output?.sectorCount ?? "no"} sectors; ${sectorIds.size} were loaded.`);
   }
-  if (landCover?.raster?.available && (!landCover.raster.imageUrl || !Array.isArray(landCover.raster.coordinates))) {
-    throw new Error("land-cover.json marks its raster available but has no image URL or coordinates.");
-  }
   if (urbanAtlas?.available && (!urbanAtlas.geojsonUrl || !urbanAtlas.sectorStats)) {
     throw new Error("urban-atlas.json marks the layer available but lacks its GeoJSON URL or sector statistics.");
   }
-  if (vegetation?.available) {
-    if (schemaVersionOf(vegetation) >= 4 && vegetation.definitions?.headlineDenominator !== "complete-statbel-sector-area") {
-      throw new Error("vegetation.json schema version 4 must use the complete Statbel sector area denominator.");
-    }
-    const activeYear = vegetation.years?.[vegetation.activeYear];
-    if (!activeYear?.imageUrl || !Array.isArray(activeYear.coordinates) || !Number.isFinite(activeYear.threshold)) {
-      throw new Error("vegetation.json marks the layer available but lacks its image, coordinates or threshold.");
-    }
-    if (Object.keys(activeYear.sectorStats ?? {}).length !== sectorIds.size) {
-      throw new Error(`vegetation.json contains ${Object.keys(activeYear.sectorStats ?? {}).length} sector records; expected ${sectorIds.size}.`);
-    }
-    const availableYears = Array.isArray(vegetation.availableYears)
-      ? vegetation.availableYears
-      : [vegetation.activeYear];
-    if (availableYears.some((year) => {
-      const data = vegetation.years?.[year];
-      return !data?.imageUrl || Object.keys(data.sectorStats ?? {}).length !== sectorIds.size;
-    })) {
-      throw new Error("vegetation.json contains an incomplete annual series.");
-    }
+  if (income?.datasetId !== "statbel-income"
+    || JSON.stringify(income.availableYears) !== JSON.stringify([2019, 2020, 2021, 2022, 2023])
+    || income.defaultYear !== 2023 || income.bands?.length !== 7) {
+    throw new Error("income.json does not contain the supported 2019-2023 Statbel contract.");
   }
+  income.availableYears.forEach((year) => {
+    const stats = income.years?.[year]?.sectorStats;
+    const ids = Object.keys(stats ?? {});
+    if (ids.length !== sectorIds.size || ids.some((sectorId) => !sectorIds.has(sectorId))) {
+      throw new Error(`income.json ${year} statistics do not match the sector geometry.`);
+    }
+    ids.forEach((sectorId) => {
+      const record = stats[sectorId];
+      if (!["available", "not-published", "sector-unmatched"].includes(record?.sourceStatus)
+        || (record.medianNetTaxableIncome !== null && !Number.isFinite(record.medianNetTaxableIncome))) {
+        throw new Error(`income.json ${year} contains an invalid record for '${sectorId}'.`);
+      }
+    });
+  });
   return { sectorIds, scores };
 }

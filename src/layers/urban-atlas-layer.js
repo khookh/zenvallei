@@ -2,6 +2,7 @@
 import { formatNumber, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
+import { authorityLink } from "../source-authorities.js";
 
 const MAP_LAYER_ID = "urban-atlas-fill";
 const SOURCE_ID = "urban-atlas";
@@ -25,6 +26,9 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
     getContext: () => ({
       meta: t("layers.context.urbanAtlasMeta", { year: year() }),
       text: t("layers.context.urbanAtlasText", { year: year() }),
+      sources: urbanAtlas?.source?.productUrl
+        ? [authorityLink("copernicusClms", urbanAtlas.source.productUrl)]
+        : [],
     }),
     getLegendModel: () => {
       const groupOrder = ["artificialSurfaces", "greenUrbanAreas", "agricultureSemiNatural", "wetlands", "water", "noData"];
@@ -55,9 +59,7 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
       template: "urban-atlas",
       record,
       methodology: shared.methodology,
-      landCover: shared.landCover,
       urbanAtlas,
-      vegetation: shared.vegetation,
     }),
     async mount(map, { beforeLayerId }) {
       if (map.getLayer(MAP_LAYER_ID)) return true;

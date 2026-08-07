@@ -13,6 +13,8 @@ const forbiddenPatterns = [
 ];
 const forbiddenSecretFile = /(?:^|\/)(?:git_passphrase\.txt|credentials?\.(?:json|txt)|passphrases?\.(?:json|txt)|secrets?\.env)$/i;
 const forbiddenExperimentalAsset = /(?:^|\/)(?:__playground__|notebook-test)(?:\/|$)|(?:^|\/)test(?:-[a-z0-9-]+)?\.png$/i;
+const forbiddenLocalDataAsset = /\.pmtiles$|(?:^|\/)local-layers(?:\/|$)/i;
+const retiredPublicAsset = /(?:^|\/)data\/(?:land-cover(?:\.json|\/)|vegetation(?:\.json|\/))/i;
 
 async function filesBelow(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -27,6 +29,8 @@ for (const file of files) {
   const relativePath = path.relative(distRoot, file).replaceAll("\\", "/");
   if (forbiddenSecretFile.test(relativePath)) throw new Error(`${relativePath} is a forbidden secret filename.`);
   if (forbiddenExperimentalAsset.test(relativePath)) throw new Error(`${relativePath} is a local notebook export and must not be distributed.`);
+  if (forbiddenLocalDataAsset.test(relativePath)) throw new Error(`${relativePath} is local official raster data and must not be distributed.`);
+  if (retiredPublicAsset.test(relativePath)) throw new Error(`${relativePath} belongs to a retired public layer.`);
 }
 for (const file of files.filter((entry) => textExtensions.has(path.extname(entry)))) {
   const contents = await fs.readFile(file, "utf8");
@@ -36,6 +40,7 @@ for (const file of files.filter((entry) => textExtensions.has(path.extname(entry
   if (path.extname(file) === ".html" && /<script[^>]+src=["']https?:/i.test(contents)) {
     throw new Error(`${path.relative(distRoot, file)} loads an unexpected external script.`);
   }
+  if (/\/__local-data(?:-query)?__\//.test(contents)) throw new Error(`${path.relative(distRoot, file)} references a local-data endpoint.`);
 }
 
 const budget = async (relativePath, maximumBytes) => {

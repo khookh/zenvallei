@@ -1,9 +1,8 @@
 import { createLayerRegistry } from "./layer-contract.js";
 import { createHeatLayer } from "./heat-layer.js";
-import { createLandCoverLayer } from "./land-cover-layer.js";
 import { createUrbanAtlasLayer } from "./urban-atlas-layer.js";
-import { createVegetationLayer } from "./vegetation-layer.js";
 import { createNotebookTestLayer } from "./notebook-test-layer.js";
+import { createIncomeLayer } from "./income-layer.js";
 import { validateLayerCategories } from "./categories.js";
 
 /**
@@ -17,10 +16,10 @@ export function buildLayerRegistry(data, options = {}) {
       methodology: data.methodology,
       initialMetric: options.initialHeatMetric,
     }),
-    createLandCoverLayer({ landCover: data.landCover }),
     createUrbanAtlasLayer({ urbanAtlas: data.urbanAtlas }),
-    createVegetationLayer({ vegetation: data.vegetation }),
+    createIncomeLayer({ income: data.income }),
   ];
   if (options.playground) layers.push(createNotebookTestLayer({ notebookTest: data.notebookTest }));
+  if (options.extraLayers) layers.push(...options.extraLayers);
   return validateLayerCategories(createLayerRegistry(layers));
 }

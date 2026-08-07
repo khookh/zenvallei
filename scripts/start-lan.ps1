@@ -102,24 +102,56 @@ try {
         }
     }
 
-    & $pnpmCommand build
-    if ($LASTEXITCODE -ne 0) {
-        throw "The Greenwave production build failed. Check the build message above."
+    $localDataIndex = Join-Path $projectRoot ".cache\local-layers\index.json"
+    $useLocalData = Test-Path -LiteralPath $localDataIndex
+
+    if ($useLocalData) {
+        & $pnpmCommand exec vite build --mode local-data
+        if ($LASTEXITCODE -ne 0) {
+            throw "The Greenwave local-data build failed. Check the build message above."
+        }
+    }
+    else {
+        & $pnpmCommand build
+        if ($LASTEXITCODE -ne 0) {
+            throw "The Greenwave production build failed. Check the build message above."
+        }
     }
 
     Write-Host ""
     Write-Host "Greenwave is starting." -ForegroundColor Green
+    if ($useLocalData) {
+        Write-Host "Mode: local official data (prepared layers detected)." -ForegroundColor Cyan
+    } else {
+        Write-Host "Mode: public application (no prepared local-layer catalogue found)." -ForegroundColor Cyan
+        Write-Host "To add Landsat temperature, JaarBAK, Groenkaart and Landgebruik, prepare them once with pnpm local-data:prepare." -ForegroundColor DarkYellow
+    }
     Write-Host "This computer: $localUrl"
     Write-Host "Other devices on this network: $lanUrl" -ForegroundColor Yellow
     Write-Host "Close this window or press Ctrl+C to stop Greenwave."
     Write-Host ""
 
     if (-not $SkipBrowser) {
-        $browserCommand = "Start-Sleep -Milliseconds 1200; Start-Process '$localUrl'"
+        $browserCommand = @"
+for (`$attempt = 0; `$attempt -lt 60; `$attempt++) {
+    try {
+        Invoke-WebRequest -Uri '$localUrl' -UseBasicParsing -TimeoutSec 1 | Out-Null
+        Start-Process '$localUrl'
+        break
+    }
+    catch {
+        Start-Sleep -Milliseconds 250
+    }
+}
+"@
         Start-Process powershell.exe -ArgumentList "-NoProfile", "-WindowStyle", "Hidden", "-Command", $browserCommand -WindowStyle Hidden | Out-Null
     }
 
-    & $pnpmCommand exec vite preview --host 0.0.0.0 --port $Port --strictPort
+    if ($useLocalData) {
+        & $pnpmCommand exec vite preview --mode local-data --host 0.0.0.0 --port $Port --strictPort
+    } else {
+        & $pnpmCommand exec vite preview --host 0.0.0.0 --port $Port --strictPort
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "The Greenwave LAN server stopped unexpectedly."
     }
