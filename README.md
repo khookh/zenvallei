@@ -1,6 +1,6 @@
 # Greenwave
 
-Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. The public map shows official heat-vulnerability scores, Copernicus Urban Atlas 2021 and Statbel fiscal income over an OpenStreetMap background. Local mode also adds Landsat surface temperature, JaarBAK soil sealing, Groenkaart Vlaanderen and Landgebruik Vlaanderen with 2025 agricultural parcel detail.
+Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. The map combines official heat-vulnerability scores, Landsat surface temperature, Copernicus Urban Atlas, Flemish soil and land-cover products, agricultural parcels and Statbel fiscal income over an OpenStreetMap background.
 
 The interface starts in English. `NL` switches the complete interface to Dutch for the current page. The application has no backend, accounts, cookies, browser storage, analytics or live score calculation.
 
@@ -40,7 +40,7 @@ pnpm income:prepare       # download and validate Statbel income 2019-2023
 pnpm brand:prepare
 ```
 
-Prepare the local-only sources once:
+Prepare or regenerate the large official raster derivatives locally:
 
 ```powershell
 pnpm local-data:setup
@@ -51,7 +51,7 @@ pnpm landsat-heat:prepare
 pnpm dev:local-data
 ```
 
-The local source rasters, analytical files, parcel vectors and PMTiles stay below `.cache/local-layers` and never enter `dist` or GitHub Pages. See [Local official layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md) and [Landsat surface temperature](docs/landsat-surface-temperature.md).
+Raw downloads and preparation caches stay below `.cache/local-layers`. To refresh the validated browser derivatives committed for the static site, run `pnpm official-layers:publish` after preparation. See [Official raster layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md) and [Landsat surface temperature](docs/landsat-surface-temperature.md).
 
 ## Python NDVI playground
 

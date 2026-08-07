@@ -1,6 +1,6 @@
-# Local official layers
+# Official raster layers
 
-Local mode adds Landsat surface temperature, JaarBAK, Groenkaart Vlaanderen and Landgebruik Vlaanderen. Their analytical files remain below `.cache/local-layers`. Normal development and GitHub Pages expose heat vulnerability, Urban Atlas and Statbel income.
+The application includes Landsat surface temperature, JaarBAK, Groenkaart Vlaanderen and Landgebruik Vlaanderen in both local and GitHub Pages builds. Scientific preparation remains local; the static site receives only validated manifests, clipped PMTiles, the agricultural parcel GeoJSON and compact Landsat query rasters.
 
 ## Setup and preparation
 
@@ -14,6 +14,14 @@ pnpm landsat-heat:prepare
 ```
 
 `--dataset all` prepares all four. JaarBAK, Groenkaart and Landgebruik also accept `--source YEAR=C:\data\source.tif`. Landsat discovery reads public STAC metadata and signed source windows, without storing signed URLs.
+
+After validation, publish the browser derivatives:
+
+```powershell
+pnpm official-layers:publish
+pnpm build:pages
+pnpm test:pages
+```
 
 Statistics are calculated on each source's native analytical grid. Separate lossless PNG PMTiles are generated for the complete region and seven municipalities. The small `.cache/local-layers/index.json` catalogue loads at startup; manifests and PMTiles load only after selecting their layer.
 
@@ -35,4 +43,4 @@ The local endpoint serves only allowed cache files and supports PMTiles byte ran
 - Groenkaart preserves high green, low green, agriculture and non-green as separate 1 m classes.
 - Landgebruik preserves all 19 official classes for the three-yearly 2019, 2022 and 2025 editions. Its optional 2025 parcel view shows the agricultural share of the complete Statbel area, crop-group composition and exact source crop attributes.
 
-See [Landsat surface temperature](landsat-surface-temperature.md) and [Landgebruik Vlaanderen](landgebruik-vlaanderen.md). Never move local manifests, PMTiles, parcel exports or analytical rasters into `public`.
+See [Landsat surface temperature](landsat-surface-temperature.md) and [Landgebruik Vlaanderen](landgebruik-vlaanderen.md). Never copy raw downloads or the full cache into `public`; use the publishing command so only allow-listed browser derivatives are distributed.

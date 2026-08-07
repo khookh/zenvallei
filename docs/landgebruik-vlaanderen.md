@@ -1,6 +1,6 @@
 # Landgebruik Vlaanderen
 
-This local layer uses the official 10 m Landgebruik Vlaanderen raster for 2019, 2022 and 2025. The source is three-yearly, not annual. It also offers an optional 2025 agricultural parcel view from the official Landbouwgebruikspercelen dataset.
+This layer uses the official 10 m Landgebruik Vlaanderen raster for 2019, 2022 and 2025. The source is three-yearly, not annual. It also offers an optional 2025 agricultural parcel view from the official Landbouwgebruikspercelen dataset.
 
 ## Prepare and run
 

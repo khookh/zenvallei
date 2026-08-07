@@ -8,13 +8,20 @@ const TRANSPARENT_PNG = Buffer.from(
 
 async function expandControls(page) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const adaptive = await page.locator(".map-shell").getAttribute("data-surface-mode") !== "expanded";
+  const panel = page.locator("#detail-panel");
+  if (adaptive && await panel.getAttribute("aria-hidden") === "false"
+    && !await panel.evaluate((element) => element.classList.contains("is-peek"))) {
+    await page.locator("#panel-toggle").click();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  }
   if (await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
     await page.locator("#map-controls-toggle").click();
   }
   await expect(page.locator("#map-controls-body")).toBeVisible();
 }
 
-test("serves Landsat and three official land layers plus Statbel income only in local-data mode", async ({ page }, testInfo) => {
+test("serves all seven layers from the prepared working catalogue in local-data mode", async ({ page }, testInfo) => {
   const isMobile = testInfo.project.name.includes("mobile");
   const errors = [];
   const rangeResponses = [];
@@ -150,10 +157,7 @@ test("serves Landsat and three official land layers plus Statbel income only in 
   }
 
   await page.locator('[data-layer="landgebruik"]').click();
-  if (isMobile) {
-    await page.locator("#panel-toggle").click();
-    await page.locator("#map-controls-toggle").click();
-  }
+  if (isMobile) await expandControls(page);
   await expect(page.locator("#active-layer-title")).toHaveText("Landgebruik Vlaanderen");
   await expect(page.locator("#temporal-output")).toHaveText("2025");
   await expect(page.locator("#secondary-control")).toBeVisible();

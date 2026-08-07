@@ -59,8 +59,52 @@ async function fetchManifest(descriptor) {
     Object.entries(observation.pmtilesVariants).forEach(([key, value]) => {
       if (/^[a-z0-9/_-]+\.pmtiles$/i.test(value)) observation.pmtilesVariants[key] = `${descriptor.assetRoot}${value}`;
     });
+    if (/^[a-z0-9/_-]+\.tif$/i.test(observation.queryRaster ?? "")) {
+      observation.queryRaster = `${descriptor.assetRoot}${observation.queryRaster}`;
+    }
   });
   return manifest;
+}
+
+const staticRasterCache = new Map();
+
+async function loadStaticQueryRaster(url, signal) {
+  if (staticRasterCache.has(url)) return staticRasterCache.get(url);
+  const promise = Promise.all([import("geotiff"), import("proj4")]).then(async ([geotiff, proj4Module]) => {
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error(`Landsat query raster HTTP ${response.status}.`);
+    const tiff = await geotiff.fromArrayBuffer(await response.arrayBuffer());
+    const image = await tiff.getImage();
+    const rasters = await image.readRasters({ samples: [0, 1, 2] });
+    await tiff.close?.();
+    const project = proj4Module.default;
+    project.defs("EPSG:32631", "+proj=utm +zone=31 +datum=WGS84 +units=m +no_defs +type=crs");
+    return {
+      width: image.getWidth(), height: image.getHeight(), bounds: image.getBoundingBox(),
+      temperature: rasters[0], status: rasters[1], uncertainty: rasters[2], project,
+    };
+  }).catch((error) => {
+    staticRasterCache.delete(url);
+    throw error;
+  });
+  staticRasterCache.set(url, promise);
+  while (staticRasterCache.size > 2) staticRasterCache.delete(staticRasterCache.keys().next().value);
+  return promise;
+}
+
+async function queryStaticRaster(observation, point, signal) {
+  const raster = await loadStaticQueryRaster(observation.queryRaster, signal);
+  const [easting, northing] = raster.project("EPSG:4326", "EPSG:32631", [point.lng, point.lat]);
+  const [minx, miny, maxx, maxy] = raster.bounds;
+  if (easting < minx || easting >= maxx || northing < miny || northing >= maxy) return { status: "outside" };
+  const column = Math.floor((easting - minx) / ((maxx - minx) / raster.width));
+  const row = Math.floor((maxy - northing) / ((maxy - miny) / raster.height));
+  const index = row * raster.width + column;
+  const status = Math.round(raster.status[index]);
+  if (status === 1) {
+    return { status: "clear", temperatureC: raster.temperature[index], uncertaintyK: raster.uncertainty[index] };
+  }
+  return { status: status === 2 ? "cloud" : "missing" };
 }
 
 function observationFor(manifest, descriptor, id) {
@@ -195,6 +239,10 @@ export function createLandsatTemperatureLayer({ descriptor: inputDescriptor, loa
     },
     getAnalysisTargets: () => ["urban-atlas", "jaarbak", "groenkaart", "landgebruik"],
     async inspectPoint(point, { signal } = {}) {
+      if (current()?.queryRaster) {
+        return { ...(await queryStaticRaster(current(), point, signal)), acquiredAt: current()?.acquiredAt };
+      }
+      if (import.meta.env.MODE !== "local-data") throw new Error("The Landsat pixel-query derivative is unavailable.");
       const parameters = new URLSearchParams({
         observation: activeObservation,
         lng: String(point.lng),

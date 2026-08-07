@@ -13,7 +13,7 @@ test("loads the static map and switches its core presentation", async ({ page })
   } catch (error) {
     throw new Error(`${error.message}\nBrowser errors:\n${errors.join("\n") || "(none reported)"}`, { cause: error });
   }
-  await expect(page.locator("[data-layer]")).toHaveCount(3);
+  await expect(page.locator("[data-layer]")).toHaveCount(7);
   await expect(page.locator("#project-intro")).toBeVisible();
   await page.locator("#project-intro-primary").click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");

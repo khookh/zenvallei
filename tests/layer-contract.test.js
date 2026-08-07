@@ -51,7 +51,7 @@ describe("layer module contract", () => {
       .toThrow("Duplicate layer id 'same'");
   });
 
-  it("registers the three public application layers without frontend-specific setup", () => {
+  it("registers the three always-built core modules without optional catalogue modules", () => {
     const registry = buildLayerRegistry({
       scores: {
         A: { sectorId: "A", status: "scored", scores: { final: 6, heat: 7, vulnerability: 8 } },

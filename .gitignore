@@ -13,6 +13,7 @@ test-results/
 *.fgb
 *.tif
 *.tiff
+!public/data/official-layers/**/*.tif
 *.zip
 *.xlsx
 *.docx

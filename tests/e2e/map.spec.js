@@ -49,6 +49,7 @@ async function showControls(page, { minimiseResults = true } = {}) {
     && await panel.getAttribute("aria-hidden") === "false"
     && !await panel.evaluate((element) => element.classList.contains("is-peek"))) {
     await page.locator("#panel-toggle").click();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
   const controls = page.locator("#map-controls");
   if (await controls.evaluate((element) => element.classList.contains("is-collapsed"))) {
@@ -96,6 +97,20 @@ async function mapSurfaceState(page) {
       collisions,
     };
   });
+}
+
+async function waitForSurfaceState(page, expected) {
+  await expect.poll(async () => {
+    const state = await mapSurfaceState(page);
+    return {
+      mode: state.mode,
+      controlsExpanded: state.controlsExpanded,
+      legendExpanded: state.legendExpanded,
+      panelPresentation: state.panelPresentation,
+      collisions: state.collisions,
+    };
+  }, { timeout: 2_000 }).toMatchObject({ ...expected, collisions: [] });
+  return mapSurfaceState(page);
 }
 
 const LAND_COVER_FIXTURE = {
@@ -416,8 +431,14 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
     { width: 320, height: 568, mode: "compact" },
   ]) {
     await page.setViewportSize(viewport);
-    await page.waitForTimeout(220);
-    const state = await mapSurfaceState(page);
+    const state = await waitForSurfaceState(page, viewport.mode === "expanded"
+      ? { mode: viewport.mode }
+      : {
+          mode: viewport.mode,
+          controlsExpanded: false,
+          legendExpanded: false,
+          panelPresentation: "expanded",
+        });
     expect(state.mode).toBe(viewport.mode);
     expect(state.collisions, `${viewport.width} by ${viewport.height}`).toEqual([]);
 
@@ -427,8 +448,11 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
       expect(state.panelPresentation).toBe("expanded");
 
       await page.locator("#map-controls-toggle").click();
-      await page.waitForTimeout(220);
-      const controlsState = await mapSurfaceState(page);
+      const controlsState = await waitForSurfaceState(page, {
+        controlsExpanded: true,
+        legendExpanded: false,
+        panelPresentation: "peek",
+      });
       expect(controlsState.controlsExpanded).toBe(true);
       expect(controlsState.legendExpanded).toBe(false);
       expect(controlsState.panelPresentation).toBe("peek");
@@ -451,8 +475,11 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
       }
 
       await page.locator("#legend > summary").click();
-      await page.waitForTimeout(220);
-      const legendState = await mapSurfaceState(page);
+      const legendState = await waitForSurfaceState(page, {
+        controlsExpanded: false,
+        legendExpanded: true,
+        panelPresentation: "peek",
+      });
       expect(legendState.controlsExpanded).toBe(false);
       expect(legendState.legendExpanded).toBe(true);
       expect(legendState.panelPresentation).toBe("peek");
@@ -465,8 +492,7 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
 
   // A 1280 by 720 viewport at 200% browser zoom exposes 640 CSS pixels.
   await page.setViewportSize({ width: 640, height: 360 });
-  await page.waitForTimeout(100);
-  const zoomed = await mapSurfaceState(page);
+  const zoomed = await waitForSurfaceState(page, { mode: "compact" });
   expect(zoomed.mode).toBe("compact");
   expect(zoomed.collisions).toEqual([]);
   await expect(indicators).toHaveAttribute("open", "");
@@ -515,13 +541,13 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator(".brand-mark")).toBeVisible();
   await expect(page.locator(".brand-mark")).toHaveAttribute("src", /assets\/zennevallei-river-mark\.png$/);
   await expect(page.locator(".eyebrow")).toHaveText("Zennevallei");
-  await expect(page.locator("[data-layer]")).toHaveCount(3);
+  await expect(page.locator("[data-layer]")).toHaveCount(7);
   await expect(page.locator(".layer-category")).toHaveCount(3);
   await expect(page.locator('[data-layer-category="heat"]')).toContainText("Hitte");
   await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik en groen");
   await expect(page.locator('[data-layer-category="demography"]')).toContainText("Demografie");
-  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(1);
-  await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(1);
+  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(2);
+  await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(4);
   await expect(page.locator('[data-layer-category="demography"] [data-layer]')).toHaveCount(1);
   await expect(page.locator("[data-heat-metric]")).toHaveCount(3);
   await expect(page.locator("#heat-metric-control")).toBeVisible();

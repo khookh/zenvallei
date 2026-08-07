@@ -18,7 +18,7 @@ jobs:
   verify:
     name: Full application verification
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     env:
       VITE_TILE_URL: ${{ vars.VITE_TILE_URL }}
       VITE_TILE_ATTRIBUTION: ${{ vars.VITE_TILE_ATTRIBUTION }}

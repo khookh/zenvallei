@@ -30,9 +30,9 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       return { available: false, loadError: error.message };
     }
   };
-  const loadLocalLayers = async () => {
-    if (import.meta.env.MODE !== "local-data") return {};
-    const root = `${prefix}__local-data__/`;
+  const loadOfficialLayers = async () => {
+    const localMode = import.meta.env.MODE === "local-data";
+    const root = localMode ? `${prefix}__local-data__/` : `${prefix}data/official-layers/`;
     try {
       const indexResponse = await fetch(`${root}index.json`, { cache: "no-store" });
       if (!indexResponse.ok) return {};
@@ -60,7 +60,7 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
     loadOptionalJson("urban-atlas.json", { tolerateErrors: true }),
     loadJson("income.json"),
     loadNotebookTest(),
-    loadLocalLayers(),
+    loadOfficialLayers(),
   ]);
   const resolveAssetUrl = (assetUrl) => {
     if (!assetUrl || /^(?:https?:)?\/\//.test(assetUrl)) return assetUrl;

@@ -572,7 +572,7 @@ async function start() {
   application.data = data;
   elements.mapControls.classList.toggle("has-local-layers", Object.keys(data.localLayers ?? {}).length > 0);
   const extraLayers = [];
-  if (import.meta.env.MODE === "local-data") {
+  if (Object.keys(data.localLayers ?? {}).length) {
     extraLayers.push(...(await import("./layers/local-official-layers.js")).createLocalOfficialLayers(data.localLayers));
     if (data.localLayers.landgebruik) {
       extraLayers.push((await import("./layers/landgebruik-layer.js")).createLandgebruikLayer({

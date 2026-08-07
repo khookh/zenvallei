@@ -31,7 +31,7 @@ describe("GitHub Pages deployment contract", () => {
     expect(workflow).toMatch(/^ {2}deploy:\s*$/m);
     expect(workflow.match(/^\s+runs-on:/gm)).toHaveLength(1);
     expect(workflow).toContain("if: github.ref == 'refs/heads/main'");
-    expect(workflow).toContain("timeout-minutes: 30");
+    expect(workflow).toContain("timeout-minutes: 40");
     expect(workflow).toContain("cancel-in-progress: false");
     expect(workflow).toContain("pages: write");
     expect(workflow).toContain("id-token: write");

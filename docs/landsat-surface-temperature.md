@@ -1,12 +1,13 @@
 # Landsat surface-temperature timeline
 
-This local layer shows NASA/USGS Landsat 8 and 9 Collection 2 Level-2 land-surface temperature during heatwaves defined by the Royal Meteorological Institute of Belgium (RMI, KMI in Dutch). Microsoft Planetary Computer supplies signed COG access only; it is not the scientific producer.
+This layer shows NASA/USGS Landsat 8 and 9 Collection 2 Level-2 land-surface temperature during heatwaves defined by the Royal Meteorological Institute of Belgium (RMI, KMI in Dutch). Microsoft Planetary Computer supplies signed COG access only; it is not the scientific producer.
 
 ## Prepare
 
 ```powershell
 pnpm local-data:setup
 pnpm landsat-heat:prepare
+pnpm official-layers:publish
 pnpm dev:local-data
 ```
 
@@ -44,6 +45,8 @@ Files are stored in `.cache/local-layers/landsat-temperature`:
 - 30 m EPSG:32631 analytical rasters;
 - one full-region and seven municipality PMTiles per usable observation;
 - `manifest.json` with discovery decisions, sources and 154 sector plus seven municipality summaries.
+
+`pnpm official-layers:publish` copies only the clipped PMTiles, validated manifest and compact query rasters needed by the static website. Raw source windows and signed source URLs are never published.
 
 The UI uses one fixed 15-50 degrees Celsius inferno scale for comparability. The date and acquisition time are displayed in `Europe/Brussels` local time with CET or CEST. Desktop hover and touch inspection query the exact active 30 m analytical pixel and show one decimal place. Sector and municipality summaries remain supporting context and report clear-sky median, mean, P10 and P90, clear/cloud/missing area, pixel count and product uncertainty.
 

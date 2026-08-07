@@ -40,7 +40,7 @@ The map controller deliberately does not decide what an Urban Atlas, Landsat or 
 - Runtime code never imports preparation modules.
 - Preparation modules never import UI code.
 - The standalone Python playground is a separate research boundary. It may read official sources and Statbel geometry, but its raw caches and experimental Test exports remain outside `public` and `dist`.
-- `processing/local-layers` is an isolated Python boundary for Landsat temperature, JaarBAK, Groenkaart and Landgebruik. Local startup reads only a lightweight catalogue; each full manifest and PMTiles archive is loaded on first activation and cached in memory. Only Vite dev or preview in `local-data` mode can serve allow-listed ignored files through same-origin endpoints. Landsat pixel inspection reads analytical rasters server-side; TIFF files are never served directly. Ordinary and Pages builds cannot reference these endpoints.
+- `processing/local-layers` is an isolated Python boundary for Landsat temperature, JaarBAK, Groenkaart and Landgebruik. Runtime startup reads only a lightweight catalogue; each full manifest and PMTiles archive is loaded on first activation and cached in memory. Local-data mode serves the preparation cache through allow-listed endpoints. Static builds use the validated derivatives under `public/data/official-layers`. Landsat pixel inspection reads a small clipped query raster in the browser; raw source windows remain private.
 
 Every JSON manifest has a `schemaVersion`. Missing versions are temporarily interpreted as version 1 for older generated files. Unsupported versions fail during data loading with a readable error.
 
@@ -52,7 +52,7 @@ Each module registered in `src/layers/registry.js` provides:
 - availability and optional secondary controls;
 - an optional temporal control for discrete years or semantic observation timelines;
 
-The normal registry contains heat vulnerability, Urban Atlas and Statbel income. Local-data mode can add Landsat temperature, JaarBAK, Groenkaart and Landgebruik from the ignored catalogue. Retired experiments remain outside the registry and are not shipped.
+The normal registry contains heat vulnerability, Landsat temperature, Urban Atlas, JaarBAK, Groenkaart, Landgebruik and Statbel income. Local-data mode resolves the same four prepared raster modules from the ignored working catalogue. Retired experiments remain outside the registry and are not shipped.
 - lazy `mount`, visibility and municipality-filter functions;
 - plain legend, popup and panel models;
 - attribution entries.

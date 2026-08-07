@@ -22,6 +22,7 @@
     "local-data:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers",
     "landsat-heat:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-temperature",
     "landgebruik:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landgebruik",
+    "official-layers:publish": "node scripts/publish-official-layer-assets.mjs",
     "local-data:test": "node scripts/run-local-layer-python.mjs -m pytest processing/local-layers/tests",
     "brand:prepare": "node scripts/generate-brand-mark.mjs",
     "playground:test": "playground\\ndvi\\.venv\\Scripts\\python.exe -m pytest playground/ndvi/tests",

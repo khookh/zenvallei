@@ -8,7 +8,7 @@ Run `Setup Greenwave LAN.cmd` once. It asks for administrator approval and creat
 - Private and Public Windows network profiles;
 - remote address restricted to `LocalSubnet`.
 
-Then use `Start Greenwave.cmd`. It installs from the lockfile, detects the current IPv4 address, builds the appropriate mode and starts the compiled application through Vite preview on `0.0.0.0:4173`. When `.cache/local-layers/index.json` exists, the launcher enables prepared Landsat temperature, JaarBAK, Groenkaart Vlaanderen and Landgebruik Vlaanderen layers. Only their small catalogue is read at startup; a full manifest and PMTiles archive is requested after selecting that layer. Without the catalogue, the launcher serves the three public layers: heat vulnerability, Urban Atlas and Statbel median taxable income.
+Then use `Start Greenwave.cmd`. It installs from the lockfile, detects the current IPv4 address, builds the appropriate mode and starts the compiled application through Vite preview on `0.0.0.0:4173`. The seven published layers are always available. When `.cache/local-layers/index.json` exists, the launcher resolves the four prepared raster layers from that working cache. In both cases only the small catalogue is read at startup; a full manifest and PMTiles archive is requested after selecting its layer.
 
 Preparing official local datasets remains a separate, one-time operation because downloads and geospatial processing are substantial. The launcher never downloads or replaces scientific data during ordinary startup.
 
@@ -50,7 +50,7 @@ The Pages build uses `/zenvallei/` for application, worker and data assets. Do n
 
 Every deployment repeats the complete verification suite before packaging and publishing. The workflow writes `release.json` into the artifact and checks that exact commit on the public site. A matching live SHA is authoritative even when the Pages status API times out; a stale or unavailable marker keeps the workflow red.
 
-For a local Pages-path check before pushing, run `pnpm build:pages` followed by `pnpm test:pages`.
+For a local Pages-path check before pushing, run `pnpm build:pages` followed by `pnpm test:pages`. If official raster data changed, first run `pnpm official-layers:publish` and `pnpm data:validate`. The Pages smoke test asserts the exact seven-layer inventory and activates every published dataset below `/zenvallei/`.
 
 ### Workflow troubleshooting
 

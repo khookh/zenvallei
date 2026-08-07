@@ -23,7 +23,9 @@ const contentTypes = new Map([
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
+  [".pmtiles", "application/vnd.pmtiles"],
   [".png", "image/png"],
+  [".tif", "image/tiff"],
 ]);
 
 http.createServer(async (request, response) => {
@@ -39,9 +41,33 @@ http.createServer(async (request, response) => {
     return;
   }
   try {
+    const stat = await fs.stat(target);
+    const rangeMatch = /^bytes=(\d+)-(\d*)$/.exec(request.headers.range ?? "");
+    if (rangeMatch) {
+      const start = Number(rangeMatch[1]);
+      const end = rangeMatch[2] ? Math.min(Number(rangeMatch[2]), stat.size - 1) : stat.size - 1;
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start > end || start >= stat.size) {
+        response.writeHead(416, { "Content-Range": `bytes */${stat.size}` }).end();
+        return;
+      }
+      const handle = await fs.open(target, "r");
+      const body = Buffer.alloc(end - start + 1);
+      await handle.read(body, 0, body.length, start);
+      await handle.close();
+      response.writeHead(206, {
+        "Content-Type": contentTypes.get(path.extname(target)) ?? "application/octet-stream",
+        "Content-Range": `bytes ${start}-${end}/${stat.size}`,
+        "Content-Length": body.length,
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+      });
+      response.end(body);
+      return;
+    }
     const body = await fs.readFile(target);
     response.writeHead(200, {
       "Content-Type": contentTypes.get(path.extname(target)) ?? "application/octet-stream",
+      "Accept-Ranges": "bytes",
       "Cache-Control": "no-store",
     });
     response.end(body);
