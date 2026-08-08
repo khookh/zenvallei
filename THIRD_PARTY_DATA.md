@@ -18,12 +18,12 @@ Urban Atlas 2021 FUA BE001L3 supplies the public land-cover and land-use polygon
 
 ## Local official sources
 
-- [JaarBAK](https://www.vlaanderen.be/datavindplaats/catalogus/jaarlijkse-bodemafdekkingskaart-jaarbak-1-m-resolutie-2023), Department of Environment & Spatial Development, Government of Flanders / MercatorNet.
+- [JaarBAK](https://www.vlaanderen.be/datavindplaats/catalogus/jaarlijkse-bodemafdekkingskaart-jaarbak-1-m-resolutie-2023), Department of Environment & Spatial Development, Government of Flanders, via MercatorNet.
 - [Groenkaart Vlaanderen](https://www.vlaanderen.be/datavindplaats/catalogus/groenkaart-vlaanderen-2021), Agentschap voor Natuur en Bos / Digitaal Vlaanderen. The local attribution uses `Bron: ANB`.
 - [Landsat Collection 2 surface temperature](https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature), NASA/USGS. [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/) provides COG access only.
 - [Landgebruik Vlaanderen](https://www.vlaanderen.be/datavindplaats/catalogus/landgebruik-vlaanderen-toestand-2025), Department of Environment & Spatial Development, Government of Flanders.
 - [Landbouwgebruikspercelen 2025](https://www.vlaanderen.be/datavindplaats/catalogus/landbouwgebruikspercelen-2025), Agency for Agriculture and Fisheries, Government of Flanders.
-- [Royal Meteorological Institute of Belgium (RMI/KMI) heatwave periods and definition](https://www.meteo.be/nl/klimaat/klimaatverandering-in-belgie/klimaattrends-in-ukkel/luchttemperatuur/zomer-indices/hittegolven/hittegolven-in-ukkel).
+- [Royal Meteorological Institute of Belgium heatwave periods and definition](https://www.meteo.be/nl/klimaat/klimaatverandering-in-belgie/klimaattrends-in-ukkel/luchttemperatuur/zomer-indices/hittegolven/hittegolven-in-ukkel) (RMI; KMI in Dutch).
 
 Their rasters, analytical derivatives and PMTiles are ignored local research inputs and are not distributed by GitHub Pages.
 
@@ -37,4 +37,4 @@ The configured basemap uses standard OpenStreetMap tiles for this modest POC and
 
 ## Software
 
-Dependencies retain their own licences. `pnpm-lock.yaml` and the Python lock constraints record the exact dependency graph.
+The local comparison view vendors fixed colour samples derived from the MIT-licensed [cmocean 4.0.3 thermal palette](https://matplotlib.org/cmocean/). Dependencies retain their own licences. `pnpm-lock.yaml` and the Python lock constraints record the exact dependency graph.

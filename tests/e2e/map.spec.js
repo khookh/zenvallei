@@ -544,7 +544,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator("[data-layer]")).toHaveCount(7);
   await expect(page.locator(".layer-category")).toHaveCount(3);
   await expect(page.locator('[data-layer-category="heat"]')).toContainText("Hitte");
-  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik en groen");
+  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik");
   await expect(page.locator('[data-layer-category="demography"]')).toContainText("Demografie");
   await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(2);
   await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(4);
@@ -672,7 +672,7 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await expect(page.locator("#dataset-status")).toContainText("hittescore 2026");
   await expect(page.locator("#legend-title")).toHaveText("Hittescore");
   await expect(page.locator("#layer-context-meta")).toContainText("Officiële hittescore");
-  await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000-2019");
+  await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000–2019");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Hittekwetsbaarheid · Hitte in de Zennevallei");
   await expect(page.locator("#selection-announcement")).toContainText("gewijzigd naar Hitte");
   expect(await sectorColor()).toBe("#96004E");
@@ -1039,7 +1039,7 @@ test.skip("retired NDVI vegetation presentation", async ({ page }) => {
   await expect(vegetationButton).toHaveText("NDVI vegetation 2020");
   await expect(page.locator("#map-controls-title")).toHaveText("What would you like to look at?");
   await expect(page.locator('[data-layer-category="heat"]')).toContainText("Heat");
-  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Land use and green cover");
+  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Land use");
   await expect(page.locator("#legend-title")).toHaveText("NDVI vegetation 2020");
   await expect(panel).toContainText("Likely vegetated");
   await expect(panel).toContainText("Median NDVI");
@@ -1090,6 +1090,27 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await expect(panel).toHaveAttribute("aria-hidden", "true");
 });
 
+test("loads the published 100 m density modes only when requested", async ({ page }) => {
+  const requests = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/density/") && request.url().endsWith(".tif")) requests.push(request.url());
+  });
+  await showControls(page);
+  await page.locator('[data-layer="jaarbak"]').click();
+  expect(requests).toEqual([]);
+  await page.locator("#map-mode-action").click();
+  await expect(page.locator("#map-mode-action")).toHaveText("Toon classificatie");
+  await expect(page.locator("#legend-title")).toContainText("Dichtheid bodemafdekking");
+  await expect.poll(() => requests.some((url) => url.includes("jaarbak-2024-density.tif"))).toBe(true);
+  await showControls(page);
+  await page.locator("#map-mode-action").click();
+  await page.locator('[data-layer="groenkaart"]').click();
+  await page.locator("#map-mode-action").click();
+  await expect(page.locator("#legend-title")).toContainText("Dichtheid geselecteerde Groenkaartklassen");
+  await expect.poll(() => requests.some((url) => url.includes("groenkaart-2021-density.tif"))).toBe(true);
+  expect(runtimeErrors.get(page)).toEqual([]);
+});
+
 test("filters the map and exposes no-data sectors honestly", async ({ page }) => {
   await page.locator("#municipality-select").selectOption("Halle");
   await expect(page.locator("#visible-count")).toHaveText("41 sectoren");
@@ -1107,7 +1128,7 @@ test("filters the map and exposes no-data sectors honestly", async ({ page }) =>
   await expect(panel.locator(".score-orb strong")).toHaveText("n.v.t.");
   await page.locator("#language-toggle").click();
   await expect(panel).toContainText("Insufficient data");
-  await expect(panel).toContainText("population or SES data is insufficient");
+  await expect(panel).toContainText("population or SES information is insufficient");
   await page.locator("#panel-close").click();
   await expect(panel).toHaveAttribute("aria-hidden", "true");
 });
@@ -1138,7 +1159,7 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   await expect(panel).toContainText("About this map");
   await expect(panel).toContainText("How to use the map");
   await expect(panel).toContainText("What each layer tells you");
-  await expect(panel).toContainText("Land use and green cover");
+  await expect(panel).toContainText("Land use");
   await expect(panel).toContainText("Why 154 sectors?");
   await expect(panel).toContainText("Statbel defines their codes and boundaries");
   await expect(panel).toContainText("Official producer");

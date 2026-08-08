@@ -12,7 +12,20 @@ const COMMON_LAYER_IDS = Object.freeze({
   hit: "heat-sectors-hit-area",
   outline: "heat-sectors-outline",
   selected: "heat-sector-selected",
+  inspectionRadius: "point-inspection-radius",
 });
+const INSPECTION_RADIUS_SOURCE_ID = "point-inspection-radius-source";
+
+function radiusPolygon(lngLat, radiusMeters, points = 64) {
+  const latitudeRadians = lngLat.lat * Math.PI / 180;
+  const latitudeScale = radiusMeters / 111_320;
+  const longitudeScale = radiusMeters / (111_320 * Math.max(0.01, Math.cos(latitudeRadians)));
+  const coordinates = Array.from({ length: points + 1 }, (_, index) => {
+    const angle = index / points * Math.PI * 2;
+    return [lngLat.lng + Math.cos(angle) * longitudeScale, lngLat.lat + Math.sin(angle) * latitudeScale];
+  });
+  return { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [coordinates] } };
+}
 
 /**
  * Keep MapLibre camera padding inside a usable viewport. Responsive surfaces
@@ -95,12 +108,17 @@ export function createMapController({
     inspectionTimer = 0;
     inspectionRequest?.abort();
     inspectionRequest = null;
+    map?.getSource?.(INSPECTION_RADIUS_SOURCE_ID)?.setData?.({ type: "FeatureCollection", features: [] });
   };
 
   const inspectPoint = (lngLat, { immediate = false } = {}) => {
     const layer = currentLayer();
-    if (!layer?.inspectPoint || !layer?.getPointPopupModel) return false;
+    if (!layer?.inspectPoint || !layer?.getPointPopupModel || layer.isPointInspectionActive?.() === false) return false;
     clearInspection();
+    const radiusMeters = layer.getInspectionRadiusMeters?.() ?? 0;
+    if (radiusMeters > 0) {
+      map.getSource(INSPECTION_RADIUS_SOURCE_ID)?.setData(radiusPolygon(lngLat, radiusMeters));
+    }
     const run = async () => {
       const controller = new AbortController();
       inspectionRequest = controller;
@@ -247,11 +265,20 @@ export function createMapController({
           filter: ["==", ["get", "sectorId"], ""],
           paint: { "line-color": "#0B2F3A", "line-width": 4, "line-blur": 0.25 },
         });
+        map.addSource(INSPECTION_RADIUS_SOURCE_ID, {
+          type: "geojson", data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: COMMON_LAYER_IDS.inspectionRadius,
+          type: "line",
+          source: INSPECTION_RADIUS_SOURCE_ID,
+          paint: { "line-color": "#0b6e69", "line-width": 2.5, "line-opacity": 0.95 },
+        });
 
         map.on("mousemove", COMMON_LAYER_IDS.hit, (event) => {
           const feature = event.features?.[0];
           if (!feature) return;
-          map.getCanvas().style.cursor = currentLayer()?.inspectPoint ? "crosshair" : "pointer";
+          map.getCanvas().style.cursor = currentLayer()?.isPointInspectionActive?.() ? "crosshair" : "pointer";
           if (hoveredId && hoveredId !== feature.id) {
             map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
           }

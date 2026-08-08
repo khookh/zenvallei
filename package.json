@@ -21,6 +21,8 @@
     "local-data:setup": "py -3.11 -m venv processing/local-layers/.venv && processing\\local-layers\\.venv\\Scripts\\python.exe -m pip install -e \"processing/local-layers[test]\"",
     "local-data:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers",
     "landsat-heat:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-temperature",
+    "landsat-urban-atlas:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-urban-atlas",
+    "landsat-soil-sealing:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-jaarbak",
     "landgebruik:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landgebruik",
     "official-layers:publish": "node scripts/publish-official-layer-assets.mjs",
     "local-data:test": "node scripts/run-local-layer-python.mjs -m pytest processing/local-layers/tests",

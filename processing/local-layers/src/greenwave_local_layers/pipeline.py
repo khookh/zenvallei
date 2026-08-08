@@ -40,6 +40,7 @@ from .sources import (
     parse_tcd_palette, read_tcd_catalogue, request_wcs_tiff,
 )
 from .statistics import categorical_statistics, jaarbak_statistics, tcd_statistics
+from .density import prepare_density_dataset
 
 
 def slug(value: str) -> str:
@@ -366,7 +367,7 @@ def prepare(dataset_id: str, sources: dict[int, Path]):
     if manifest_path.exists():
         try:
             previous = json.loads(manifest_path.read_text(encoding="utf-8"))
-            if previous.get("schemaVersion") in (1, 2) and previous.get("datasetId") == dataset_id:
+            if previous.get("schemaVersion") in (1, 2, 3) and previous.get("datasetId") == dataset_id:
                 previous_years = previous.get("years", {})
         except (OSError, ValueError):
             previous_years = {}
@@ -392,7 +393,7 @@ def prepare(dataset_id: str, sources: dict[int, Path]):
         scale = {"items": list(JAARBAK_CLASSES if dataset_id == "jaarbak" else GROENKAART_CLASSES)}
         tcd_palette = None
     manifest = {
-        "schemaVersion": 2, "datasetId": dataset_id,
+        "schemaVersion": 3 if dataset_id in ("jaarbak", "groenkaart") else 2, "datasetId": dataset_id,
         "kind": "continuous" if dataset_id == "tcd" else "categorical",
         "availableYears": list(years), "defaultYear": max(years), "opacity": 0.68,
         "classesOrScale": scale, "source": _source_metadata(dataset_id), "years": {},
@@ -502,6 +503,22 @@ def prepare(dataset_id: str, sources: dict[int, Path]):
         )
         update_index()
         print(f"{dataset_id} {year}: complete", flush=True)
+    if dataset_id in ("jaarbak", "groenkaart"):
+        source_paths = {
+            year: sources.get(year, CACHE_ROOT / "raw" / dataset_id / f"{dataset_id}-{year}.tif")
+            for year in years
+        }
+        missing_sources = [str(path) for path in source_paths.values() if not Path(path).exists()]
+        if missing_sources:
+            raise FileNotFoundError(f"Density preparation is missing source rasters: {', '.join(missing_sources)}")
+        manifest["density"] = prepare_density_dataset(
+            dataset_id,
+            years,
+            sectors,
+            municipalities,
+            source_paths,
+        )
+
     # Persist contract-only upgrades even when every native raster and PMTiles
     # archive was reused and the processing loop performed no heavy work.
     manifest_path.write_text(
@@ -533,8 +550,25 @@ def update_index():
                 "featureCount": manifest.get("agriculturalDetail", {}).get("featureCount"),
                 "source": manifest.get("agriculturalDetail", {}).get("source"),
             } if manifest.get("agriculturalDetail") else None,
+            "density": {
+                "available": True,
+                "radiusMeters": manifest["density"]["radiusMeters"],
+                "availableYears": [int(year) for year in manifest["density"]["years"]],
+            } if manifest.get("density") else None,
+        }
+    comparisons = {}
+    for comparison_id in ("landsat-urban-atlas", "landsat-jaarbak"):
+        comparison_path = CACHE_ROOT / comparison_id / "manifest.json"
+        if not comparison_path.exists():
+            continue
+        comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
+        comparisons[comparison_id] = {
+            "comparisonId": comparison_id,
+            "primaryLayerId": comparison["primaryLayerId"],
+            "secondaryLayerId": comparison["secondaryLayerId"],
+            "manifestUrl": f"{comparison_id}/manifest.json",
         }
     (CACHE_ROOT / "index.json").write_text(
-        json.dumps({"schemaVersion": 2, "datasets": datasets}, ensure_ascii=False, indent=2),
+        json.dumps({"schemaVersion": 3, "datasets": datasets, "comparisons": comparisons}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )

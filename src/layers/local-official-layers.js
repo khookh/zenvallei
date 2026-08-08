@@ -4,6 +4,7 @@ import { escapeHtml, safeExternalUrl } from "../security.js";
 import { authorityLink, authorityName } from "../source-authorities.js";
 import { defineLayer } from "./layer-contract.js";
 import { createTemporalPmtilesMap } from "./temporal-pmtiles-layer.js";
+import { createDensityMode } from "./density-mode.js";
 
 const DATASET_CONFIG = Object.freeze({
   jaarbak: {
@@ -32,7 +33,7 @@ const localized = (value, fallback = "") => typeof value === "string"
   : value?.[getLanguage()] ?? value?.en ?? value?.nl ?? fallback;
 
 export function validateLocalTemporalManifest(manifest, expectedId) {
-  if (!manifest || ![1, 2].includes(manifest.schemaVersion)) throw new TypeError(`${expectedId}: unsupported local manifest schema.`);
+  if (!manifest || ![1, 2, 3].includes(manifest.schemaVersion)) throw new TypeError(`${expectedId}: unsupported local manifest schema.`);
   if (manifest.datasetId !== expectedId) throw new TypeError(`${expectedId}: dataset identifier does not match.`);
   if (!["categorical", "continuous"].includes(manifest.kind)) throw new TypeError(`${expectedId}: invalid raster kind.`);
   if (!Array.isArray(manifest.availableYears) || !manifest.availableYears.length) throw new TypeError(`${expectedId}: no years are available.`);
@@ -46,6 +47,12 @@ export function validateLocalTemporalManifest(manifest, expectedId) {
       || Object.keys(entry.sectorStats).length !== 154
       || MUNICIPALITIES.some((name) => !entry.pmtilesVariants[name] || !entry.municipalityStats[name])) {
       throw new TypeError(`${expectedId}: year ${year} is incomplete.`);
+    }
+  }
+  if (manifest.density) {
+    if (manifest.density.schemaVersion !== 1 || manifest.density.radiusMeters !== 100
+      || !manifest.density.scopeIndexUrl || !manifest.availableYears.every((year) => manifest.density.years?.[year]?.dataUrl)) {
+      throw new TypeError(`${expectedId}: density metadata is incomplete.`);
     }
   }
   return manifest;
@@ -71,6 +78,14 @@ async function fetchLocalManifest(descriptor, datasetId) {
       if (/^[a-z0-9/_-]+\.pmtiles$/i.test(value)) year.pmtilesVariants[key] = `${descriptor.assetRoot}${value}`;
     });
   });
+  if (manifest.density) {
+    if (/^[a-z0-9/_-]+\.png$/i.test(manifest.density.scopeIndexUrl)) {
+      manifest.density.scopeIndexUrl = `${descriptor.assetRoot}${manifest.density.scopeIndexUrl}`;
+    }
+    Object.values(manifest.density.years ?? {}).forEach((year) => {
+      if (/^[a-z0-9/_-]+\.tif$/i.test(year.dataUrl)) year.dataUrl = `${descriptor.assetRoot}${year.dataUrl}`;
+    });
+  }
   return manifest;
 }
 
@@ -134,6 +149,11 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
         kind: manifest.kind,
         opacity: manifest.opacity,
         source: manifest.source,
+        density: manifest.density ? {
+          available: true,
+          radiusMeters: manifest.density.radiusMeters,
+          availableYears: manifest.availableYears,
+        } : null,
       }, datasetId);
     } else {
       descriptor = validateLocalDatasetDescriptor(inputDescriptor, datasetId);
@@ -161,6 +181,7 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
   };
   let activeYear = descriptor?.defaultYear;
   let activeMunicipality = "";
+  let layerVisible = false;
   const yearData = () => manifest?.years?.[activeYear];
   const archiveUrl = () => yearData()?.pmtilesVariants?.[activeMunicipality || "all"]
     ?? yearData()?.pmtilesVariants?.all;
@@ -170,6 +191,18 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     opacity: descriptor?.opacity ?? 0.68,
     getArchiveUrl: archiveUrl,
   });
+  let densityMode = null;
+  const ensureDensityMode = () => {
+    if (!manifest?.density) return null;
+    densityMode ??= createDensityMode({
+      datasetId,
+      getManifest: () => manifest,
+      getYear: () => activeYear,
+      getMunicipality: () => activeMunicipality,
+      setClassificationVisible: (visible) => mapLayer.setVisible(Boolean(visible && layerVisible)),
+    });
+    return densityMode;
+  };
 
   return defineLayer({
     id: config.id,
@@ -182,12 +215,16 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     getContext: () => ({
       meta: t(`${config.contextKey}.contextMeta`, { year: activeYear }),
       text: t(`${config.contextKey}.contextText`),
-      note: manifest ? temporalNote(manifest, activeYear) : "",
+      note: densityMode?.isActive()
+        ? t(`${config.contextKey}.densityContext`, { year: activeYear, radius: 100 })
+        : manifest ? temporalNote(manifest, activeYear) : "",
       sources: descriptor?.source?.url
         ? config.authorityIds.map((authorityId) => authorityLink(authorityId, descriptor.source.url))
         : [],
     }),
-    getLegendModel: () => legendModel(manifest, activeYear, config),
+    getLegendModel: () => densityMode?.isActive()
+      ? densityMode.getLegendModel()
+      : legendModel(manifest, activeYear, config),
     getPopupModel: (feature, record) => ({
       title: feature.properties.sectorName,
       subtitle: feature.properties.municipality,
@@ -214,19 +251,52 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
       await ensureManifest();
       return mapLayer.mount(map, context);
     },
-    setVisible(_map, visible) { mapLayer.setVisible(visible); },
+    setVisible(_map, visible) {
+      layerVisible = visible;
+      if (densityMode?.isActive()) densityMode.setVisible(visible);
+      else mapLayer.setVisible(visible);
+    },
     applyFilter(_map, _filter, context = {}) {
       activeMunicipality = context.municipality ?? "";
-      mapLayer.refresh();
+      if (densityMode?.isActive()) densityMode.refresh();
+      else mapLayer.refresh();
     },
     setOption(_map, name, value) {
       if (name !== "year") return false;
       const year = Number(value);
       if (!descriptor?.availableYears?.includes(year)) return false;
       activeYear = year;
+      if (densityMode?.isActive()) {
+        densityMode.refresh();
+        return true;
+      }
       return mapLayer.refresh();
     },
     getOption: (name) => name === "year" ? activeYear : null,
+    ensureManifest,
+    getRuntimeData: () => ({ manifest, descriptor, year: activeYear, municipality: activeMunicipality }),
+    getMapModeAction: () => descriptor?.density?.available && !loadError ? ({
+      active: Boolean(densityMode?.isActive()),
+      label: t(densityMode?.isActive() ? "density.showClassification" : "density.showDensity"),
+    }) : null,
+    async toggleMapMode(map) {
+      await ensureManifest();
+      const mode = ensureDensityMode();
+      if (!mode) return false;
+      await mode.toggle(map);
+      return true;
+    },
+    toggleDensityClass(code) { return densityMode?.toggleClass(code) ?? { changed: false }; },
+    isPointInspectionActive: () => Boolean(densityMode?.isActive()),
+    inspectPoint: (point, context) => densityMode?.inspectPoint(point, context),
+    getPointPopupModel: (result) => densityMode?.getPointPopupModel(result),
+    getInspectionRadiusMeters: () => densityMode?.getInspectionRadiusMeters() ?? 0,
+    subscribeMapMode(listener) {
+      return ensureDensityMode()?.subscribe(listener) ?? (() => {});
+    },
+    setOpacity: (value) => mapLayer.setOpacity(value),
+    getOpacity: () => mapLayer.getOpacity(),
+    waitUntilReady: () => mapLayer.whenReady(),
     getAttributions() {
       const url = safeExternalUrl(descriptor?.source?.url);
       if (!url) return [];

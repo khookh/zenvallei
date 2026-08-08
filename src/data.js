@@ -35,10 +35,12 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
     const root = localMode ? `${prefix}__local-data__/` : `${prefix}data/official-layers/`;
     try {
       const indexResponse = await fetch(`${root}index.json`, { cache: "no-store" });
-      if (!indexResponse.ok) return {};
+      if (!indexResponse.ok) return { layers: {}, comparisons: {} };
       const index = await indexResponse.json();
-      if (index.schemaVersion !== 2 || !index.datasets || typeof index.datasets !== "object") return {};
-      return Object.fromEntries(Object.entries(index.datasets).flatMap(([id, descriptor]) => {
+      if (![2, 3].includes(index.schemaVersion) || !index.datasets || typeof index.datasets !== "object") {
+        return { layers: {}, comparisons: {} };
+      }
+      const layers = Object.fromEntries(Object.entries(index.datasets).flatMap(([id, descriptor]) => {
         if (!descriptor || descriptor.datasetId !== id
           || !/^[a-z0-9-]+\/manifest\.json$/i.test(descriptor.manifestUrl ?? "")) return [];
         return [[id, {
@@ -48,11 +50,19 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
           available: true,
         }]];
       }));
+      const comparisons = localMode && index.schemaVersion >= 3
+        ? Object.fromEntries(Object.entries(index.comparisons ?? {}).flatMap(([id, descriptor]) => {
+          if (!descriptor || descriptor.comparisonId !== id
+            || !/^[a-z0-9-]+\/manifest\.json$/i.test(descriptor.manifestUrl ?? "")) return [];
+          return [[id, { ...descriptor, manifestUrl: `${root}${descriptor.manifestUrl}`, assetRoot: root }]];
+        }))
+        : {};
+      return { layers, comparisons };
     } catch {
-      return {};
+      return { layers: {}, comparisons: {} };
     }
   };
-  const [geojson, scorePayload, methodology, provenance, urbanAtlas, income, notebookTest, localLayers] = await Promise.all([
+  const [geojson, scorePayload, methodology, provenance, urbanAtlas, income, notebookTest, officialData] = await Promise.all([
     loadJson("sectors.geojson"),
     loadJson("scores.json"),
     loadJson("methodology.json"),
@@ -79,7 +89,10 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
   }
   validateApplicationData({ geojson, scorePayload, methodology, provenance, urbanAtlas, income });
   addMunicipalityStatistics({ scores: scorePayload.sectors, urbanAtlas });
-  return { geojson, scores: scorePayload.sectors, methodology, provenance, urbanAtlas, income, notebookTest, localLayers };
+  return {
+    geojson, scores: scorePayload.sectors, methodology, provenance, urbanAtlas, income, notebookTest,
+    localLayers: officialData.layers, localComparisons: officialData.comparisons,
+  };
 }
 
 export function sectorsForMunicipality(scores, municipality = "") {

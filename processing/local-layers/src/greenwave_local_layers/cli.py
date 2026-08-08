@@ -25,7 +25,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Prepare local Greenwave raster layers.")
     parser.add_argument(
         "--dataset",
-        choices=("all", "jaarbak", "groenkaart", "landgebruik", "landsat-temperature"),
+        choices=(
+            "all", "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
+            "landsat-urban-atlas", "landsat-jaarbak",
+        ),
         default="all",
     )
     parser.add_argument("--source", action="append", default=[], metavar="YEAR=PATH")
@@ -33,7 +36,10 @@ def main(argv=None):
     sources = parse_source(arguments.source)
     if arguments.dataset == "all" and sources:
         parser.error("Use --source with one explicit --dataset so the year cannot be assigned to the wrong product.")
-    datasets = ("jaarbak", "groenkaart", "landgebruik", "landsat-temperature") if arguments.dataset == "all" else (arguments.dataset,)
+    datasets = (
+        "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
+        "landsat-urban-atlas", "landsat-jaarbak",
+    ) if arguments.dataset == "all" else (arguments.dataset,)
     for dataset_id in datasets:
         print(f"Preparing {dataset_id}…", flush=True)
         if dataset_id == "landsat-temperature":
@@ -41,6 +47,16 @@ def main(argv=None):
                 parser.error("Landsat source overrides are not supported; the command caches signed COG windows.")
             from .landsat import prepare_landsat_temperature
             prepare_landsat_temperature()
+        elif dataset_id == "landsat-urban-atlas":
+            if sources:
+                parser.error("The Landsat-Urban Atlas comparison reuses prepared data and accepts no source override.")
+            from .landsat_urban_atlas import prepare_landsat_urban_atlas
+            prepare_landsat_urban_atlas()
+        elif dataset_id == "landsat-jaarbak":
+            if sources:
+                parser.error("The Landsat-JaarBAK comparison reuses prepared data and accepts no source override.")
+            from .landsat_jaarbak import prepare_landsat_jaarbak
+            prepare_landsat_jaarbak()
         elif dataset_id == "landgebruik":
             from .landgebruik import prepare_landgebruik
             prepare_landgebruik(sources)

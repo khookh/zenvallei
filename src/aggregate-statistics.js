@@ -133,5 +133,6 @@ export function addMunicipalityStatistics({ scores, urbanAtlas }) {
     urbanAtlas.municipalityStats = Object.fromEntries([...groups].map(([municipality, ids]) => [
       municipality, aggregateUrbanAtlas(ids.map((id) => urbanAtlas.sectorStats[id]).filter(Boolean), urbanAtlas),
     ]));
+    urbanAtlas.regionStats = aggregateUrbanAtlas(Object.values(urbanAtlas.sectorStats), urbanAtlas);
   }
 }

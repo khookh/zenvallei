@@ -41,6 +41,7 @@ The map controller deliberately does not decide what an Urban Atlas, Landsat or 
 - Preparation modules never import UI code.
 - The standalone Python playground is a separate research boundary. It may read official sources and Statbel geometry, but its raw caches and experimental Test exports remain outside `public` and `dist`.
 - `processing/local-layers` is an isolated Python boundary for Landsat temperature, JaarBAK, Groenkaart and Landgebruik. Runtime startup reads only a lightweight catalogue; each full manifest and PMTiles archive is loaded on first activation and cached in memory. Local-data mode serves the preparation cache through allow-listed endpoints. Static builds use the validated derivatives under `public/data/official-layers`. Landsat pixel inspection reads a small clipped query raster in the browser; raw source windows remain private.
+- Local comparison modules are separate from the top-level layer registry. A small comparison registry currently composes Landsat with Urban Atlas or JaarBAK. Each module owns only its selection and presentation state and reads ignored comparison assets advertised by catalogue schema 3. Public catalogue schema 2 remains supported and exposes no comparison assets.
 
 Every JSON manifest has a `schemaVersion`. Missing versions are temporarily interpreted as version 1 for older generated files. Unsupported versions fail during data loading with a readable error.
 

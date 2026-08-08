@@ -71,6 +71,12 @@ async function publishDataset(datasetId, descriptor) {
   }
 
   for (const asset of referencedPmtiles(manifest)) await copyAsset(asset);
+  if (manifest.density) {
+    await copyAsset(manifest.density.scopeIndexUrl, ".png");
+    for (const year of Object.values(manifest.density.years ?? {})) {
+      await copyAsset(year.dataUrl, ".tif");
+    }
+  }
   if (datasetId === "landgebruik") {
     await copyAsset(manifest.agriculturalDetail.geojsonUrl, ".geojson");
   }
@@ -78,7 +84,7 @@ async function publishDataset(datasetId, descriptor) {
 }
 
 const index = await readJson(path.join(sourceRoot, "index.json"));
-if (index.schemaVersion !== 2) throw new Error("The prepared official-layer catalogue must use schema version 2.");
+if (![2, 3].includes(index.schemaVersion)) throw new Error("The prepared official-layer catalogue must use schema version 2 or 3.");
 const missing = datasetIds.filter((id) => !index.datasets?.[id]);
 if (missing.length) throw new Error(`Prepared datasets are missing: ${missing.join(", ")}.`);
 
@@ -94,6 +100,18 @@ const publishedIndex = {
 };
 for (const id of datasetIds) await publishDataset(id, publishedIndex.datasets[id]);
 await writeJson(path.join(outputRoot, "index.json"), publishedIndex);
+
+const densityBytes = (await Promise.all(
+  ["jaarbak", "groenkaart"].flatMap((datasetId) => {
+    const descriptor = publishedIndex.datasets[datasetId];
+    return descriptor?.density?.availableYears?.map((year) => path.join(
+      outputRoot, datasetId, "density", `${datasetId}-${year}-density.tif`,
+    )) ?? [];
+  }).map(async (file) => (await fs.stat(file)).size),
+)).reduce((sum, size) => sum + size, 0);
+if (densityBytes > 80 * 1024 * 1024) {
+  throw new Error(`Density derivatives exceed the 80 MiB budget (${(densityBytes / 1024 / 1024).toFixed(1)} MiB).`);
+}
 
 const files = [];
 async function collect(directory) {

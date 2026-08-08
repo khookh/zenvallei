@@ -44,6 +44,10 @@ describe("English–Dutch translations", () => {
     expect(t("authority.meteorologicalInstitute", {}, "en")).toBe("Royal Meteorological Institute of Belgium (RMI)");
     expect(t("layers.groenkaart", { year: 2021 }, "en")).toBe("Flanders Green Map 2021");
     expect(t("layers.landgebruik", {}, "en")).toBe("Flanders land use");
+    expect(t("jaarbak.contextMeta", { year: 2024 }, "nl")).toBe("JaarBAK · binaire classificatie van 1 m · 2024");
+    expect(t("groenkaart.contextMeta", { year: 2021 }, "nl")).toBe("Groenkaart Vlaanderen · vier klassen van 1 m · 2021");
+    expect(t("landgebruik.contextMeta", { year: 2025 }, "nl")).toBe("Landgebruik Vlaanderen · classificatie van 10 m · 2025");
+    expect(t("about.heatProducer", {}, "nl")).toBe("Departement Zorg van de Vlaamse overheid");
     ["Flemish Government", "Flemish Department", "Government of Flanders, Department", "ANB and Digital Flanders", "Green Map Flanders", "Land use Flanders"]
       .forEach((obsolete) => expect(english).not.toContain(obsolete));
   });

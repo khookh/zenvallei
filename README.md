@@ -48,10 +48,14 @@ pnpm local-data:prepare -- --dataset jaarbak
 pnpm local-data:prepare -- --dataset groenkaart
 pnpm landgebruik:prepare
 pnpm landsat-heat:prepare
+pnpm landsat-urban-atlas:prepare  # local Landsat x Urban Atlas comparison
+pnpm landsat-soil-sealing:prepare # local Landsat x JaarBAK comparison
 pnpm dev:local-data
 ```
 
 Raw downloads and preparation caches stay below `.cache/local-layers`. To refresh the validated browser derivatives committed for the static site, run `pnpm official-layers:publish` after preparation. See [Official raster layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md) and [Landsat surface temperature](docs/landsat-surface-temperature.md).
+
+Soil sealing and Flanders Green Map also provide a **Show density** mode. It calculates the source-class share within a fixed 100 m radius; preparation creates the density derivatives alongside their ordinary classifications.
 
 ## Python NDVI playground
 

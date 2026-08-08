@@ -90,6 +90,7 @@
             <div class="timeline-markers" id="timeline-markers" aria-hidden="true"></div>
           </div>
           <div class="analysis-pairing" id="analysis-pairing" hidden>
+            <button class="analysis-compare-button map-mode-button" id="map-mode-action" type="button" hidden aria-pressed="false"></button>
             <button class="analysis-compare-button" id="analysis-compare" type="button">
               <span class="analysis-link-icon" aria-hidden="true">↔</span>
               <span data-i18n="analysisPairing.compare">Compare</span>
@@ -97,6 +98,7 @@
             <div class="analysis-pair-result" id="analysis-pair-result" hidden>
               <strong id="analysis-pair-label"></strong>
               <div class="analysis-pair-actions">
+                <button id="analysis-pair-retry" type="button" data-i18n="analysisPairing.retry" hidden>Retry</button>
                 <button id="analysis-pair-change" type="button" data-i18n="analysisPairing.change">Change</button>
                 <button id="analysis-pair-remove" type="button" data-i18n="analysisPairing.remove">Remove</button>
               </div>

@@ -15,7 +15,12 @@ function isMunicipalitySummary(record) {
   return record.scope === "municipality";
 }
 
+function isRegionSummary(record) {
+  return record.scope === "region";
+}
+
 function panelEyebrow(record) {
+  if (isRegionSummary(record)) return t("panel.regionSummary", { count: record.sectorCount });
   if (isMunicipalitySummary(record)) {
     return t("panel.municipalitySummary", { count: record.sectorCount });
   }
@@ -23,9 +28,9 @@ function panelEyebrow(record) {
 }
 
 function scopedStatistics(dataset, record) {
-  return isMunicipalitySummary(record)
-    ? dataset?.municipalityStats?.[record.municipality]
-    : dataset?.sectorStats?.[record.sectorId];
+  if (isRegionSummary(record)) return dataset?.regionStats;
+  if (isMunicipalitySummary(record)) return dataset?.municipalityStats?.[record.municipality];
+  return dataset?.sectorStats?.[record.sectorId];
 }
 
 function scoreCard(labelKey, definitionKey, value, color) {
@@ -652,6 +657,14 @@ function renderLocalOfficialRaster(model) {
         <summary data-focus-key="local-raster-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("localLayers.methodology"))}</span></summary>
         <div class="accordion-content methodology-copy">
           <p>${escapeHtml(t(methodKey))}</p>
+          ${manifest.density ? `
+            <p>${escapeHtml(t("density.methodology"))}</p>
+            <p>${escapeHtml(t("density.radiusEvidence"))}</p>
+            <ul class="source-list">
+              <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6462107/" target="_blank" rel="noopener noreferrer">${escapeHtml(t("density.referencePnas"))}</a></li>
+              <li><a href="https://doi.org/10.1016/j.buildenv.2023.111029" target="_blank" rel="noopener noreferrer">${escapeHtml(t("density.referenceBuildingEnvironment"))}</a></li>
+              <li><a href="https://www.sciensano.be/sites/default/files/beele_et_al_2024_lurp_spatial_config_green_space_1.pdf" target="_blank" rel="noopener noreferrer">${escapeHtml(t("density.referenceLeuven"))}</a></li>
+            </ul>` : ""}
           ${year >= 2023 && datasetId === "jaarbak" ? `<p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("jaarbak.methodChangeNote"))}</p>` : ""}
           ${stats ? `<h4>${escapeHtml(t("localLayers.coverageTitle"))}</h4><p>${escapeHtml(t("localLayers.completeArea"))} ${escapeHtml(t("localLayers.visualDerivative"))}</p><p>${escapeHtml(t("localLayers.coverageTitle"))}: ${escapeHtml(localAreaValue(stats.validAreaHa, stats.validPercentage))}. ${escapeHtml(t("jaarbak.noData"))}: ${escapeHtml(localAreaValue(stats.noDataAreaHa, stats.noDataPercentage))}.</p>` : ""}
           ${localSource(manifest)}
@@ -920,6 +933,211 @@ function landsatDistribution(stats) {
     </div>`;
 }
 
+function comparisonStepPath(percentages, maximum) {
+  const left = 58;
+  const top = 48;
+  const width = 632;
+  const height = 220;
+  if (!percentages.length) return "";
+  let path = `M ${left} ${top + height}`;
+  percentages.forEach((value, index) => {
+    const x0 = left + index / percentages.length * width;
+    const x1 = left + (index + 1) / percentages.length * width;
+    const y = top + height - Math.min(maximum, value) / maximum * height;
+    path += ` H ${x0.toFixed(2)} V ${y.toFixed(2)} H ${x1.toFixed(2)}`;
+  });
+  return `${path} V ${top + height}`;
+}
+
+function comparisonHistogram(model, { expanded = false } = {}) {
+  const available = model.selectedSeries.filter((series) => series.stats?.clearPixelCount >= 10);
+  if (!model.selectedSeries.length) return `<p class="panel-empty-state">${escapeHtml(t("comparison.noSelectedSeries"))}</p>`;
+  const percentages = available.map((series) => series.stats.binCounts.map((count) => (
+    series.stats.clearPixelCount ? count / series.stats.clearPixelCount * 100 : 0
+  )));
+  const maximum = Math.max(1, Math.ceil(Math.max(0, ...percentages.flat()) / 5) * 5);
+  const dashes = ["none", "10 5", "3 4", "12 4 3 4"];
+  const edges = model.manifest.binEdges;
+  const labels = edges.slice(0, -1).map((minimum, index) => t("comparison.binLabel", {
+    minimum: formatNumber(minimum, 1),
+    maximum: formatNumber(edges[index + 1], 1),
+    values: model.selectedSeries.map((series) => t("comparison.binValue", {
+      series: series.label,
+      percentage: formatNumber(series.stats?.clearPixelCount
+        ? Number(series.stats.binCounts[index] ?? 0) / series.stats.clearPixelCount * 100 : 0, 1),
+    })).join(", "),
+  }));
+  const prefix = expanded ? "comparison-chart-expanded" : "comparison-chart-inline";
+  const yTicks = [0, .25, .5, .75, 1].map((fraction) => ({
+    y: 268 - fraction * 220,
+    label: `${formatNumber(maximum * fraction, maximum < 10 ? 1 : 0)}%`,
+  }));
+  const xTicks = Array.from({ length: 8 }, (_, index) => 15 + index * 5);
+  const chips = model.selectedSeries.map((series) => `<span class="comparison-series-chip" style="--series:${escapeHtml(series.color)}">
+    <i aria-hidden="true"></i><b>${escapeHtml(series.label)}</b><span>${escapeHtml(t("comparison.clearPixels"))}: ${escapeHtml(formatNumber(series.stats?.clearPixelCount ?? 0, 0))}</span>
+  </span>`).join("");
+  return `<div class="comparison-chart ${expanded ? "is-expanded" : ""}" data-comparison-chart>
+    <div class="comparison-chart-heading">
+      <div class="comparison-series-chips">${chips}</div>
+      ${expanded ? "" : `<button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("comparison.expandHistogram"))}</button>`}
+    </div>
+    <svg viewBox="0 0 720 340" role="img" aria-labelledby="${prefix}-title ${prefix}-description">
+      <title id="${prefix}-title">${escapeHtml(t("comparison.histogramTitle"))}</title>
+      <desc id="${prefix}-description">${escapeHtml(t("comparison.histogramExplanation"))}</desc>
+      <g class="comparison-grid" aria-hidden="true">
+        ${yTicks.map(({ y }) => `<line x1="58" x2="690" y1="${y}" y2="${y}"></line>`).join("")}
+      </g>
+      <text class="comparison-axis-label comparison-axis-y" x="58" y="28">${escapeHtml(t("comparison.histogramAxisY"))}</text>
+      <text class="comparison-axis-label" x="374" y="326" text-anchor="middle">${escapeHtml(t("comparison.histogramAxisX"))}</text>
+      <g class="comparison-axis-values" aria-hidden="true">
+        ${xTicks.map((value) => `<text x="${58 + (value - 15) / 35 * 632}" y="291" text-anchor="middle">${value}${value === 50 ? "°C" : ""}</text>`).join("")}
+        ${yTicks.map(({ y, label }) => `<text x="50" y="${y + 4}" text-anchor="end">${label}</text>`).join("")}
+      </g>
+      ${available.map((series, index) => {
+        const path = comparisonStepPath(percentages[index], maximum);
+        return `<path class="comparison-curve-halo" d="${path}"></path>
+          <path class="comparison-curve" d="${path}" style="--curve:${escapeHtml(series.color)};stroke-dasharray:${dashes[index]}"></path>`;
+      }).join("")}
+      <line class="comparison-crosshair" data-comparison-crosshair x1="58" x2="58" y1="48" y2="268" hidden></line>
+    </svg>
+    <div class="comparison-bin-hitareas" role="toolbar" aria-label="${escapeHtml(t("comparison.histogramTitle"))}">
+      ${labels.map((label, index) => `<button type="button" data-histogram-bin="${index}" data-histogram-x="${58 + (index + .5) / labels.length * 632}" data-histogram-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></button>`).join("")}
+    </div>
+    <p class="comparison-bin-output" data-histogram-output aria-live="polite">${escapeHtml(labels[Math.floor(labels.length / 2)] ?? "")}</p>
+  </div>`;
+}
+
+function comparisonChartDialog(model) {
+  return `<dialog class="comparison-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("comparison.histogramTitle"))}">
+    <div class="comparison-chart-dialog-content">
+      <header><h3>${escapeHtml(t("comparison.histogramTitle"))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("comparison.closeHistogram"))}">×</button></header>
+      <p>${escapeHtml(t("comparison.histogramExplanation"))}</p>
+      ${comparisonHistogram(model, { expanded: true })}
+    </div>
+  </dialog>`;
+}
+
+function comparisonSeriesCard(series) {
+  const stats = series.stats;
+  if (!stats) return "";
+  const total = stats.clearPixelCount + stats.cloudPixelCount + stats.otherMissingPixelCount;
+  const cloudShare = total ? stats.cloudPixelCount / total * 100 : 0;
+  const warning = stats.clearPixelCount < 10
+    ? t("comparison.tooFewPixels")
+    : stats.clearPixelCount < 30 ? t("comparison.limitedSample", { count: stats.clearPixelCount }) : "";
+  return `<article class="comparison-series-card" style="--series:${escapeHtml(series.color)}">
+    <header><i aria-hidden="true"></i><h4>${escapeHtml(series.label)}</h4></header>
+    ${warning ? `<p class="comparison-sample-warning">${escapeHtml(warning)}</p>` : ""}
+    <dl>
+      <div><dt>${escapeHtml(t("landsat.median"))}</dt><dd>${stats.medianC == null ? "-" : `${escapeHtml(formatNumber(stats.medianC, 1))} °C`}</dd></div>
+      <div><dt>${escapeHtml(t("landsat.mean"))}</dt><dd>${stats.meanC == null ? "-" : `${escapeHtml(formatNumber(stats.meanC, 1))} °C`}</dd></div>
+      <div><dt>${escapeHtml(t("comparison.temperatureRange"))}</dt><dd>${stats.p10C == null ? "-" : `${escapeHtml(formatNumber(stats.p10C, 1))}–${escapeHtml(formatNumber(stats.p90C, 1))} °C`}</dd></div>
+      <div><dt>${escapeHtml(t("comparison.clearPixels"))}</dt><dd>${escapeHtml(formatNumber(stats.clearPixelCount, 0))}</dd></div>
+      <div><dt>${escapeHtml(t("comparison.cloudShare"))}</dt><dd>${escapeHtml(formatNumber(cloudShare, 1))}%</dd></div>
+    </dl>
+  </article>`;
+}
+
+function renderLandsatUrbanAtlasComparison(model) {
+  const { record, urbanAtlas, observation, landsatManifest } = model;
+  const heatwave = landsatManifest?.heatwaves?.find(({ id }) => observation?.heatwaveIds?.includes(id));
+  const uaStats = scopedStatistics(urbanAtlas, record);
+  return `<div class="panel-hero comparison-hero">
+    <p class="panel-eyebrow">${escapeHtml(t("comparison.heroKicker"))}</p>
+    <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+    <p class="panel-subtitle">${escapeHtml(landsatDateTime(observation?.acquiredAt))}</p>
+    ${heatwave ? `<p>${escapeHtml(t("landsat.heatwavePeriod", { start: formatDate(heatwave.start), end: formatDate(heatwave.end) }))}</p>` : ""}
+    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("comparison.seriesCount", { count: model.selectedSeries.length }))}</p>
+  </div>
+  <div class="panel-body comparison-body">
+    <section>
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("comparison.title"))}</p><h3>${escapeHtml(t("comparison.histogramTitle"))}</h3></div>
+      <p class="comparison-definition">${escapeHtml(t("comparison.surfaceTemperatureDefinition"))}</p>
+      <p class="section-intro">${escapeHtml(t("comparison.histogramExplanation"))}</p>
+      ${comparisonHistogram(model)}
+      ${comparisonChartDialog(model)}
+    </section>
+    <section aria-labelledby="comparison-series-title">
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("panel.detailsKicker"))}</p><h3 id="comparison-series-title">${escapeHtml(t("comparison.seriesMetrics"))}</h3></div>
+      <div class="comparison-series-list">${model.selectedSeries.map(comparisonSeriesCard).join("")}</div>
+    </section>
+    ${uaStats ? `<section aria-labelledby="comparison-ua-title">
+      <div class="section-heading"><p class="section-kicker">URBAN ATLAS 2021</p><h3 id="comparison-ua-title">${escapeHtml(t("comparison.urbanAtlasResults"))}</h3></div>
+      <div class="summary-grid">
+        ${metricCard("urbanAtlas.greenCoverage", t("unit.percentage", { value: formatNumber(uaStats.green.percentage) }), "#008c00")}
+        ${metricCard("urbanAtlas.artificialisation", t("unit.percentage", { value: formatNumber(uaStats.artificial.percentage) }), "#bf0000")}
+      </div>
+    </section>
+    <details class="detail-accordion" data-section="comparison-urban-atlas-green">
+      <summary data-focus-key="comparison-urban-atlas-green-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.greenBreakdown"))}</span></summary>
+      <div class="accordion-content land-cover-classes">${uaStats.green.classes.map((entry) => urbanAtlasRow(entry, urbanAtlas)).join("")}</div>
+    </details>
+    <details class="detail-accordion" data-section="comparison-urban-atlas-artificial">
+      <summary data-focus-key="comparison-urban-atlas-artificial-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("urbanAtlas.artificialBreakdown"))}</span></summary>
+      <div class="accordion-content">${urbanAtlasArtificialGroups(uaStats, urbanAtlas)}</div>
+    </details>` : `<p class="panel-empty-state">${escapeHtml(t("comparison.noScopeData"))}</p>`}
+    <details class="detail-accordion methodology-accordion" data-section="comparison-methodology">
+      <summary data-focus-key="comparison-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("comparison.methodologyTitle"))}</span></summary>
+      <div class="accordion-content methodology-copy">
+        <p>${escapeHtml(t("comparison.methodologyPixel"))}</p>
+        <p>${escapeHtml(t("comparison.methodologyTime"))}</p>
+        <p>${escapeHtml(t("comparison.cloudExplanation"))}</p>
+        <p>${escapeHtml(t("comparison.methodologyStatistics"))}</p>
+        <p>${escapeHtml(t("landsat.methodology"))}</p>
+        <p>${escapeHtml(t("urbanAtlas.classificationWarning"))}</p>
+      </div>
+    </details>
+  </div>`;
+}
+
+function renderLandsatJaarbakComparison(model) {
+  const { record, observation, landsatManifest, surfaceStats } = model;
+  const heatwave = landsatManifest?.heatwaves?.find(({ id }) => observation?.heatwaveIds?.includes(id));
+  const sealed = surfaceStats?.sealedPercentage ?? 0;
+  const unsealed = surfaceStats?.unsealedPercentage ?? 0;
+  return `<div class="panel-hero comparison-hero">
+    <p class="panel-eyebrow">${escapeHtml(t("soilComparison.heroKicker"))}</p>
+    <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
+    <p class="panel-subtitle">${escapeHtml(landsatDateTime(observation?.acquiredAt))}</p>
+    ${heatwave ? `<p>${escapeHtml(t("landsat.heatwavePeriod", { start: formatDate(heatwave.start), end: formatDate(heatwave.end) }))}</p>` : ""}
+    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("soilComparison.matchedYear", { year: model.secondaryYear }))}</p>
+  </div>
+  <div class="panel-body comparison-body">
+    <section>
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("soilComparison.title"))}</p><h3>${escapeHtml(t("comparison.histogramTitle"))}</h3></div>
+      <p class="comparison-definition">${escapeHtml(t("comparison.surfaceTemperatureDefinition"))}</p>
+      <p class="section-intro">${escapeHtml(t("comparison.histogramExplanation"))}</p>
+      ${comparisonHistogram(model)}
+      ${comparisonChartDialog(model)}
+    </section>
+    <section aria-labelledby="soil-comparison-series-title">
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("panel.detailsKicker"))}</p><h3 id="soil-comparison-series-title">${escapeHtml(t("comparison.seriesMetrics"))}</h3></div>
+      <div class="comparison-series-list">${model.selectedSeries.map(comparisonSeriesCard).join("")}</div>
+    </section>
+    ${surfaceStats ? `<section aria-labelledby="soil-composition-title">
+      <div class="section-heading"><p class="section-kicker">JAARBAK ${escapeHtml(String(model.secondaryYear))}</p><h3 id="soil-composition-title">${escapeHtml(t("soilComparison.results"))}</h3></div>
+      <div class="local-composition" role="img" aria-label="${escapeHtml(`${t("soilComparison.sealed")} ${formatNumber(sealed, 1)}%, ${t("soilComparison.unsealed")} ${formatNumber(unsealed, 1)}%`)}">
+        <span style="width:${sealed}%;--segment:#e8292f"></span><span style="width:${unsealed}%;--segment:#8ecf7c"></span>
+      </div>
+      <div class="summary-grid">
+        ${metricCard("soilComparison.sealed", `${formatNumber(sealed, 1)}% · ${formatNumber(surfaceStats.sealedAreaHa, 1)} ha`, "#8f1d2c")}
+        ${metricCard("soilComparison.unsealed", `${formatNumber(unsealed, 1)}% · ${formatNumber(surfaceStats.unsealedAreaHa, 1)} ha`, "#176b43")}
+      </div>
+      <p class="calculation-note">${escapeHtml(t("soilComparison.assignment"))}</p>
+    </section>` : `<p class="panel-empty-state">${escapeHtml(t("comparison.noScopeData"))}</p>`}
+    <details class="detail-accordion methodology-accordion" data-section="soil-comparison-methodology">
+      <summary data-focus-key="soil-comparison-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("comparison.methodologyTitle"))}</span></summary>
+      <div class="accordion-content methodology-copy">
+        <p>${escapeHtml(t("soilComparison.assignment"))}</p>
+        <p>${escapeHtml(t("soilComparison.methodTime"))}</p>
+        ${model.secondaryStatus === "provisional" ? `<p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("soilComparison.provisional"))}</p>` : ""}
+        <p>${escapeHtml(t("comparison.cloudExplanation"))}</p>
+        <p>${escapeHtml(t("comparison.methodologyStatistics"))}</p>
+      </div>
+    </details>
+  </div>`;
+}
+
 function renderLandsatTemperature(model) {
   const { record, manifest, observation, stats } = model;
   const kind = "Heatwave";
@@ -1070,6 +1288,8 @@ export function renderSectorPanelModel(model) {
   if (model.template === "local-official-raster") return renderLocalOfficialRaster(model);
   if (model.template === "landgebruik") return renderLandgebruik(model);
   if (model.template === "landsat-temperature") return renderLandsatTemperature(model);
+  if (model.template === "landsat-urban-atlas-comparison") return renderLandsatUrbanAtlasComparison(model);
+  if (model.template === "landsat-jaarbak-comparison") return renderLandsatJaarbakComparison(model);
   if (model.template === "income") return renderIncome(model);
   if (model.template === "metric-summary") return renderMetricSummary(model);
   throw new Error(`Unknown sector panel template '${model.template}'.`);
@@ -1222,9 +1442,27 @@ export function createDetailPanel({
   toggleButton.addEventListener("click", () => onPresentationRequest?.("peek", toggleButton));
   peekButton.addEventListener("click", () => onPresentationRequest?.("expanded", peekButton));
   panel.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") close();
+    if (event.key === "Escape" && !content.querySelector("dialog[open]")) close();
   });
   content.addEventListener("click", (event) => {
+    const expand = event.target.closest("[data-expand-comparison-chart]");
+    if (expand) {
+      const dialog = expand.closest("section")?.querySelector("[data-comparison-chart-dialog]");
+      if (dialog) {
+        dialog.dataset.returnFocusKey = "comparison-chart-expand";
+        expand.dataset.focusKey = "comparison-chart-expand";
+        dialog.showModal();
+        dialog.querySelector("[data-close-comparison-chart]")?.focus();
+      }
+      return;
+    }
+    const closeChart = event.target.closest("[data-close-comparison-chart]");
+    if (closeChart) {
+      const dialog = closeChart.closest("dialog");
+      dialog?.close();
+      content.querySelector('[data-focus-key="comparison-chart-expand"]')?.focus();
+      return;
+    }
     const button = event.target.closest("[data-panel-heat-metric]");
     if (!button) return;
     onLayerOptionChange?.("metric", button.dataset.panelHeatMetric, button);
@@ -1236,6 +1474,14 @@ export function createDetailPanel({
     else openSectionIds.delete(section.dataset.section);
   }, true);
   content.addEventListener("keydown", (event) => {
+    const histogramBin = event.target.closest("[data-histogram-bin]");
+    if (histogramBin && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      const bins = [...content.querySelectorAll("[data-histogram-bin]")];
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      bins[(bins.indexOf(histogramBin) + direction + bins.length) % bins.length]?.focus();
+      return;
+    }
     const button = event.target.closest("[data-panel-heat-metric]");
     if (!button || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
     event.preventDefault();
@@ -1244,6 +1490,20 @@ export function createDetailPanel({
     const direction = event.key === "ArrowRight" ? 1 : -1;
     buttons[(currentIndex + direction + buttons.length) % buttons.length].focus();
   });
+  const updateHistogramOutput = (event) => {
+    const bin = event.target.closest?.("[data-histogram-label]");
+    if (!bin) return;
+    const output = bin.closest("[data-comparison-chart]")?.querySelector("[data-histogram-output]");
+    if (output) output.textContent = bin.dataset.histogramLabel;
+    const crosshair = bin.closest("[data-comparison-chart]")?.querySelector("[data-comparison-crosshair]");
+    if (crosshair) {
+      crosshair.hidden = false;
+      crosshair.setAttribute("x1", bin.dataset.histogramX);
+      crosshair.setAttribute("x2", bin.dataset.histogramX);
+    }
+  };
+  content.addEventListener("focusin", updateHistogramOutput);
+  content.addEventListener("pointerover", updateHistogramOutput);
   return {
     open,
     openAbout,

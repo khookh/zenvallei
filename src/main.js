@@ -48,9 +48,11 @@ const elements = {
   layerContextNote: document.querySelector("#layer-context-note"),
   layerContextSources: document.querySelector("#layer-context-sources"),
   analysisPairing: document.querySelector("#analysis-pairing"),
+  mapModeAction: document.querySelector("#map-mode-action"),
   analysisCompare: document.querySelector("#analysis-compare"),
   analysisPairResult: document.querySelector("#analysis-pair-result"),
   analysisPairLabel: document.querySelector("#analysis-pair-label"),
+  analysisPairRetry: document.querySelector("#analysis-pair-retry"),
   analysisPairChange: document.querySelector("#analysis-pair-change"),
   analysisPairRemove: document.querySelector("#analysis-pair-remove"),
   analysisPickInstruction: document.querySelector("#analysis-pick-instruction"),
@@ -91,11 +93,22 @@ const application = {
   mapControlsCollapsed: false,
   analysisPairings: {},
   analysisPickMode: null,
+  comparisons: new Map(),
+  activeComparisonId: null,
+  activateAnalysisPairing: null,
+  deactivateAnalysisPairing: null,
   surfaceLayout: null,
   projectIntro: null,
 };
 
 const activeLayer = () => application.layers?.get(application.activeLayer);
+const activeComparison = () => application.comparisons.get(application.activeComparisonId) ?? null;
+const activeAnalysisTargets = (layer) => {
+  const declared = layer?.getAnalysisTargets?.() ?? [];
+  if (layer?.id !== "landsat-temperature") return declared;
+  return declared.filter((targetId) => [...application.comparisons.values()]
+    .some((comparison) => comparison.primaryLayerId === layer.id && comparison.secondaryLayerId === targetId));
+};
 const supportsMunicipalitySummary = () => Boolean(activeLayer()?.supportsMunicipalitySummary);
 
 function updateMapControlsDisclosure({ refreshMap = true } = {}) {
@@ -201,6 +214,7 @@ function updateLayerControls() {
     const isCompatible = Boolean(pick?.targetIds.includes(layer?.id));
     const available = pick ? isCompatible : normallyAvailable;
     const label = layer?.getLabel() ?? button.dataset.layer;
+    const linkedSecondary = application.analysisPairings[application.activeLayer] === layer?.id;
     button.replaceChildren();
     if (pick && isCompatible) {
       const icon = document.createElement("span");
@@ -216,11 +230,13 @@ function updateLayerControls() {
       button.removeAttribute("aria-label");
     }
     if (isPrimary) button.setAttribute("aria-label", t("analysisPairing.locked", { layer: label }));
+    if (linkedSecondary && !pick) button.setAttribute("aria-label", t("analysisPairing.comparisonLayer", { layer: label }));
     button.setAttribute("aria-disabled", String(!available));
     button.setAttribute("aria-pressed", String(application.activeLayer === layer?.id));
     button.classList.toggle("is-active", application.activeLayer === layer?.id);
     button.classList.toggle("is-comparison-target", isCompatible);
     button.classList.toggle("is-comparison-primary", isPrimary);
+    button.classList.toggle("is-linked-comparison", linkedSecondary && !pick);
     button.classList.toggle("is-comparison-muted", Boolean(pick && !isCompatible && !isPrimary));
   });
 }
@@ -268,17 +284,35 @@ function createLayerControls() {
 function updateAnalysisPairing() {
   if (!application.layers) return;
   const layer = activeLayer();
-  const targets = (layer?.getAnalysisTargets?.() ?? [])
+  const targets = activeAnalysisTargets(layer)
     .map((id) => application.layers.get(id))
     .filter((candidate) => candidate?.isAvailable());
   const picking = application.analysisPickMode?.primaryLayerId === layer?.id;
+  const mapModeAction = layer?.getMapModeAction?.() ?? null;
   const selectedId = targets.some(({ id }) => id === application.analysisPairings[layer.id])
     ? application.analysisPairings[layer.id]
     : "";
-  elements.analysisPairing.hidden = targets.length === 0;
-  if (!targets.length) return;
+  const selectedComparison = selectedId && activeComparison()?.secondaryLayerId === selectedId
+    ? activeComparison()
+    : null;
+  const comparisonFailed = Boolean(selectedComparison?.hasLoadError?.());
+  elements.analysisPairing.hidden = targets.length === 0 && !mapModeAction;
+  elements.mapModeAction.hidden = !mapModeAction;
+  if (mapModeAction) {
+    elements.mapModeAction.textContent = mapModeAction.label;
+    elements.mapModeAction.setAttribute("aria-pressed", String(mapModeAction.active));
+    elements.mapModeAction.classList.toggle("is-active", mapModeAction.active);
+  }
+  if (!targets.length) {
+    elements.analysisCompare.hidden = true;
+    elements.analysisPairResult.hidden = true;
+    elements.analysisPickInstruction.hidden = true;
+    elements.analysisPairNote.hidden = true;
+    return;
+  }
   elements.analysisCompare.hidden = Boolean(selectedId) || picking;
   elements.analysisPairResult.hidden = !selectedId || picking;
+  elements.analysisPairRetry.hidden = !comparisonFailed || picking;
   elements.analysisPickInstruction.hidden = !picking;
   elements.analysisPairNote.hidden = !selectedId || picking;
   if (selectedId) {
@@ -286,7 +320,11 @@ function updateAnalysisPairing() {
       primary: layer.getLabel(),
       secondary: application.layers.get(selectedId).getLabel(),
     });
-    elements.analysisPairNote.textContent = t("analysisPairing.previewNote");
+    elements.analysisPairNote.textContent = comparisonFailed
+      ? t("analysisPairing.loadFailed")
+      : selectedComparison?.isActive()
+        ? t("analysisPairing.activeNote")
+        : t("analysisPairing.previewNote");
   }
   if (picking) {
     elements.analysisPairingHelp.textContent = t("analysisPairing.instruction", { layer: layer.getLabel() });
@@ -295,7 +333,7 @@ function updateAnalysisPairing() {
 
 function enterAnalysisPickMode(trigger = elements.analysisCompare) {
   const layer = activeLayer();
-  const targetIds = (layer?.getAnalysisTargets?.() ?? [])
+  const targetIds = activeAnalysisTargets(layer)
     .filter((id) => application.layers.get(id)?.isAvailable());
   if (!targetIds.length) return;
   application.analysisPickMode = { primaryLayerId: layer.id, targetIds, returnFocus: trigger };
@@ -321,7 +359,7 @@ function cancelAnalysisPickMode({ restoreFocus = true } = {}) {
   if (restoreFocus && returnFocus instanceof HTMLElement) returnFocus.focus();
 }
 
-function selectAnalysisPairing(targetId) {
+async function selectAnalysisPairing(targetId) {
   const pick = application.analysisPickMode;
   if (!pick?.targetIds.includes(targetId)) return false;
   application.analysisPairings[pick.primaryLayerId] = targetId;
@@ -336,6 +374,23 @@ function selectAnalysisPairing(targetId) {
     parameters: { primary: primary.getLabel(), secondary: secondary.getLabel() },
   };
   updateAnnouncement();
+  try {
+    const activated = await application.activateAnalysisPairing?.(pick.primaryLayerId, targetId);
+    if (activated === false) {
+      updateAnalysisPairing();
+      elements.analysisPairRetry.focus();
+      return false;
+    }
+  } catch (error) {
+    console.error(error);
+    elements.layerHelp.textContent = t("analysisPairing.loadFailed");
+    updateAnalysisPairing();
+    return false;
+  }
+  if (activeComparison()?.isActive()) {
+    application.announcement = { type: "analysisPairing", key: "comparison.activated", parameters: {} };
+    updateAnnouncement();
+  }
   elements.analysisPairChange.focus();
   return true;
 }
@@ -344,6 +399,7 @@ function removeAnalysisPairing() {
   const layer = activeLayer();
   if (!layer || !application.analysisPairings[layer.id]) return;
   delete application.analysisPairings[layer.id];
+  application.deactivateAnalysisPairing?.(layer.id);
   updateAnalysisPairing();
   application.announcement = { type: "analysisPairing", key: "analysisPairing.removed", parameters: {} };
   updateAnnouncement();
@@ -415,8 +471,10 @@ function updateSecondaryControls() {
 function updateLayerContext() {
   if (!application.layers) return;
   const layer = activeLayer();
-  const context = layer.getContext({ sectorCount: application.data?.provenance?.output?.sectorCount ?? 154 });
-  elements.activeLayerTitle.textContent = layer.getLabel();
+  const comparison = activeComparison()?.isActive() ? activeComparison() : null;
+  const context = comparison?.getContext()
+    ?? layer.getContext({ sectorCount: application.data?.provenance?.output?.sectorCount ?? 154 });
+  elements.activeLayerTitle.textContent = comparison?.getLabel() ?? layer.getLabel();
   elements.layerContextMeta.textContent = context.meta;
   elements.layerContextCopy.textContent = context.text;
   elements.layerContextNote.textContent = context.note ?? "";
@@ -453,9 +511,106 @@ function createLegendItem(item, { score = false } = {}) {
   return container;
 }
 
+function createSurfaceSelector(model) {
+  const wrapper = document.createElement("section");
+  wrapper.className = "comparison-surface-selector";
+  const heading = document.createElement("h3");
+  heading.textContent = model.title;
+  const help = document.createElement("p");
+  help.textContent = model.help;
+  const groups = document.createElement("div");
+  groups.className = "comparison-surface-groups";
+  model.groups.forEach((group) => {
+    const section = document.createElement("section");
+    section.className = "comparison-surface-family";
+    const header = document.createElement("div");
+    header.className = "comparison-surface-family-header";
+    const family = group.family;
+    const select = document.createElement("button");
+    select.type = "button";
+    select.dataset.comparisonSeries = family.key;
+    select.className = "comparison-surface-family-select";
+    select.setAttribute("aria-pressed", String(family.selected));
+    select.classList.toggle("is-selected", family.selected);
+    const swatch = document.createElement("i");
+    swatch.style.setProperty("--swatch", family.color);
+    swatch.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.textContent = group.title;
+    select.append(swatch, label);
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "comparison-surface-family-toggle";
+    toggle.dataset.comparisonFamilyToggle = group.id;
+    toggle.setAttribute("aria-expanded", String(group.expanded));
+    toggle.setAttribute("aria-controls", `comparison-family-${group.id}`);
+    toggle.setAttribute("aria-label", t(group.expanded ? "comparison.collapseFamily" : "comparison.expandFamily", { family: group.title }));
+    toggle.textContent = group.expanded ? "−" : "+";
+    header.append(select, toggle);
+    const options = document.createElement("div");
+    options.className = "comparison-surface-options";
+    options.id = `comparison-family-${group.id}`;
+    options.hidden = !group.expanded;
+    group.items.forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.comparisonSeries = item.key;
+      button.className = "comparison-surface-button";
+      button.setAttribute("aria-pressed", String(item.selected));
+      button.classList.toggle("is-selected", item.selected);
+      const swatch = document.createElement("i");
+      swatch.style.setProperty("--swatch", item.color);
+      swatch.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.textContent = item.label;
+      button.append(swatch, label);
+      options.append(button);
+    });
+    section.append(header, options);
+    groups.append(section);
+  });
+  const feedback = document.createElement("p");
+  feedback.className = "comparison-surface-feedback";
+  feedback.dataset.comparisonFeedback = "";
+  feedback.setAttribute("aria-live", "polite");
+  wrapper.append(heading, help, groups, feedback);
+  return wrapper;
+}
+
+function createDensitySelector(model) {
+  const wrapper = document.createElement("section");
+  wrapper.className = "density-class-selector";
+  const heading = document.createElement("h3");
+  heading.textContent = model.title;
+  const options = document.createElement("div");
+  options.setAttribute("role", "group");
+  options.setAttribute("aria-label", model.title);
+  model.items.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.densityClass = String(item.code);
+    button.setAttribute("aria-pressed", String(item.selected));
+    button.classList.toggle("is-selected", item.selected);
+    const swatch = document.createElement("i");
+    swatch.style.setProperty("--swatch", item.color);
+    swatch.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.textContent = item.label;
+    button.append(swatch, label);
+    options.append(button);
+  });
+  const feedback = document.createElement("p");
+  feedback.dataset.densityFeedback = "";
+  feedback.setAttribute("aria-live", "polite");
+  wrapper.append(heading, options, feedback);
+  return wrapper;
+}
+
 function renderLegend() {
   if (!application.layers) return;
-  const model = activeLayer().getLegendModel();
+  const model = activeComparison()?.isActive()
+    ? activeComparison().getLegendModel()
+    : activeLayer().getLegendModel();
   elements.legendTitle.textContent = model.title;
   elements.legendNote.textContent = model.note ?? "";
   const footnote = model.footnote ? document.createElement("p") : null;
@@ -471,7 +626,14 @@ function renderLegend() {
     const statuses = document.createElement("div");
     statuses.className = "legend-statuses";
     statuses.append(...(model.groups[1]?.items ?? []).map((item) => createLegendItem(item)));
-    elements.legend.replaceChildren(scale, statuses, ...(footnote ? [footnote] : []));
+    if (model.comparisonSeries?.length) {
+      statuses.append(...model.comparisonSeries.map((item) => createLegendItem(item)));
+    }
+    const selector = model.surfaceSelector ? createSurfaceSelector(model.surfaceSelector) : null;
+    const densitySelector = model.densitySelector ? createDensitySelector(model.densitySelector) : null;
+    elements.legend.replaceChildren(
+      scale, statuses, ...(selector ? [selector] : []), ...(densitySelector ? [densitySelector] : []), ...(footnote ? [footnote] : []),
+    );
     return;
   }
 
@@ -606,11 +768,19 @@ async function start() {
     sectorId: "",
     sectorCount: data.provenance.output.municipalityCounts[municipality] ?? 0,
   });
+  const regionRecord = () => ({
+    scope: "region",
+    municipality: "",
+    sectorName: t("controls.allMunicipalities"),
+    sectorId: "",
+    sectorCount: data.provenance.output.sectorCount ?? 154,
+  });
   const sharedPanelData = {
     methodology: data.methodology,
     urbanAtlas: data.urbanAtlas,
     income: data.income,
     localLayers: data.localLayers,
+    localComparisons: data.localComparisons,
   };
   const panel = createDetailPanel({
     panel: elements.detailPanel,
@@ -620,7 +790,11 @@ async function start() {
     peekButton: elements.panelPeek,
     peekLabel: elements.panelPeekLabel,
     peekValue: elements.panelPeekValue,
-    getPanelModel: (layerId, record) => application.layers.get(layerId).getPanelModel(record, sharedPanelData),
+    getPanelModel: (layerId, record) => (
+      layerId === "landsat-temperature" && activeComparison()?.isActive()
+        ? activeComparison().getPanelModel(record, sharedPanelData)
+        : application.layers.get(layerId).getPanelModel(record, sharedPanelData)
+    ),
     getAboutModel: () => ({ ...sharedPanelData, provenance: data.provenance }),
     onLayerOptionChange: (name, value) => activateLayerOption(name, value),
     onOpen: () => application.surfaceLayout?.requestPanel("expanded"),
@@ -630,7 +804,13 @@ async function start() {
       application.mapController?.setSelected("");
       application.announcement = { type: "closed" };
       updateAnnouncement();
-      if (closedView?.type === "record" && closedView.record.scope !== "municipality"
+      if (closedView?.type === "record" && !closedView.record.scope && activeComparison()?.isActive()) {
+        queueMicrotask(() => panel.open(
+          elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(),
+          elements.municipality,
+          application.activeLayer,
+        ));
+      } else if (closedView?.type === "record" && closedView.record.scope !== "municipality"
         && elements.municipality.value && supportsMunicipalitySummary()) {
         queueMicrotask(() => panel.open(
           municipalityRecord(elements.municipality.value),
@@ -683,6 +863,7 @@ async function start() {
     updateDatasetStatus();
     renderLegend();
     panel.refresh();
+    activeComparison()?.refreshObservation();
     application.announcement = { type: "temporalValue", layerId: layer.id, value };
     updateAnnouncement();
     return true;
@@ -720,6 +901,71 @@ async function start() {
       updateLayerControls();
     },
   });
+  const landsatLayer = application.layers.get("landsat-temperature");
+  if (landsatLayer && data.localComparisons?.["landsat-urban-atlas"]) {
+    const { createLandsatUrbanAtlasComparison } = await import("./comparisons/landsat-urban-atlas.js");
+    const comparison = createLandsatUrbanAtlasComparison({
+      descriptor: data.localComparisons["landsat-urban-atlas"], landsatLayer,
+      urbanAtlasLayer: application.layers.get("urban-atlas"), urbanAtlas: data.urbanAtlas,
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
+  if (landsatLayer && data.localComparisons?.["landsat-jaarbak"] && application.layers.has("jaarbak")) {
+    const { createLandsatJaarbakComparison } = await import("./comparisons/landsat-jaarbak.js");
+    const comparison = createLandsatJaarbakComparison({
+      descriptor: data.localComparisons["landsat-jaarbak"], landsatLayer,
+      jaarbakLayer: application.layers.get("jaarbak"),
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
+  application.comparisons.forEach((comparison) => comparison.subscribe(() => {
+    if (!comparison.isActive()) return;
+    renderLegend();
+    panel.refresh();
+    updateAnalysisPairing();
+    updateLayerControls();
+  }));
+  application.activateAnalysisPairing = async (primaryId, targetId) => {
+    const next = [...application.comparisons.values()].find((comparison) => (
+      comparison.primaryLayerId === primaryId && comparison.secondaryLayerId === targetId
+    ));
+    if (!next) return false;
+    const current = activeComparison();
+    if (current && current !== next) current.deactivate();
+    application.activeComparisonId = next.id;
+    const activated = await next.activate(application.mapController.map);
+    if (activated === false) {
+      renderLegend();
+      updateLayerContext();
+      updateLayerControls();
+      updateAnalysisPairing();
+      return false;
+    }
+    await next.setMunicipality(elements.municipality.value);
+    renderLegend();
+    updateLayerContext();
+    updateLayerControls();
+    updateAnalysisPairing();
+    if (selectedSectorId) panel.refresh();
+    else panel.open(
+      elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(),
+      elements.analysisPairChange, "landsat-temperature",
+    );
+    return true;
+  };
+  application.deactivateAnalysisPairing = (primaryId) => {
+    const comparison = activeComparison();
+    if (comparison?.primaryLayerId !== primaryId || !comparison.isActive()) return;
+    comparison.deactivate();
+    application.activeComparisonId = null;
+    renderLegend();
+    updateLayerContext();
+    updateLayerControls();
+    if (selectedSectorId) panel.refresh();
+    else if (elements.municipality.value) {
+      panel.open(municipalityRecord(elements.municipality.value), elements.municipality, "landsat-temperature");
+    } else panel.close({ restoreFocus: false });
+  };
   application.surfaceLayout = createMapSurfaceLayout({
     shell: document.querySelector(".map-shell"),
     controls: elements.mapControls,
@@ -756,7 +1002,10 @@ async function start() {
       panel.close({ restoreFocus: false });
     }
     application.mapController.setMunicipality(municipality);
-    if (!selectedSectorId && municipality && supportsMunicipalitySummary()) {
+    activeComparison()?.setMunicipality(municipality);
+    if (!selectedSectorId && activeComparison()?.isActive()) {
+      panel.open(municipality ? municipalityRecord(municipality) : regionRecord(), elements.municipality, application.activeLayer);
+    } else if (!selectedSectorId && municipality && supportsMunicipalitySummary()) {
       panel.open(municipalityRecord(municipality), elements.municipality, application.activeLayer);
     } else if (!municipality && panel.isMunicipalitySummary?.()) {
       panel.close({ restoreFocus: false });
@@ -804,11 +1053,76 @@ async function start() {
     if (button) moveSegmentFocus(event, buttons, button);
   });
   elements.analysisCompare.addEventListener("click", () => enterAnalysisPickMode(elements.analysisCompare));
+  elements.mapModeAction.addEventListener("click", async () => {
+    const layer = activeLayer();
+    if (!layer?.toggleMapMode) return;
+    elements.mapModeAction.setAttribute("aria-busy", "true");
+    try {
+      await layer.toggleMapMode(application.mapController.map);
+      updateAnalysisPairing();
+      updateLayerContext();
+      renderLegend();
+      application.mapController.setLanguage();
+      elements.mapModeAction.focus({ preventScroll: true });
+    } catch (error) {
+      console.error(error);
+      elements.layerHelp.textContent = t("density.loadError");
+    } finally {
+      elements.mapModeAction.removeAttribute("aria-busy");
+    }
+  });
   elements.analysisPairChange.addEventListener("click", () => enterAnalysisPickMode(elements.analysisPairChange));
+  elements.analysisPairRetry.addEventListener("click", async () => {
+    const comparison = activeComparison();
+    if (!comparison?.retry) return;
+    elements.analysisPairRetry.setAttribute("aria-busy", "true");
+    try {
+      const ready = await comparison.retry({ municipality: elements.municipality.value });
+      updateAnalysisPairing();
+      if (!ready) return;
+      renderLegend();
+      updateLayerContext();
+      updateLayerControls();
+      if (selectedSectorId) panel.refresh();
+      else panel.open(
+        elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(),
+        elements.analysisPairRetry,
+        "landsat-temperature",
+      );
+    } finally {
+      elements.analysisPairRetry.removeAttribute("aria-busy");
+    }
+  });
   elements.analysisPairRemove.addEventListener("click", removeAnalysisPairing);
   elements.analysisPickCancel.addEventListener("click", () => cancelAnalysisPickMode());
   elements.legendDisclosure.addEventListener("toggle", () => {
     if (!application.surfaceLayout?.isApplying()) application.surfaceLayout?.requestLegend(elements.legendDisclosure.open);
+  });
+  elements.legend.addEventListener("click", (event) => {
+    const densityButton = event.target.closest("[data-density-class]");
+    if (densityButton && activeLayer()?.toggleDensityClass) {
+      const result = activeLayer().toggleDensityClass(densityButton.dataset.densityClass);
+      if (result.minimum) {
+        const feedback = elements.legend.querySelector("[data-density-feedback]");
+        if (feedback) feedback.textContent = t("density.minimumClass");
+        elements.announcement.textContent = t("density.minimumClass");
+      } else if (result.changed) renderLegend();
+      return;
+    }
+    const disclosure = event.target.closest("[data-comparison-family-toggle]");
+    if (disclosure && activeComparison()?.isActive()) {
+      activeComparison().toggleFamilyDisclosure?.(disclosure.dataset.comparisonFamilyToggle);
+      return;
+    }
+    const button = event.target.closest("[data-comparison-series]");
+    if (!button || !activeComparison()?.isActive() || !activeComparison().toggleSeries) return;
+    const result = activeComparison().toggleSeries(button.dataset.comparisonSeries);
+    if (result.limit) {
+      const feedback = elements.legend.querySelector("[data-comparison-feedback]");
+      if (feedback) feedback.textContent = t("comparison.seriesLimit");
+      application.announcement = { type: "analysisPairing", key: "comparison.seriesLimit", parameters: {} };
+      updateAnnouncement();
+    }
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && application.analysisPickMode) {
@@ -854,6 +1168,10 @@ async function start() {
         return;
       }
       button.setAttribute("aria-busy", "true");
+      if (activeComparison()?.isActive() && layerId !== "landsat-temperature") {
+        activeComparison().deactivate();
+        application.activeComparisonId = null;
+      }
       let activated;
       try {
         activated = await application.mapController.setLayer(layerId);
@@ -868,6 +1186,15 @@ async function start() {
         return;
       }
       application.activeLayer = layerId;
+      if (layerId === "landsat-temperature" && application.analysisPairings["landsat-temperature"]) {
+        const targetId = application.analysisPairings["landsat-temperature"];
+        const comparison = [...application.comparisons.values()].find((item) => item.secondaryLayerId === targetId);
+        if (comparison && !comparison.isActive()) {
+          application.activeComparisonId = comparison.id;
+          await comparison.activate(application.mapController.map);
+          await comparison.setMunicipality(elements.municipality.value);
+        }
+      }
       if (application.analysisPickMode) cancelAnalysisPickMode({ restoreFocus: false });
       elements.layerHelp.textContent = "";
       updateLayerControls();
@@ -877,6 +1204,8 @@ async function start() {
       renderLegend();
       if (selectedSectorId) {
         panel.setActiveLayer(layerId);
+      } else if (activeComparison()?.isActive()) {
+        panel.open(elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(), button, layerId);
       } else if (elements.municipality.value && supportsMunicipalitySummary()) {
         panel.open(municipalityRecord(elements.municipality.value), button, layerId);
       } else if (panel.isMunicipalitySummary?.()) {

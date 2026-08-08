@@ -35,7 +35,7 @@ export function parseSingleByteRange(header, size) {
 }
 
 function localDataPlugin(root) {
-  const allowedExtensions = new Set([".json", ".geojson", ".pmtiles"]);
+  const allowedExtensions = new Set([".json", ".geojson", ".pmtiles", ".png", ".tif"]);
   const landsatCache = new Map();
   let geospatialLibraries;
   const loadGeospatialLibraries = () => {
@@ -136,7 +136,8 @@ function localDataPlugin(root) {
     response.setHeader("Cache-Control", isJson ? "no-store" : "private, max-age=3600");
     response.setHeader("Content-Type", isJson
       ? "application/json; charset=utf-8"
-      : "application/vnd.pmtiles");
+      : target.endsWith(".png") ? "image/png"
+        : target.endsWith(".tif") ? "image/tiff" : "application/vnd.pmtiles");
     if (!request.headers.range) {
       response.setHeader("Content-Length", stat.size);
       return fs.createReadStream(target).pipe(response);

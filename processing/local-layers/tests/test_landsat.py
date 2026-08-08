@@ -10,6 +10,7 @@ from greenwave_local_layers.landsat import (
     classify_quality,
     group_items_by_date,
     is_observation_excluded,
+    select_clearest_candidate,
     scale_surface_temperature,
 )
 
@@ -78,3 +79,21 @@ def test_withdrawn_acquisition_cannot_return_to_the_timeline():
     assert EXCLUDED_OBSERVATION_DATES == {"2020-08-16": "excluded-from-timeline"}
     assert is_observation_excluded("2020-08-16") is True
     assert is_observation_excluded("2020-08-07") is False
+
+
+def test_clearest_acquisition_is_selected_once_per_heatwave():
+    june = next(item for item in HEATWAVES if item["id"] == "2023-06")
+    chosen, rejected = select_clearest_candidate(june, [
+        {"date": "2023-06-14", "acquiredAt": "2023-06-14T10:41:00Z", "coveragePercentage": 97.50},
+        {"date": "2023-06-13", "acquiredAt": "2023-06-13T10:47:00Z", "coveragePercentage": 99.80},
+    ])
+    assert chosen["date"] == "2023-06-13"
+    assert [item["date"] for item in rejected] == ["2023-06-14"]
+
+    september = next(item for item in HEATWAVES if item["id"] == "2023-09")
+    chosen, rejected = select_clearest_candidate(september, [
+        {"date": "2023-09-10", "acquiredAt": "2023-09-10T10:35:00Z", "coveragePercentage": 91.33},
+        {"date": "2023-09-09", "acquiredAt": "2023-09-09T10:41:00Z", "coveragePercentage": 99.87},
+    ])
+    assert chosen["date"] == "2023-09-09"
+    assert [item["date"] for item in rejected] == ["2023-09-10"]

@@ -47,9 +47,18 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/landgebruik/manifest.json"))).toBe(true);
   await expect.poll(() => rangeResponses.includes(206)).toBe(true);
   const landsatManifest = await page.evaluate(async () => (await fetch("./data/official-layers/landsat-temperature/manifest.json")).json());
-  expect(landsatManifest.timelineItems).toHaveLength(8);
+  expect(landsatManifest.timelineItems.map(({ value }) => value)).toEqual([
+    "landsat-2020-08-07",
+    "landsat-2022-08-14",
+    "landsat-2023-06-13",
+    "landsat-2023-09-09",
+    "landsat-2025-08-13",
+    "landsat-2026-06-22",
+  ]);
   expect(landsatManifest.timelineItems.every(({ kind }) => kind === "heatwave")).toBe(true);
   expect(landsatManifest.timelineItems.some(({ value }) => value === "landsat-2020-08-16")).toBe(false);
+  expect(ownResponses.some((url) => url.includes("/__local-data__/")
+    || url.includes("/landsat-urban-atlas/manifest.json"))).toBe(false);
 
   if (!testInfo.project.name.includes("mobile")) {
     await page.locator('[data-layer="landsat-temperature"]').click();

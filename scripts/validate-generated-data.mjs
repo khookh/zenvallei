@@ -73,6 +73,14 @@ for (const datasetId of officialIds) {
     if (observation.queryRaster) referencedAssets.push(observation.queryRaster);
   });
   if (manifest.agriculturalDetail?.geojsonUrl) referencedAssets.push(manifest.agriculturalDetail.geojsonUrl);
+  if (manifest.density) {
+    if (manifest.density.radiusMeters !== 100 || manifest.density.denominator !== "complete-circle"
+      || manifest.density.analysisResolutionMeters !== 10 || manifest.density.validCoverageThreshold !== 95) {
+      throw new Error(`${datasetId}: published density contract is incompatible.`);
+    }
+    referencedAssets.push(manifest.density.scopeIndexUrl);
+    referencedAssets.push(...Object.values(manifest.density.years ?? {}).map(({ dataUrl }) => dataUrl));
+  }
   for (const asset of referencedAssets) {
     if (typeof asset !== "string" || asset.includes("..") || path.isAbsolute(asset)) {
       throw new Error(`${datasetId}: invalid published asset path '${asset}'.`);
@@ -84,8 +92,18 @@ const landsat = JSON.parse(await fs.readFile(path.join(officialRoot, "landsat-te
 if (landsat.timelineItems.some(({ kind, value }) => kind !== "heatwave" || value === "landsat-2020-08-16")) {
   throw new Error("Published Landsat timeline contains a reference or withdrawn 16 August 2020 observation.");
 }
-if (landsat.timelineItems.length !== 8 || Object.keys(landsat.observations).length !== 8) {
-  throw new Error("Published Landsat timeline must contain the eight approved heatwave observations.");
+const expectedLandsatObservations = [
+  "landsat-2020-08-07",
+  "landsat-2022-08-14",
+  "landsat-2023-06-13",
+  "landsat-2023-09-09",
+  "landsat-2025-08-13",
+  "landsat-2026-06-22",
+];
+const publishedLandsatObservations = landsat.timelineItems.map(({ value }) => value);
+if (JSON.stringify(publishedLandsatObservations) !== JSON.stringify(expectedLandsatObservations)
+  || JSON.stringify(Object.keys(landsat.observations)) !== JSON.stringify(expectedLandsatObservations)) {
+  throw new Error(`Published Landsat timeline must contain the six clearest approved heatwave observations: ${publishedLandsatObservations.join(", ")}.`);
 }
 
 console.log(`Validated ${sectorIds.size} sectors, seven application layers and all prepared browser assets.`);

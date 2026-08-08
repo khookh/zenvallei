@@ -7,13 +7,15 @@ This layer shows NASA/USGS Landsat 8 and 9 Collection 2 Level-2 land-surface tem
 ```powershell
 pnpm local-data:setup
 pnpm landsat-heat:prepare
+pnpm landsat-urban-atlas:prepare
+pnpm landsat-soil-sealing:prepare
 pnpm official-layers:publish
 pnpm dev:local-data
 ```
 
 The command queries `landsat-c2-l2`, requires Tier 1 `L2SP` products, mosaics adjacent WRS rows from the same overpass, and caches only the Zennevallei windows. Repeated runs reuse valid cached files.
 
-## RMI/KMI periods
+## RMI heatwave periods (KMI in Dutch)
 
 - 5-16 August 2020
 - 9-16 August 2022
@@ -27,7 +29,9 @@ The Royal Meteorological Institute of Belgium (RMI, KMI in Dutch) defines a heat
 
 ## Selection and calculation
 
-Heatwave acquisitions require at least 10% clear Zennevallei coverage. Usable acquisitions within a listed period are shown unless they are explicitly withdrawn; observations outside those periods are not included. The 16 August 2020 acquisition is intentionally excluded from the timeline, while the official 5-16 August heatwave period remains recorded in provenance.
+Heatwave acquisitions require at least 10% clear Zennevallei coverage. The pipeline retains one acquisition per heatwave: the date with the greatest clear coverage, followed by proximity to the heatwave midpoint and timestamp as deterministic tie-breakers. The six selectable observations are 7 August 2020, 14 August 2022, 13 June 2023, 9 September 2023, 13 August 2025 and 22 June 2026. The 13 June and 9 September observations respectively replace the cloudier 14 June and 10 September acquisitions. Rejected acquisitions remain in the analytical cache and provenance but have no browser derivative.
+
+The 16 August 2020 acquisition is intentionally excluded from selection, while the official 5-16 August heatwave period remains recorded in provenance.
 
 Temperature is calculated from `lwir11` with:
 
@@ -51,5 +55,40 @@ Files are stored in `.cache/local-layers/landsat-temperature`:
 The UI uses one fixed 15-50 degrees Celsius inferno scale for comparability. The date and acquisition time are displayed in `Europe/Brussels` local time with CET or CEST. Desktop hover and touch inspection query the exact active 30 m analytical pixel and show one decimal place. Sector and municipality summaries remain supporting context and report clear-sky median, mean, P10 and P90, clear/cloud/missing area, pixel count and product uncertainty.
 
 Surface temperature is not air temperature or perceived temperature. It shows how warm roofs, roads, vegetation and other surfaces were around the overpass. These spatial differences are highly relevant for understanding urban heat islands and radiant heat at street level, but one image does not represent an entire heatwave or prove a cause.
+
+## Local comparisons
+
+Both comparisons reuse the prepared Landsat analytical rasters. They download no satellite or reference data, stay below `.cache/local-layers`, and are available only through `pnpm dev:local-data` or `Start Greenwave.cmd`.
+
+### Urban Atlas 2021
+
+Run `pnpm landsat-urban-atlas:prepare` after preparing Landsat. It reuses the cached analytical rasters and `public/data/urban-atlas.geojson`; it downloads nothing. For every 30 m Landsat pixel, a 6 by 6 grid of 5 m sample points is evaluated. A pixel receives one Urban Atlas class only when a unique class covers at least 18 of the 36 points. Ties and mixed pixels without a majority are excluded.
+
+The generated files stay below `.cache/local-layers/landsat-urban-atlas`. The comparison manifest defines fixed 0.5 degree Celsius bins from 15 to 50 degrees Celsius. Per-observation files contain distributions for 154 sectors, seven municipalities and the complete Zennevallei, plus lossless browser-selection PNGs. The browser uses these PNGs only for display; all metrics come from the aligned EPSG:32631 analytical grid.
+
+Choose Landsat surface temperature, select **Compare**, then **Urban Atlas 2021**. The default curves compare pooled green urban areas with continuous urban fabric. Up to four analysis families or individual classes can be shown. The families are artificial surfaces; green urban areas; agriculture; forest and semi-natural vegetation; sports and leisure; wetlands; and water. Family and child selections are mutually exclusive.
+
+Only selected Urban Atlas surfaces are drawn. Their fill uses 18% opacity and their outline 62%; the thermal raster is drawn above them at 96%. Curves show the percentage of each surface's clear pixels per temperature bin and are normalised independently. One clear Landsat pixel is one recording, and 100% means all clear pixels assigned to that curve's surface. The comparison is descriptive, uses the fixed 2021 Urban Atlas classification for every Landsat year and does not treat spatially neighbouring pixels as independent observations.
+
+### JaarBAK soil sealing
+
+Run `pnpm landsat-soil-sealing:prepare` after JaarBAK and Landsat are prepared. The output is stored under `.cache/local-layers/landsat-jaarbak`. Each Landsat observation is paired with the closest available JaarBAK edition:
+
+| Landsat observation | JaarBAK edition |
+| --- | --- |
+| 7 August 2020 | 2020 |
+| 14 August 2022 | 2022 |
+| 13 June and 9 September 2023 | 2023 |
+| 13 August 2025 and 22 June 2026 | 2024 |
+
+Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded. The comparison always shows those two independently normalised curves. The faint 20% JaarBAK base retains its official red and green classes; the thermal raster is drawn above it at 94%.
+
+The UI discloses that the JaarBAK method changed in 2023 and that the 2024 edition is provisional. The 2024 mask is the closest available reference for the 2025 and 2026 Landsat observations.
+
+### Comparison palette and interpretation
+
+Comparison rasters use a fixed, vendored thermal colour table derived from the MIT-licensed [cmocean 4.0.3 thermal palette](https://matplotlib.org/cmocean/). The dark-blue-to-pale-yellow scale remains fixed at 15-50 degrees Celsius across all observations. Ordinary Landsat mode keeps its existing palette.
+
+The curves compare distribution shapes, not causal effects. Pixels are spatially correlated, mixed pixels can be excluded, and the reference classifications do not always match the Landsat acquisition year.
 
 Sources: [RMI/KMI heatwaves](https://www.meteo.be/nl/klimaat/klimaatverandering-in-belgie/klimaattrends-in-ukkel/luchttemperatuur/zomer-indices/hittegolven/hittegolven-in-ukkel), [USGS temperature product](https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature), [Planetary Computer STAC](https://planetarycomputer.microsoft.com/docs/quickstarts/reading-stac/).

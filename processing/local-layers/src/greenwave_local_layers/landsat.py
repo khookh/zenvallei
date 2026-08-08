@@ -60,6 +60,15 @@ HEATWAVES = (
     {"id": "2026-06", "start": "2026-06-17", "end": "2026-06-28", "sourceUrl": "https://www.meteo.be/nl/klimaat/klimaat-van-belgie/klimatologisch-overzicht/2026/juni"},
 )
 
+EXPECTED_SELECTED_OBSERVATIONS = (
+    "landsat-2020-08-07",
+    "landsat-2022-08-14",
+    "landsat-2023-06-13",
+    "landsat-2023-09-09",
+    "landsat-2025-08-13",
+    "landsat-2026-06-22",
+)
+
 # A discovered scene can be deliberately withdrawn from the user-facing
 # timeline without rewriting the authoritative RMI heatwave period. Keep these
 # decisions explicit so regenerating the cache cannot silently restore them.
@@ -120,6 +129,20 @@ def group_items_by_date(items):
 def is_observation_excluded(day: str) -> bool:
     """Return whether an acquisition date is intentionally omitted."""
     return day in EXCLUDED_OBSERVATION_DATES
+
+
+def select_clearest_candidate(period, candidates):
+    """Select one acquisition by coverage, midpoint proximity and timestamp."""
+    if not candidates:
+        return None, []
+    start, end = _period_dates(period)
+    midpoint = start + (end - start) / 2
+    ordered = sorted(candidates, key=lambda candidate: (
+        -candidate["coveragePercentage"],
+        abs((date.fromisoformat(candidate["date"]) - midpoint).total_seconds()),
+        candidate["acquiredAt"],
+    ))
+    return ordered[0], ordered[1:]
 
 
 def _grid(sectors):
@@ -328,6 +351,8 @@ def validate_prepared_manifest(manifest):
         raise ValueError("Landsat observations must form a non-empty chronological timeline.")
     if manifest.get("defaultObservation") not in observations:
         raise ValueError("The default Landsat observation is missing.")
+    if tuple(item["value"] for item in timeline) != EXPECTED_SELECTED_OBSERVATIONS:
+        raise ValueError("The Landsat timeline must contain the clearest acquisition for each observed heatwave.")
     periods = manifest.get("heatwaves", [])
     if [(item["start"], item["end"]) for item in periods] != [(item["start"], item["end"]) for item in HEATWAVES]:
         raise ValueError("The pinned KMI heatwave periods changed unexpectedly.")
@@ -423,7 +448,7 @@ def prepare_landsat_temperature():
     for period in HEATWAVES:
         start, end = _period_dates(period)
         groups = group_items_by_date(_search(catalog, sectors.geometry.union_all(), start, end))
-        observation_ids = []
+        eligible = []
         for day, group in sorted(groups.items()):
             if is_observation_excluded(day):
                 rejected.append({
@@ -434,16 +459,37 @@ def prepare_landsat_temperature():
                 continue
             candidate, *_ = evaluate(group)
             if candidate["coveragePercentage"] >= MINIMUM_HEATWAVE_COVERAGE:
-                observation_id = f"landsat-{day}"
-                selected[observation_id] = {"kind": "heatwave", "heatwaveIds": [period["id"]], "candidate": candidate}
-                observation_ids.append(observation_id)
+                eligible.append(candidate)
             else:
                 rejected.append({**candidate, "heatwaveId": period["id"], "reason": "insufficient-clear-coverage"})
+        observation_ids = []
+        if eligible:
+            chosen, not_selected = select_clearest_candidate(period, eligible)
+            observation_id = f"landsat-{chosen['date']}"
+            selected[observation_id] = {
+                "kind": "heatwave", "heatwaveIds": [period["id"]], "candidate": chosen,
+            }
+            observation_ids.append(observation_id)
+            rejected.extend({
+                "date": candidate["date"],
+                "acquiredAt": candidate["acquiredAt"],
+                "heatwaveId": period["id"],
+                "coveragePercentage": candidate["coveragePercentage"],
+                "reason": "not-clearest-for-heatwave",
+                "selectedObservationId": observation_id,
+            } for candidate in not_selected)
         heatwave_records.append({
             **period,
             "status": "observed" if observation_ids else ("no-acquisition" if not groups else "cloud-obscured"),
             "observationIds": observation_ids,
         })
+
+    # Browser derivatives are disposable. Keep every analytical GeoTIFF, but
+    # remove PMTiles for acquisitions that are no longer selected.
+    selected_ids = set(selected)
+    for archive in output_root.glob("landsat-*.pmtiles"):
+        if not any(archive.name.startswith(f"{observation_id}-") for observation_id in selected_ids):
+            archive.unlink()
 
     cutline_root = CACHE_ROOT / "cutlines"
     cutline_root.mkdir(parents=True, exist_ok=True)

@@ -287,7 +287,7 @@ describe("progressive detail panel", () => {
     setLanguage("en");
     api.open(records["23027A183"]);
     expect(document.querySelector("#panel").textContent).toContain("Insufficient data");
-    expect(document.querySelector("#panel").textContent).toContain("population or SES data is insufficient");
+    expect(document.querySelector("#panel").textContent).toContain("population or SES information is insufficient");
 
     api.open({
       ...records["23027A183"],
@@ -352,7 +352,7 @@ describe("progressive detail panel", () => {
     api.openAbout(document.querySelector("#trigger"));
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Wat elke laag vertelt");
-    expect(panel.textContent).toContain("Landgebruik en groen");
+    expect(panel.textContent).toContain("Landgebruik");
     expect(panel.textContent).toContain("visuele interpretatie");
     expect(panel.textContent).toContain("Waarom 154 sectoren?");
     expect(panel.textContent).toContain("Statbel bepaalt hun codes en grenzen");
@@ -368,7 +368,7 @@ describe("progressive detail panel", () => {
     setLanguage("en");
     api.setLanguage();
     expect(panel.textContent).toContain("What each layer tells you");
-    expect(panel.textContent).toContain("Land use and green cover");
+    expect(panel.textContent).toContain("Land use");
     expect(panel.textContent).toContain("Why 154 sectors?");
     expect(panel.textContent).toContain("Statbel defines their codes and boundaries");
     expect(panel.textContent).toContain("Official producer");
