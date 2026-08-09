@@ -98,16 +98,16 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
     return distributionCache.get(observationId);
   };
 
-  const selectJaarbakYear = async () => {
+  const selectJaarbakYear = async ({ retry = false } = {}) => {
     const year = activeObservation()?.secondaryYear;
     if (!year) return;
     jaarbakLayer.setOption(map, "year", year);
     jaarbakLayer.applyFilter(map, null, { municipality });
     jaarbakLayer.setOpacity(0.20);
-    await jaarbakLayer.waitUntilReady();
+    await jaarbakLayer.waitUntilReady({ retry });
   };
 
-  const draw = async () => {
+  const draw = async ({ retrySource = false } = {}) => {
     if (!active || !manifest || !outputContext) return;
     const requestGeneration = ++drawGeneration;
     const observationId = activeObservationId();
@@ -115,7 +115,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
     jaarbakLayer.setVisible(map, false);
     if (map.getLayer(RASTER_LAYER_ID)) map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "none");
     try {
-      await selectJaarbakYear();
+      await selectJaarbakYear({ retry: retrySource });
       const [pixels, scopes] = await Promise.all([
         loadPixels(observationId),
         scopeData ??= loadImageData(manifest.scopeIndexUrl, manifest.imageSize),
@@ -153,6 +153,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       jaarbakLayer.setVisible(map, true);
       map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "visible");
       landsatLayer.setVisible(map, false);
+      map.triggerRepaint();
       loadError = null;
       notify();
     } catch (error) {
@@ -167,12 +168,15 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
     }
   };
 
-  const mount = async () => {
+  const mount = async ({ retrySource = false } = {}) => {
     await ensureManifest();
     await jaarbakLayer.ensureManifest();
     savedYear ??= jaarbakLayer.getOption("year");
     savedOpacity ??= jaarbakLayer.getOpacity();
     await jaarbakLayer.mount(map, { beforeLayerId: BEFORE_LAYER });
+    // A Landsat comparison always needs JaarBAK's binary classification, but
+    // the user's density-mode preference remains stored for later use.
+    jaarbakLayer.setClassificationOverride?.(true);
     jaarbakLayer.setVisible(map, false);
     jaarbakLayer.setOpacity(0.20);
     if (!map.getSource(SOURCE_ID)) {
@@ -192,7 +196,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
         paint: { "raster-opacity": 0.94, "raster-resampling": "nearest", "raster-fade-duration": 0 },
       }, BEFORE_LAYER);
     }
-    await draw();
+    await draw({ retrySource });
   };
 
   return {
@@ -224,8 +228,11 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       outputContext = null;
       loadError = null;
       jaarbakLayer.setVisible(map, false);
+      jaarbakLayer.setClassificationOverride?.(false);
       if (savedYear != null) jaarbakLayer.setOption(map, "year", savedYear);
       if (savedOpacity != null) jaarbakLayer.setOpacity(savedOpacity);
+      savedYear = undefined;
+      savedOpacity = undefined;
       landsatLayer.setVisible(map, true);
       notify();
     },
@@ -243,7 +250,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       if (!active) active = true;
       landsatLayer.setVisible(map, true);
       try {
-        await mount();
+        await mount({ retrySource: true });
         return true;
       } catch (error) {
         console.error(error);

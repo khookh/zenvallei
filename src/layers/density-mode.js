@@ -74,10 +74,20 @@ function webMercator(lng, lat) {
   return [x, y];
 }
 
-export function createDensityMode({ datasetId, getManifest, getYear, getMunicipality, setClassificationVisible }) {
+export function createDensityMode({
+  datasetId,
+  getManifest,
+  getYear,
+  getMunicipality,
+  setClassificationVisible,
+  ensureClassificationReady,
+}) {
   let map;
   let active = false;
-  let visible = false;
+  // Layer visibility belongs to the selected application layer. Density
+  // visibility is derived from it and must never overwrite it during a mode
+  // transition.
+  let layerVisible = false;
   let canvas;
   let context;
   let worker;
@@ -172,10 +182,10 @@ export function createDensityMode({ datasetId, getManifest, getYear, getMunicipa
     }, map.getLayer(BEFORE_LAYER) ? BEFORE_LAYER : undefined);
   };
 
-  const setDensityVisible = (nextVisible) => {
-    visible = nextVisible;
+  const setDensityLayerVisible = (nextVisible) => {
     if (map?.getLayer(CANVAS_LAYER_ID(datasetId))) {
-      map.setLayoutProperty(CANVAS_LAYER_ID(datasetId), "visibility", active && visible ? "visible" : "none");
+      map.setLayoutProperty(CANVAS_LAYER_ID(datasetId), "visibility", nextVisible ? "visible" : "none");
+      map.triggerRepaint();
     }
   };
 
@@ -192,33 +202,51 @@ export function createDensityMode({ datasetId, getManifest, getYear, getMunicipa
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     async toggle(nextMap) {
       map = nextMap;
-      active = !active;
-      if (active) {
+      if (!active) {
         mount(map);
-        setClassificationVisible(false);
-        setDensityVisible(true);
-        try { await render(); } catch (error) {
+        active = true;
+        // Keep classification visible until the density canvas is complete.
+        setDensityLayerVisible(false);
+        try {
+          await render();
+          setClassificationVisible(false);
+          setDensityLayerVisible(layerVisible);
+        } catch (error) {
           active = false;
-          setDensityVisible(false);
-          setClassificationVisible(visible);
+          setDensityLayerVisible(false);
+          setClassificationVisible(layerVisible);
           throw error;
         }
       } else {
-        generation += 1;
-        cancelPendingRender();
-        worker?.terminate();
-        setDensityVisible(false);
-        setClassificationVisible(visible);
+        // Reveal and validate classification before removing the working
+        // density image. A failed transition therefore never leaves the map
+        // visually empty.
+        setClassificationVisible(layerVisible);
+        try {
+          await ensureClassificationReady?.({ retry: true });
+          active = false;
+          generation += 1;
+          cancelPendingRender();
+          worker?.terminate();
+          setDensityLayerVisible(false);
+        } catch (error) {
+          setClassificationVisible(false);
+          setDensityLayerVisible(layerVisible);
+          throw error;
+        }
       }
       notify();
       return active;
     },
     setVisible(nextVisible) {
-      visible = nextVisible;
+      layerVisible = nextVisible;
       if (active) {
         setClassificationVisible(false);
-        setDensityVisible(nextVisible);
-      } else setClassificationVisible(nextVisible);
+        setDensityLayerVisible(nextVisible);
+      } else {
+        setDensityLayerVisible(false);
+        setClassificationVisible(nextVisible);
+      }
     },
     refresh() { if (active) return render(); return Promise.resolve(); },
     toggleClass(code) {

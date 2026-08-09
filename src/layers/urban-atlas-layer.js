@@ -17,6 +17,7 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
     id: "urban-atlas",
     categoryId: "land-green",
     supportsMunicipalitySummary: true,
+    supportsRegionSummary: true,
     isAvailable: () => Boolean(!loadFailed && urbanAtlas?.available && urbanAtlas.geojsonUrl),
     getUnavailableReasonKey: () => loadFailed || urbanAtlas?.loadError
       ? "layers.urbanAtlasLoadError"

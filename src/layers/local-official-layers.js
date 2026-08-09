@@ -89,8 +89,39 @@ async function fetchLocalManifest(descriptor, datasetId) {
   return manifest;
 }
 
-function statsFor(manifest, year, record) {
+function aggregateCategoricalRegion(records) {
+  const completeAreaHa = records.reduce((sum, record) => sum + Number(record.completeAreaHa ?? 0), 0);
+  const validAreaHa = records.reduce((sum, record) => sum + Number(record.validAreaHa ?? 0), 0);
+  const noDataAreaHa = records.reduce((sum, record) => sum + Number(record.noDataAreaHa ?? 0), 0);
+  const percentage = (area) => completeAreaHa > 0 ? area / completeAreaHa * 100 : 0;
+  if (records.some((record) => Array.isArray(record.classes))) {
+    const areas = new Map();
+    records.forEach((record) => record.classes.forEach((entry) => {
+      areas.set(Number(entry.code), (areas.get(Number(entry.code)) ?? 0) + Number(entry.areaHa ?? 0));
+    }));
+    return {
+      completeAreaHa, validAreaHa, validPercentage: percentage(validAreaHa),
+      noDataAreaHa, noDataPercentage: percentage(noDataAreaHa),
+      classes: [...areas].sort(([left], [right]) => left - right)
+        .map(([code, areaHa]) => ({ code, areaHa, percentage: percentage(areaHa) })),
+    };
+  }
+  const sealedAreaHa = records.reduce((sum, record) => sum + Number(record.sealedAreaHa ?? 0), 0);
+  const unsealedAreaHa = records.reduce((sum, record) => sum + Number(record.unsealedAreaHa ?? 0), 0);
+  return {
+    completeAreaHa, validAreaHa, validPercentage: percentage(validAreaHa),
+    noDataAreaHa, noDataPercentage: percentage(noDataAreaHa),
+    sealedAreaHa, sealedPercentage: percentage(sealedAreaHa),
+    unsealedAreaHa, unsealedPercentage: percentage(unsealedAreaHa),
+  };
+}
+
+function statsFor(manifest, year, record, regionStats) {
   const data = manifest.years[year];
+  if (record.scope === "region") {
+    if (!regionStats.has(year)) regionStats.set(year, aggregateCategoricalRegion(Object.values(data.sectorStats)));
+    return regionStats.get(year);
+  }
   return record.scope === "municipality"
     ? data.municipalityStats?.[record.municipality]
     : data.sectorStats?.[record.sectorId];
@@ -182,6 +213,9 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
   let activeYear = descriptor?.defaultYear;
   let activeMunicipality = "";
   let layerVisible = false;
+  let classificationOverride = false;
+  const regionStats = new Map();
+  const scopedStats = (record) => statsFor(manifest, activeYear, record, regionStats);
   const yearData = () => manifest?.years?.[activeYear];
   const archiveUrl = () => yearData()?.pmtilesVariants?.[activeMunicipality || "all"]
     ?? yearData()?.pmtilesVariants?.all;
@@ -194,20 +228,37 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
   let densityMode = null;
   const ensureDensityMode = () => {
     if (!manifest?.density) return null;
-    densityMode ??= createDensityMode({
-      datasetId,
-      getManifest: () => manifest,
-      getYear: () => activeYear,
-      getMunicipality: () => activeMunicipality,
-      setClassificationVisible: (visible) => mapLayer.setVisible(Boolean(visible && layerVisible)),
-    });
+    if (!densityMode) {
+      densityMode = createDensityMode({
+        datasetId,
+        getManifest: () => manifest,
+        getYear: () => activeYear,
+        getMunicipality: () => activeMunicipality,
+        setClassificationVisible: (visible) => mapLayer.setVisible(Boolean(visible && layerVisible)),
+        ensureClassificationReady: (options) => mapLayer.whenReady(options),
+      });
+      // Density is lazy-created after the layer is already active. Seed its
+      // independent layer-level visibility before the first mode transition.
+      densityMode.setVisible(layerVisible);
+    }
     return densityMode;
+  };
+  const densityPresentationActive = () => Boolean(densityMode?.isActive() && !classificationOverride);
+  const applyPresentation = () => {
+    if (densityPresentationActive()) {
+      mapLayer.setVisible(false);
+      densityMode.setVisible(layerVisible);
+    } else {
+      densityMode?.setVisible(false);
+      mapLayer.setVisible(layerVisible);
+    }
   };
 
   return defineLayer({
     id: config.id,
     categoryId: "land-green",
     supportsMunicipalitySummary: true,
+    supportsRegionSummary: true,
     isAvailable: () => Boolean(descriptor?.available !== false && !loadError),
     getUnavailableReasonKey: () => loadError ? "officialData.loadError" : "officialData.unavailable",
     getLabel: () => t(config.labelKey, { year: activeYear }),
@@ -228,7 +279,7 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     getPopupModel: (feature, record) => ({
       title: feature.properties.sectorName,
       subtitle: feature.properties.municipality,
-      lines: popupLines(config, statsFor(manifest, activeYear, record), manifest),
+      lines: popupLines(config, scopedStats(record), manifest),
     }),
     getPanelModel: (record) => ({
       template: "local-official-raster",
@@ -236,7 +287,7 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
       record,
       manifest,
       year: activeYear,
-      stats: statsFor(manifest, activeYear, record),
+      stats: scopedStats(record),
     }),
     getTemporalControl: () => ({
       optionName: "year",
@@ -253,12 +304,11 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     },
     setVisible(_map, visible) {
       layerVisible = visible;
-      if (densityMode?.isActive()) densityMode.setVisible(visible);
-      else mapLayer.setVisible(visible);
+      applyPresentation();
     },
     applyFilter(_map, _filter, context = {}) {
       activeMunicipality = context.municipality ?? "";
-      if (densityMode?.isActive()) densityMode.refresh();
+      if (densityPresentationActive()) densityMode.refresh();
       else mapLayer.refresh();
     },
     setOption(_map, name, value) {
@@ -266,7 +316,7 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
       const year = Number(value);
       if (!descriptor?.availableYears?.includes(year)) return false;
       activeYear = year;
-      if (densityMode?.isActive()) {
+      if (densityPresentationActive()) {
         densityMode.refresh();
         return true;
       }
@@ -296,7 +346,12 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     },
     setOpacity: (value) => mapLayer.setOpacity(value),
     getOpacity: () => mapLayer.getOpacity(),
-    waitUntilReady: () => mapLayer.whenReady(),
+    waitUntilReady: (options) => mapLayer.whenReady(options),
+    setClassificationOverride(enabled) {
+      classificationOverride = Boolean(enabled);
+      applyPresentation();
+    },
+    getClassificationOverride: () => classificationOverride,
     getAttributions() {
       const url = safeExternalUrl(descriptor?.source?.url);
       if (!url) return [];

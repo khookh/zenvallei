@@ -35,6 +35,19 @@ async function expandComparisonLegend(page) {
   await expect(page.locator("#legend-content")).toBeVisible();
 }
 
+async function rasterVisibility(page) {
+  return page.evaluate(() => {
+    const map = window.__heatMap.map;
+    const visibility = (id) => map.getLayer(id) ? map.getLayoutProperty(id, "visibility") ?? "visible" : "missing";
+    return {
+      landsat: visibility("landsat-temperature-raster"),
+      jaarbak: visibility("jaarbak-local-raster"),
+      density: visibility("jaarbak-density-raster"),
+      comparison: visibility("landsat-jaarbak-temperature"),
+    };
+  });
+}
+
 test("serves all seven layers from the prepared working catalogue in local-data mode", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const isMobile = testInfo.project.name.includes("mobile");
@@ -99,7 +112,10 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   }
 
   await page.locator('[data-layer="groenkaart"]').click();
-  if (isMobile) await page.locator("#panel-peek").click();
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  if (isMobile) await expandControls(page);
+  await page.locator("#sector-search").fill("23003A001");
+  await page.locator("#sector-search").press("Enter");
   await expect.poll(() => page.locator("#detail-panel").evaluate((element) => element.scrollTop)).toBeLessThan(5);
   await expect(page.locator("#detail-panel")).toContainText("High green");
   await expect(page.locator("#detail-panel")).toContainText("Vegetation higher than 3 m");
@@ -187,6 +203,9 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   await expect(page.locator("#detail-panel")).toContainText("Soil-sealing composition");
   await expect(page.locator("[data-comparison-series]")).toHaveCount(0);
   expect(localRequests.some((url) => url.includes("/landsat-jaarbak/manifest.json"))).toBe(true);
+  await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
+    landsat: "none", jaarbak: "visible", density: "none", comparison: "visible",
+  });
   if (isMobile) await expandControls(page);
   await page.locator("#analysis-pair-change").click();
   await page.locator('[data-layer="urban-atlas"]').click();
@@ -237,6 +256,10 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   }
 
   await page.locator('[data-layer="landgebruik"]').click();
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  if (isMobile) await expandControls(page);
+  await page.locator("#sector-search").fill("23003A001");
+  await page.locator("#sector-search").press("Enter");
   if (isMobile) await expandControls(page);
   await expect(page.locator("#active-layer-title")).toHaveText("Landgebruik Vlaanderen");
   await expect(page.locator("#temporal-output")).toHaveText("2025");

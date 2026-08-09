@@ -74,15 +74,57 @@ async function fetchManifest(descriptor) {
   return manifest;
 }
 
-function areaStats(manifest, year, record) {
+function aggregateAreaStats(records) {
+  const completeAreaHa = records.reduce((sum, record) => sum + Number(record.completeAreaHa ?? 0), 0);
+  const validAreaHa = records.reduce((sum, record) => sum + Number(record.validAreaHa ?? 0), 0);
+  const noDataAreaHa = records.reduce((sum, record) => sum + Number(record.noDataAreaHa ?? 0), 0);
+  const areas = new Map();
+  records.forEach((record) => record.classes.forEach((entry) => {
+    areas.set(Number(entry.code), (areas.get(Number(entry.code)) ?? 0) + Number(entry.areaHa ?? 0));
+  }));
+  const percentage = (area) => completeAreaHa > 0 ? area / completeAreaHa * 100 : 0;
+  return {
+    completeAreaHa, validAreaHa, validPercentage: percentage(validAreaHa),
+    noDataAreaHa, noDataPercentage: percentage(noDataAreaHa),
+    classes: [...areas].sort(([left], [right]) => left - right)
+      .map(([code, areaHa]) => ({ code, areaHa, percentage: percentage(areaHa) })),
+  };
+}
+
+function aggregateParcelStats(records) {
+  const completeAreaHa = records.reduce((sum, record) => sum + Number(record.completeAreaHa ?? 0), 0);
+  const parcelAreaHa = records.reduce((sum, record) => sum + Number(record.parcelAreaHa ?? 0), 0);
+  const cropAreas = new Map();
+  records.forEach((record) => record.cropGroups.forEach((entry) => {
+    cropAreas.set(entry.sourceLabel, (cropAreas.get(entry.sourceLabel) ?? 0) + Number(entry.areaHa ?? 0));
+  }));
+  return {
+    completeAreaHa, parcelAreaHa,
+    parcelPercentage: completeAreaHa > 0 ? parcelAreaHa / completeAreaHa * 100 : 0,
+    parcelCount: records.reduce((sum, record) => sum + Number(record.parcelCount ?? 0), 0),
+    cropGroups: [...cropAreas].map(([sourceLabel, areaHa]) => ({
+      sourceLabel, areaHa, percentage: parcelAreaHa > 0 ? areaHa / parcelAreaHa * 100 : 0,
+    })).sort((left, right) => right.areaHa - left.areaHa || left.sourceLabel.localeCompare(right.sourceLabel)),
+  };
+}
+
+function areaStats(manifest, year, record, regionCache) {
   const entry = manifest?.years?.[year];
+  if (record.scope === "region") {
+    if (!regionCache.has(year)) regionCache.set(year, aggregateAreaStats(Object.values(entry?.sectorStats ?? {})));
+    return regionCache.get(year);
+  }
   return record.scope === "municipality"
     ? entry?.municipalityStats?.[record.municipality]
     : entry?.sectorStats?.[record.sectorId];
 }
 
-function parcelStats(manifest, record) {
+function parcelStats(manifest, record, regionCache) {
   const detail = manifest?.agriculturalDetail;
+  if (record.scope === "region") {
+    if (!regionCache.value) regionCache.value = aggregateParcelStats(Object.values(detail?.sectorStats ?? {}));
+    return regionCache.value;
+  }
   return record.scope === "municipality"
     ? detail?.municipalityStats?.[record.municipality]
     : detail?.sectorStats?.[record.sectorId];
@@ -111,6 +153,8 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
   let mapVisible = false;
   let parcelDataPromise = null;
   let parcelDataLoaded = false;
+  const regionAreaStats = new Map();
+  const regionParcelStats = { value: null };
   const mapLayer = createTemporalPmtilesMap({
     layerId: "landgebruik-raster",
     sourceId: "landgebruik-raster-source",
@@ -162,6 +206,7 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
     id: DATASET_ID,
     categoryId: "land-green",
     supportsMunicipalitySummary: true,
+    supportsRegionSummary: true,
     isAvailable: () => Boolean(descriptor?.available !== false && !loadError),
     getUnavailableReasonKey: () => loadError ? "landgebruik.loadError" : "landgebruik.unavailable",
     getLabel: () => t("layers.landgebruik"),
@@ -197,7 +242,7 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
     },
     getPopupModel: (feature, record) => {
       if (activeMode === "agriculture") {
-        const stats = parcelStats(manifest, record);
+        const stats = parcelStats(manifest, record, regionParcelStats);
         const crop = dominantCrop(stats);
         return {
           title: feature.properties.sectorName,
@@ -209,7 +254,7 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
           ] : [t("landgebruik.noParcels")],
         };
       }
-      const stats = areaStats(manifest, activeYear, record);
+      const stats = areaStats(manifest, activeYear, record, regionAreaStats);
       const dominant = dominantClass(stats);
       const definition = classDefinition(manifest, dominant?.code);
       return {
@@ -227,8 +272,8 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
       manifest,
       year: activeYear,
       mode: activeMode,
-      stats: areaStats(manifest, activeYear, record),
-      parcelStats: parcelStats(manifest, record),
+      stats: areaStats(manifest, activeYear, record, regionAreaStats),
+      parcelStats: parcelStats(manifest, record, regionParcelStats),
     }),
     getTemporalControl: () => ({
       optionName: "year",

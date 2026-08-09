@@ -112,6 +112,7 @@ const activeAnalysisTargets = (layer) => {
     .some((comparison) => comparison.primaryLayerId === layer.id && comparison.secondaryLayerId === targetId));
 };
 const supportsMunicipalitySummary = () => Boolean(activeLayer()?.supportsMunicipalitySummary);
+const supportsRegionSummary = () => Boolean(activeLayer()?.supportsRegionSummary);
 
 function updateMapControlsDisclosure({ refreshMap = true } = {}) {
   const collapsed = application.mapControlsCollapsed;
@@ -614,6 +615,7 @@ async function start() {
   populateSectorOptions(data.scores);
 
   let selectedSectorId = "";
+  let suppressPanelFallback = false;
   const municipalityRecord = (municipality) => ({
     scope: "municipality",
     municipality,
@@ -657,13 +659,13 @@ async function start() {
       application.mapController?.setSelected("");
       application.announcement = { type: "closed" };
       updateAnnouncement();
-      if (closedView?.type === "record" && !closedView.record.scope && activeComparison()?.isActive()) {
+      if (!suppressPanelFallback && closedView?.type === "record" && !closedView.record.scope && activeComparison()?.isActive()) {
         queueMicrotask(() => panel.open(
           elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(),
           elements.municipality,
           application.activeLayer,
         ));
-      } else if (closedView?.type === "record" && closedView.record.scope !== "municipality"
+      } else if (!suppressPanelFallback && closedView?.type === "record" && closedView.record.scope !== "municipality"
         && elements.municipality.value && supportsMunicipalitySummary()) {
         queueMicrotask(() => panel.open(
           municipalityRecord(elements.municipality.value),
@@ -854,7 +856,7 @@ async function start() {
     const municipality = elements.municipality.value;
     populateSectorOptions(data.scores, municipality);
     elements.sectorSearch.value = "";
-    if (selectedSectorId && data.scores[selectedSectorId]?.municipality !== municipality && municipality) {
+    if (selectedSectorId && (!municipality || data.scores[selectedSectorId]?.municipality !== municipality)) {
       panel.close({ restoreFocus: false });
     }
     application.mapController.setMunicipality(municipality);
@@ -863,6 +865,8 @@ async function start() {
       panel.open(municipality ? municipalityRecord(municipality) : regionRecord(), elements.municipality, application.activeLayer);
     } else if (!selectedSectorId && municipality && supportsMunicipalitySummary()) {
       panel.open(municipalityRecord(municipality), elements.municipality, application.activeLayer);
+    } else if (!selectedSectorId && !municipality && supportsRegionSummary()) {
+      panel.open(regionRecord(), elements.municipality, application.activeLayer);
     } else if (!municipality && panel.isMunicipalitySummary?.()) {
       panel.close({ restoreFocus: false });
     }
@@ -892,7 +896,12 @@ async function start() {
   });
   elements.sectorSearch.addEventListener("input", () => elements.sectorSearch.setCustomValidity(""));
 
-  elements.resetView.addEventListener("click", () => application.mapController.resetView());
+  elements.resetView.addEventListener("click", () => {
+    application.mapController.resetView();
+    if (!selectedSectorId && !elements.municipality.value && supportsRegionSummary()) {
+      panel.open(regionRecord(), elements.resetView, application.activeLayer);
+    }
+  });
   elements.aboutButton.addEventListener("click", () => panel.openAbout(elements.aboutButton));
   elements.secondarySwitch.addEventListener("click", (event) => {
     const button = event.target.closest("[data-secondary-option]");
@@ -1024,6 +1033,7 @@ async function start() {
         return;
       }
       button.setAttribute("aria-busy", "true");
+      const changedLayer = application.activeLayer !== layerId;
       if (activeComparison()?.isActive() && layerId !== "landsat-temperature") {
         activeComparison().deactivate();
         application.activeComparisonId = null;
@@ -1042,6 +1052,12 @@ async function start() {
         return;
       }
       application.activeLayer = layerId;
+      if (changedLayer && panel.isOpen()) {
+        suppressPanelFallback = true;
+        panel.close({ restoreFocus: false });
+        suppressPanelFallback = false;
+        elements.sectorSearch.value = "";
+      }
       if (layerId === "landsat-temperature" && application.analysisPairings["landsat-temperature"]) {
         const targetId = application.analysisPairings["landsat-temperature"];
         const comparison = [...application.comparisons.values()].find((item) => item.secondaryLayerId === targetId);
@@ -1058,12 +1074,17 @@ async function start() {
       updateLayerContext();
       updateDatasetStatus();
       renderLegend();
-      if (selectedSectorId) {
+      if (changedLayer) {
+        // A new top-level layer starts without results from the previous
+        // dataset. Overview or an area selection opens its own summary.
+      } else if (selectedSectorId) {
         panel.setActiveLayer(layerId);
       } else if (activeComparison()?.isActive()) {
         panel.open(elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(), button, layerId);
       } else if (elements.municipality.value && supportsMunicipalitySummary()) {
         panel.open(municipalityRecord(elements.municipality.value), button, layerId);
+      } else if (!elements.municipality.value && supportsRegionSummary()) {
+        panel.open(regionRecord(), button, layerId);
       } else if (panel.isMunicipalitySummary?.()) {
         panel.close({ restoreFocus: false });
       }

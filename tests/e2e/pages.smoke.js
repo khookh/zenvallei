@@ -1,5 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+async function rasterVisibility(page) {
+  return page.evaluate(() => {
+    const map = window.__heatMap.map;
+    const visibility = (id) => map.getLayer(id) ? map.getLayoutProperty(id, "visibility") ?? "visible" : "missing";
+    return {
+      landsat: visibility("landsat-temperature-raster"),
+      jaarbak: visibility("jaarbak-local-raster"),
+      density: visibility("jaarbak-density-raster"),
+      comparison: visibility("landsat-jaarbak-temperature"),
+    };
+  });
+}
+
 test("serves the complete application below the GitHub Pages project path", async ({ page }, testInfo) => {
   const failedOwnRequests = [];
   const ownResponses = [];
@@ -77,6 +90,11 @@ test("serves the complete application below the GitHub Pages project path", asyn
     || url.includes("/landsat-jaarbak/manifest.json"))).toBe(false);
 
   if (!testInfo.project.name.includes("mobile")) {
+    // Preserve a user's density preference while the comparison temporarily
+    // forces JaarBAK's binary classification.
+    await page.locator('[data-layer="jaarbak"]').click();
+    await page.locator("#map-mode-action").click();
+    await expect.poll(() => rasterVisibility(page)).toMatchObject({ jaarbak: "none", density: "visible" });
     await page.locator('[data-layer="landsat-temperature"]').click();
     await page.locator("#analysis-compare").click();
     await expect(page.locator('[data-layer="urban-atlas"]')).toHaveClass(/is-comparison-target/);
@@ -88,7 +106,14 @@ test("serves the complete application below the GitHub Pages project path", asyn
     await page.locator('[data-layer="jaarbak"]').click();
     await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing");
     await expect.poll(() => ownResponses.some((url) => url.endsWith("/landsat-jaarbak/manifest.json"))).toBe(true);
+    await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
+      landsat: "none", jaarbak: "visible", density: "none", comparison: "visible",
+    });
     await page.locator("#analysis-pair-remove").click();
+    await expect.poll(() => rasterVisibility(page)).toMatchObject({ landsat: "visible", jaarbak: "none", comparison: "missing" });
+    await page.locator('[data-layer="jaarbak"]').click();
+    await expect.poll(() => rasterVisibility(page)).toMatchObject({ jaarbak: "none", density: "visible" });
+    await page.locator('[data-layer="landsat-temperature"]').click();
     const point = await page.evaluate(() => {
       const projected = window.__heatMap.map.project([4.29, 50.73]);
       const rectangle = window.__heatMap.map.getCanvas().getBoundingClientRect();
@@ -99,4 +124,57 @@ test("serves the complete application below the GitHub Pages project path", asyn
     expect(ownResponses.some((url) => url.endsWith("/landsat-temperature/query/landsat-2026-06-22.tif"))).toBe(true);
   }
   expect(failedOwnRequests).toEqual([]);
+});
+
+test("retries the same JaarBAK source without leaving an empty comparison", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "The responsive flow is covered by the complete mobile smoke test.");
+  test.setTimeout(45_000);
+  let allowJaarbak = false;
+  let rejectedRequests = 0;
+  await page.route("**/jaarbak-2024-all.pmtiles*", async (route) => {
+    if (allowJaarbak) await route.continue();
+    else {
+      rejectedRequests += 1;
+      await route.fulfill({ status: 503, contentType: "text/plain", body: "temporary test failure" });
+    }
+  });
+  await page.goto(".");
+  await page.locator("#project-intro-primary").click();
+  await page.locator('[data-layer="landsat-temperature"]').click();
+  await page.locator("#analysis-compare").click();
+  await page.locator('[data-layer="jaarbak"]').click();
+
+  await expect(page.locator("#analysis-pair-retry")).toBeVisible({ timeout: 20_000 });
+  expect(rejectedRequests).toBeGreaterThan(0);
+  await expect.poll(() => rasterVisibility(page)).toMatchObject({
+    landsat: "visible", jaarbak: "none", comparison: "none",
+  });
+
+  allowJaarbak = true;
+  await page.locator("#analysis-pair-retry").click();
+  await expect(page.locator("#analysis-pair-retry")).toBeHidden({ timeout: 20_000 });
+  await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
+    landsat: "none", jaarbak: "visible", density: "missing", comparison: "visible",
+  });
+});
+
+test("keeps classification visible when density loading fails", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "Repeated density transitions are covered on mobile by the complete smoke suite.");
+  await page.route("**/groenkaart-2021-density.tif*", (route) => route.fulfill({
+    status: 503, contentType: "text/plain", body: "temporary test failure",
+  }));
+  await page.goto(".");
+  await page.locator("#project-intro-primary").click();
+  await page.locator('[data-layer="groenkaart"]').click();
+  await page.locator("#map-mode-action").click();
+  await expect(page.locator("#map-mode-action")).not.toHaveAttribute("aria-busy", "true");
+  await expect.poll(() => page.evaluate(() => {
+    const map = window.__heatMap.map;
+    return {
+      classification: map.getLayoutProperty("groenkaart-local-raster", "visibility"),
+      density: map.getLayer("groenkaart-density-raster")
+        ? map.getLayoutProperty("groenkaart-density-raster", "visibility")
+        : "missing",
+    };
+  })).toEqual({ classification: "visible", density: "none" });
 });

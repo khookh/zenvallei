@@ -309,6 +309,8 @@ test("discloses map controls without changing exploration state", async ({ page 
   await page.locator('[data-layer="urban-atlas"]').click();
   await page.waitForFunction(() => window.__heatMap.getActiveLayer() === "urban-atlas");
   await page.waitForFunction(() => !window.__heatMap.map.isMoving());
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  await expect(search).toHaveValue("");
   const stateBeforeCollapse = await page.evaluate(() => ({
     activeLayer: window.__heatMap.getActiveLayer(),
     heatMetric: window.__heatMap.getHeatMetric(),
@@ -325,7 +327,7 @@ test("discloses map controls without changing exploration state", async ({ page 
   await expect(controlsToggle).toHaveAttribute("aria-expanded", "false");
   await expect(controlsToggle).toHaveAttribute("aria-label", "Kaartbediening uitklappen");
   await expect(page.locator("#map-controls-toggle-icon")).toHaveText("+");
-  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
   expect(await page.evaluate(() => ({
     activeLayer: window.__heatMap.getActiveLayer(),
     heatMetric: window.__heatMap.getHeatMetric(),
@@ -349,7 +351,7 @@ test("discloses map controls without changing exploration state", async ({ page 
   await expect(controlsToggle).toHaveAttribute("aria-label", "Collapse map controls");
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-  await expect(search).toHaveValue(/23003A001/);
+  await expect(search).toHaveValue("");
 
   const expandedResults = await new AxeBuilder({ page })
     .include("#map-controls")
@@ -746,15 +748,6 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await search.fill("23003A001");
   await search.press("Enter");
   const panel = page.locator("#detail-panel");
-  // Selection, result-panel measurement and MapLibre's camera transition can
-  // finish on adjacent animation frames on slower CI runners. Capture the
-  // baseline only after that complete interaction has settled.
-  await page.waitForTimeout(1_200);
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
   const atlasButton = page.locator('[data-layer="urban-atlas"]');
   await expect(atlasButton).toHaveAttribute("aria-disabled", "false");
   await showControls(page);
@@ -778,6 +771,9 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-opacity"))).toBe(0.68);
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-color"))).toContain("#ccf24d");
 
+  await showControls(page);
+  await search.fill("23003A001");
+  await search.press("Enter");
   await expect(panel).toContainText("Dominante Urban Atlas-klasse");
   await expect(panel).toContainText("Bossen");
   await expect(panel.locator(".summary-card").filter({ hasText: "Groenbedekking" })).toContainText("40%");
@@ -790,11 +786,6 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await expect(panel).toContainText("Bouwterreinen");
   await expect(panel).toContainText("Berekend door deze toepassing");
   await expect(panel.locator('[data-section="urban-atlas-other"]')).not.toHaveAttribute("open", "");
-  expect(await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }))).toEqual(mapStateBefore);
-
   const subsequentSwitch = await page.evaluate(async () => {
     await window.__heatMap.setLayer("heat");
     const started = performance.now();
@@ -837,6 +828,10 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await expect(panel).toHaveAttribute("aria-hidden", "true");
 
   await page.locator('[data-layer="urban-atlas"]').click();
+  await expect(panel).toHaveAttribute("aria-hidden", "true");
+  await page.locator("#municipality-select").selectOption("Halle");
+  await showControls(page);
+  await page.locator("#municipality-select").selectOption("Beersel");
   await expect(panel).toHaveAttribute("aria-hidden", "false");
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
   await expect(panel).toContainText("Groenbedekking");
@@ -858,6 +853,39 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await expect(panel).toHaveAttribute("aria-hidden", "true");
 });
 
+test("closes stale results on layer changes and opens meaningful Zennevallei summaries", async ({ page }) => {
+  const panel = page.locator("#detail-panel");
+  await page.locator("#sector-search").fill("23003A001");
+  await page.locator("#sector-search").press("Enter");
+  await expect(panel).toHaveAttribute("aria-hidden", "false");
+
+  const summaries = [
+    ["urban-atlas", "Groenbedekking"],
+    ["jaarbak", "Afgedekte oppervlakte"],
+    ["groenkaart", "Hoog groen"],
+    ["landgebruik", "Grootste klasse"],
+  ];
+  for (const [layerId, expectedText] of summaries) {
+    await showControls(page);
+    await page.locator(`[data-layer="${layerId}"]`).click();
+    await expect(panel).toHaveAttribute("aria-hidden", "true");
+    await expect(page.locator("#sector-search")).toHaveValue("");
+    await showControls(page);
+    await page.locator("#reset-view").click();
+    await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(panel).toContainText("HELE ZENNEVALLEI · 154 STATBEL-SECTOREN");
+    await expect(panel).toContainText(expectedText);
+    if (layerId === "groenkaart") {
+      await showControls(page);
+      await page.locator("#municipality-select").selectOption("Halle");
+      await expect(panel).toContainText("Gemeenteoverzicht · 41 Statbel-sectoren");
+      await showControls(page);
+      await page.locator("#municipality-select").selectOption("");
+      await expect(panel).toContainText("HELE ZENNEVALLEI · 154 STATBEL-SECTOREN");
+    }
+  }
+});
+
 test("loads the published 100 m density modes only when requested", async ({ page }) => {
   const requests = [];
   page.on("request", (request) => {
@@ -865,17 +893,58 @@ test("loads the published 100 m density modes only when requested", async ({ pag
   });
   await showControls(page);
   await page.locator('[data-layer="jaarbak"]').click();
+  await expect.poll(() => page.evaluate(() => window.__heatMap.map.getLayoutProperty(
+    "jaarbak-local-raster", "visibility",
+  ))).toBe("visible");
   expect(requests).toEqual([]);
   await page.locator("#map-mode-action").click();
   await expect(page.locator("#map-mode-action")).toHaveText("Toon classificatie");
   await expect(page.locator("#legend-title")).toContainText("Dichtheid bodemafdekking");
   await expect.poll(() => requests.some((url) => url.includes("jaarbak-2024-density.tif"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => ({
+    classification: window.__heatMap.map.getLayoutProperty("jaarbak-local-raster", "visibility"),
+    density: window.__heatMap.map.getLayoutProperty("jaarbak-density-raster", "visibility"),
+  }))).toEqual({ classification: "none", density: "visible" });
   await showControls(page);
   await page.locator("#map-mode-action").click();
+  await expect.poll(() => page.evaluate(() => ({
+    classification: window.__heatMap.map.getLayoutProperty("jaarbak-local-raster", "visibility"),
+    density: window.__heatMap.map.getLayoutProperty("jaarbak-density-raster", "visibility"),
+  }))).toEqual({ classification: "visible", density: "none" });
   await page.locator('[data-layer="groenkaart"]').click();
+  await expect.poll(() => page.evaluate(() => window.__heatMap.map.getLayoutProperty(
+    "groenkaart-local-raster", "visibility",
+  ))).toBe("visible");
   await page.locator("#map-mode-action").click();
   await expect(page.locator("#legend-title")).toContainText("Dichtheid geselecteerde Groenkaartklassen");
   await expect.poll(() => requests.some((url) => url.includes("groenkaart-2021-density.tif"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => ({
+    classification: window.__heatMap.map.getLayoutProperty("groenkaart-local-raster", "visibility"),
+    density: window.__heatMap.map.getLayoutProperty("groenkaart-density-raster", "visibility"),
+  }))).toEqual({ classification: "none", density: "visible" });
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await page.locator("#map-mode-action").click();
+    await expect.poll(() => page.evaluate(() => ({
+      classification: window.__heatMap.map.getLayoutProperty("groenkaart-local-raster", "visibility"),
+      density: window.__heatMap.map.getLayoutProperty("groenkaart-density-raster", "visibility"),
+    }))).toEqual({ classification: "visible", density: "none" });
+    if (cycle === 0) {
+      await page.locator("#temporal-previous").click();
+      await expect(page.locator("#temporal-output")).toHaveText("2018");
+      await page.locator("#municipality-select").selectOption("Halle");
+      await showControls(page);
+    }
+    await page.locator("#map-mode-action").click();
+    await expect.poll(() => page.evaluate(() => ({
+      classification: window.__heatMap.map.getLayoutProperty("groenkaart-local-raster", "visibility"),
+      density: window.__heatMap.map.getLayoutProperty("groenkaart-density-raster", "visibility"),
+    }))).toEqual({ classification: "none", density: "visible" });
+  }
+  await page.locator("#map-mode-action").click();
+  await expect.poll(() => page.evaluate(() => ({
+    classification: window.__heatMap.map.getLayoutProperty("groenkaart-local-raster", "visibility"),
+    density: window.__heatMap.map.getLayoutProperty("groenkaart-density-raster", "visibility"),
+  }))).toEqual({ classification: "visible", density: "none" });
   expect(runtimeErrors.get(page)).toEqual([]);
 });
 

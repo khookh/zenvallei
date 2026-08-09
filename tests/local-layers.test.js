@@ -16,7 +16,11 @@ import { parseSingleByteRange } from "../vite.config.js";
 function manifest(datasetId = "jaarbak") {
   const years = datasetId === "groenkaart" ? [2018, 2021] : [2018, 2019, 2020, 2021, 2022, 2023, 2024];
   const municipalities = ["Beersel", "Drogenbos", "Halle", "Linkebeek", "Pepingen", "Sint-Genesius-Rode", "Sint-Pieters-Leeuw"];
-  const statistic = { sealedPercentage: 50 };
+  const statistic = {
+    completeAreaHa: 10, validAreaHa: 10, validPercentage: 100,
+    noDataAreaHa: 0, noDataPercentage: 0,
+    sealedAreaHa: 5, sealedPercentage: 50, unsealedAreaHa: 5, unsealedPercentage: 50,
+  };
   const sectorStats = Object.fromEntries(Array.from({ length: 154 }, (_, index) => [`S${index}`, statistic]));
   sectorStats.A = sectorStats.S0;
   delete sectorStats.S0;
@@ -59,6 +63,10 @@ describe("local temporal raster contract", () => {
     expect(layer.getTemporalControl().values).toEqual([2018, 2019, 2020, 2021, 2022, 2023, 2024]);
     expect(layer.getTemporalControl().activeValue).toBe(2024);
     expect(layer.getPanelModel({ sectorId: "A", sectorName: "A", municipality: "Halle" }).stats.sealedPercentage).toBe(50);
+    expect(layer.supportsRegionSummary).toBe(true);
+    expect(layer.getPanelModel({ scope: "region", sectorName: "Zennevallei" }).stats).toMatchObject({
+      completeAreaHa: 1540, sealedAreaHa: 770, sealedPercentage: 50,
+    });
   });
 
   it("parses single HTTP byte ranges and rejects invalid ranges", () => {
