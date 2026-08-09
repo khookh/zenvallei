@@ -218,7 +218,7 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
         lines: dominant ? [
           `${t("landgebruik.dominantClass")}: ${t(`landgebruik.class.${definition?.value}`)}`,
           `${formatNumber(dominant.percentage, 1)}%`,
-        ] : [t("localLayers.noData")],
+        ] : [t("officialData.noData")],
       };
     },
     getPanelModel: (record) => ({
@@ -234,10 +234,10 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
       optionName: "year",
       values: YEARS,
       activeValue: activeYear,
-      label: t("localLayers.referenceYearLabel"),
+      label: t("officialData.referenceYearLabel"),
       note: t("landgebruik.temporalNote"),
-      previousLabel: t("localLayers.previousYear"),
-      nextLabel: t("localLayers.nextYear"),
+      previousLabel: t("officialData.previousYear"),
+      nextLabel: t("officialData.nextYear"),
     }),
     getSecondaryControl: () => ({
       id: "landgebruik-mode",

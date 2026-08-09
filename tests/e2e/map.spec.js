@@ -1,3 +1,4 @@
+
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs";
@@ -9,7 +10,6 @@ const TRANSPARENT_PNG = Buffer.from(
 );
 
 const runtimeErrors = new WeakMap();
-const vegetationRasterRequests = new WeakMap();
 
 async function findUnobstructedSectorPoint(page, layerId) {
   return page.evaluate((layer) => {
@@ -113,61 +113,6 @@ async function waitForSurfaceState(page, expected) {
   return mapSurfaceState(page);
 }
 
-const LAND_COVER_FIXTURE = {
-  schemaVersion: 2,
-  generatedAt: "2026-08-05T10:00:00.000Z",
-  activeYear: 2020,
-  availableYears: [2020],
-  opacity: 0.68,
-  raster: {
-    available: true,
-    year: 2020,
-    imageUrl: "data/land-cover/land-cover-2020.png",
-    rasterVariants: {
-      all: "data/land-cover/land-cover-2020.png",
-      Beersel: "data/land-cover/land-cover-2020-beersel.png",
-    },
-    coordinates: [[4.072, 50.828], [4.424, 50.828], [4.424, 50.689], [4.072, 50.689]],
-  },
-  classes: [
-    { code: 10, key: "treeCover", color: "#006400", vegetation: true, present: true },
-    { code: 30, key: "grassland", color: "#ffff4c", vegetation: true, present: true },
-    { code: 40, key: "cropland", color: "#f096ff", vegetation: false, present: true },
-    { code: 90, key: "builtUp", color: "#fa0000", vegetation: false, present: true },
-    { code: 100, key: "water", color: "#0064c8", vegetation: false, present: true },
-  ],
-  vegetationCodes: [10, 30],
-  builtUpCodes: [90],
-  sectorStats: {
-    "23003A001": {
-      classifiedAreaHa: 24.5,
-      vegetationAreaHa: 15,
-      vegetationPercentage: 61.22,
-      builtUpAreaHa: 5.5,
-      builtUpPercentage: 22.45,
-      dominantClassCode: 10,
-      classes: [
-        { code: 10, areaHa: 10, percentage: 40.82 },
-        { code: 30, areaHa: 5, percentage: 20.41 },
-        { code: 40, areaHa: 4, percentage: 16.33 },
-        { code: 90, areaHa: 5.5, percentage: 22.45 },
-      ],
-    },
-  },
-  change: {
-    available: false,
-    baseYear: 2020,
-    comparisonYear: 2026,
-    palette: [{ key: "gained", color: "#009E73" }, { key: "lost", color: "#D55E00" }],
-    reason: "comparison-year-not-published",
-  },
-  source: {
-    productUrl: "https://land.copernicus.eu/en/products/global-dynamic-land-cover/land-cover-2020-raster-10-m-global-annual",
-    doi: "https://doi.org/10.2909/602507b2-96c7-47bb-b79d-7ba25e97d0a9",
-    accessedAt: "2026-08-05T10:00:00.000Z",
-  },
-};
-
 const sectorData = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "..", "..", "public", "data", "sectors.geojson"), "utf8"));
 const beerselGeometry = sectorData.features.find((feature) => feature.properties.sectorId === "23003A001").geometry;
 const URBAN_ATLAS_GEOJSON = {
@@ -238,17 +183,16 @@ const URBAN_ATLAS_FIXTURE = {
     validationStatus: "not-yet-validated",
     validationStatusCheckedAt: "2026-08-05T10:00:00.000Z",
   },
+
 };
 test.beforeEach(async ({ page }) => {
   const errors = [];
   runtimeErrors.set(page, errors);
-  vegetationRasterRequests.set(page, 0);
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
-  await page.route("**/data/land-cover.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(LAND_COVER_FIXTURE) }));
   await page.route("**/data/urban-atlas.json", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(URBAN_ATLAS_FIXTURE) }));
   await page.route("**/data/urban-atlas.geojson", (route) => route.fulfill({ status: 200, contentType: "application/geo+json", body: JSON.stringify(URBAN_ATLAS_GEOJSON) }));
   await page.goto("/");
@@ -358,6 +302,7 @@ test("discloses map controls without changing exploration state", async ({ page 
   await page.locator('[data-heat-metric="vulnerability"]').click();
   await page.locator("#municipality-select").selectOption("Beersel");
   const search = page.locator("#sector-search");
+
   await search.fill("23003A001");
   await search.press("Enter");
   await showControls(page);
@@ -478,6 +423,7 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
       const legendState = await waitForSurfaceState(page, {
         controlsExpanded: false,
         legendExpanded: true,
+
         panelPresentation: "peek",
       });
       expect(legendState.controlsExpanded).toBe(false);
@@ -598,6 +544,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
   const overlayRenderBudgetMs = process.env.CI === "true" ? 750 : 500;
   expect(overlayRenderMs).toBeLessThan(overlayRenderBudgetMs);
   const search = page.locator("#sector-search");
+
   await search.fill("23003A001");
   await search.press("Enter");
   const panel = page.locator("#detail-panel");
@@ -718,6 +665,7 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await expect(page.locator("#heat-metric-control")).toBeHidden();
   await page.locator('[data-layer="heat"]').click();
   await expect(page.locator("#heat-metric-control")).toBeVisible();
+
   await expect(page.locator('[data-heat-metric="vulnerability"]')).toHaveAttribute("aria-pressed", "true");
   await expect(panel.locator(".score-orb strong")).toHaveText("8");
 
@@ -793,102 +741,6 @@ test("switches the complete interface to English without resetting exploration s
   await expect(page.locator("#language-toggle")).toHaveText("NL");
 });
 
-test.skip("retired Copernicus land-cover presentation", async ({ page }) => {
-  await page.locator("#municipality-select").selectOption("Beersel");
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  const panel = page.locator("#detail-panel");
-  await panel.locator('[data-section="indicators"] > summary').click();
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-
-  const landCoverButton = page.locator('[data-layer="land-cover"]');
-  await expect(landCoverButton).toHaveAttribute("aria-disabled", "false");
-  const switchStarted = await page.evaluate(() => performance.now());
-  await landCoverButton.click();
-  await page.waitForFunction(() => window.__heatMap.map.getLayer("land-cover-raster")
-    && window.__heatMap.map.getLayoutProperty("land-cover-raster", "visibility") === "visible");
-  const switchDuration = await page.evaluate((start) => performance.now() - start, switchStarted);
-  expect(switchDuration).toBeLessThan(1_000);
-  const subsequentSwitchDuration = await page.evaluate(async () => {
-    await window.__heatMap.setLayer("heat");
-    const started = performance.now();
-    await window.__heatMap.setLayer("land-cover");
-    return performance.now() - started;
-  });
-  expect(subsequentSwitchDuration).toBeLessThan(100);
-  await expect(landCoverButton).toBeFocused();
-  await expect(landCoverButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#legend-title")).toHaveText("Copernicus-landbedekking 2020");
-  await expect(page.locator("#dataset-status")).toContainText("Copernicus · raster 2020");
-  await expect(page.locator("#layer-context-meta")).toContainText("10 m-pixels · 2020");
-  await expect(page.locator("#layer-context-copy")).toContainText("officiële Copernicus LCM-10-classificatie");
-  await expect(page.locator("#layer-context-copy")).toContainText("Wij knippen het raster uit");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Landbedekking 2020 in de Zennevallei");
-  await expect(page.locator("#legend-content")).toContainText("Boombedekking");
-  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Generated using European Union's Copernicus Land Monitoring Service information");
-  await expect(panel).toContainText("Dominante landbedekking");
-  await expect(panel).toContainText("Boombedekking");
-  await expect(panel).toContainText("Bomen en grasland samen");
-  await expect(panel.locator(".land-cover-trees")).toContainText("Boombedekking");
-  await expect(panel.locator(".land-cover-trees")).toContainText("40,82%");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("Akkerland");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("16,33%");
-  await expect(panel).toContainText("61,22%");
-  await expect(panel).toContainText("Bebouwde oppervlakte");
-  await expect(panel).toContainText("22,45%");
-  await expect(panel).toContainText("Berekend door deze toepassing");
-  await expect(panel).not.toContainText("Gekarteerd gebied");
-  await expect(panel.locator('[data-section="land-cover-classes"]')).not.toHaveAttribute("open", "");
-  expect(await panel.evaluate((element) => element.scrollTop)).toBe(0);
-  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-  await expect(search).toHaveValue(/23003A001/);
-  expect(await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }))).toEqual(mapStateBefore);
-
-  await page.locator("#panel-close").click();
-  await search.fill("23003A001");
-  await search.press("Enter");
-  await expect(panel).toContainText("Dominante landbedekking");
-  await page.locator("#panel-close").click();
-  await expect(panel).toContainText("Gemeenteoverzicht");
-  await page.locator("#panel-close").click();
-  await page.locator("#legend").evaluate((element) => element.removeAttribute("open"));
-  await page.locator("#reset-view").click();
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const landCoverClickPoint = await findUnobstructedSectorPoint(page, "heat-sectors-hit-area");
-  expect(landCoverClickPoint).not.toBeNull();
-  await page.locator("#map canvas").click({ position: landCoverClickPoint });
-  await expect(panel).toHaveAttribute("aria-hidden", "false");
-  await expect(panel.locator(".land-cover-hero")).toBeVisible();
-  await search.fill("23003A001");
-  await search.press("Enter");
-
-  await page.locator("#language-toggle").click();
-  await expect(landCoverButton).toHaveText("Land cover 2020");
-  await expect(page.locator("#legend-title")).toHaveText("Copernicus land cover 2020");
-  await expect(panel).toContainText("Dominant land cover");
-  await expect(panel).toContainText("Tree cover");
-  await expect(panel).toContainText("Trees and grassland combined");
-  await expect(panel.locator(".land-cover-trees")).toContainText("Tree cover");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("Cropland");
-  await expect(panel.locator(".land-cover-cropland")).toContainText("16.33%");
-  await expect(panel).toContainText("61.22%");
-  await expect(panel).toContainText("Built-up area");
-  await expect(panel).toContainText("22.45%");
-  await expect(panel).not.toContainText("Mapped area");
-
-  await page.locator('[data-layer="heat"]').click();
-  await expect(panel).toContainText("Score 6 out of 10");
-  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-});
-
 test("loads Urban Atlas lazily and presents green and artificialisation statistics", async ({ page }) => {
   const search = page.locator("#sector-search");
   await search.fill("23003A001");
@@ -958,6 +810,7 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await expect(panel).toContainText("Herbaceous vegetation");
   await expect(panel).toContainText("Pastures");
   await expect(panel).toContainText("not yet validated");
+
   await expect(panel.locator('[data-section="urban-atlas-green"]')).toHaveAttribute("open", "");
 
   await page.locator("#language-toggle").click();
@@ -978,92 +831,6 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   }
 });
 
-test.skip("retired NDVI vegetation presentation", async ({ page }) => {
-  expect(vegetationRasterRequests.get(page)).toBe(0);
-  await page.locator("#municipality-select").selectOption("Beersel");
-  const search = page.locator("#sector-search");
-  await search.fill("23003A001");
-  await search.press("Enter");
-  await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  const panel = page.locator("#detail-panel");
-  const mapStateBefore = await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }));
-
-  const vegetationButton = page.locator('[data-layer="vegetation"]');
-  await expect(vegetationButton).toHaveAttribute("aria-disabled", "false");
-  const switchStarted = await page.evaluate(() => performance.now());
-  await vegetationButton.click();
-  await page.waitForFunction(() => window.__heatMap.map.getLayer("likely-vegetation-raster")
-    && window.__heatMap.map.getLayoutProperty("likely-vegetation-raster", "visibility") === "visible");
-  expect(await page.evaluate((start) => performance.now() - start, switchStarted)).toBeLessThan(1_000);
-  expect(vegetationRasterRequests.get(page)).toBe(1);
-  await expect(vegetationButton).toBeFocused();
-  await expect(vegetationButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("NDVI-vegetatie 2020");
-  await expect(page.locator("#legend-title")).toHaveText("NDVI-vegetatie 2020");
-  await expect(page.locator("#legend-note")).toHaveText("NDVI ≥ 0,697");
-  await expect(page.locator("#legend-content")).toContainText("Waarschijnlijk begroeid");
-  await expect(page.locator("#legend-content")).not.toContainText("Onder de NDVI-drempel");
-  await expect(page.locator("#legend-content")).not.toContainText("Uitgesloten of geen waarneming");
-  await expect(page.locator("#legend-content")).toContainText("Ongekleurde pixels kunnen onder de drempel liggen");
-  await expect(page.locator("#layer-context-meta")).toContainText("24 jun 2020");
-  await expect(page.locator("#layer-context-copy")).toContainText("bewijst geen ecologische gezondheid");
-  await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: NDVI-vegetatie 2020 in de Zennevallei");
-  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-opacity"))).toBe(0.68);
-  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("likely-vegetation-raster", "raster-resampling"))).toBe("nearest");
-
-  await expect(panel).toContainText("Waarschijnlijk begroeid");
-  await expect(panel).toContainText("47,69");
-  await expect(panel).toContainText("24,51 ha");
-  await expect(panel).toContainText("NDVI is een satellietmaat voor groenheid");
-  await expect(panel).toContainText("Andere oppervlakte van de sector");
-  await expect(panel).toContainText("Mediane NDVI");
-  await expect(panel).toContainText("0,677");
-  await expect(panel).toContainText("Uitgesloten akkerland");
-  await expect(panel.locator('[data-section="vegetation-methodology"]')).not.toHaveAttribute("open", "");
-  await panel.locator('[data-section="vegetation-methodology"] > summary').click();
-  await expect(panel).toContainText("Berekende NDVI-drempel: 0,697");
-  await expect(panel).toContainText("Kalibratie van de drempel");
-  await expect(panel).toContainText("ROC AUC 0,925");
-  await expect(panel).toContainText("S2B_MSIL2A_20200624T104629");
-  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Copernicus Sentinel-2 information");
-  await expect(page.locator("#municipality-select")).toHaveValue("Beersel");
-  expect(await page.evaluate(() => ({
-    center: window.__heatMap.map.getCenter().toArray(),
-    zoom: window.__heatMap.map.getZoom(),
-  }))).toEqual(mapStateBefore);
-
-  await page.locator("#language-toggle").click();
-  await expect(vegetationButton).toHaveText("NDVI vegetation 2020");
-  await expect(page.locator("#map-controls-title")).toHaveText("What would you like to look at?");
-  await expect(page.locator('[data-layer-category="heat"]')).toContainText("Heat");
-  await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Land use");
-  await expect(page.locator("#legend-title")).toHaveText("NDVI vegetation 2020");
-  await expect(panel).toContainText("Likely vegetated");
-  await expect(panel).toContainText("Median NDVI");
-  await expect(panel).toContainText("Calculated NDVI threshold: 0.697");
-  await expect(panel).toContainText("Threshold calibration");
-  await expect(panel.locator('[data-section="vegetation-methodology"]')).toHaveAttribute("open", "");
-  await expect(page.locator("#temporal-control")).toBeHidden();
-
-  const subsequentSwitch = await page.evaluate(async () => {
-    await window.__heatMap.setLayer("heat");
-    const started = performance.now();
-    await window.__heatMap.setLayer("vegetation");
-    return performance.now() - started;
-  });
-  expect(subsequentSwitch).toBeLessThan(100);
-  expect(vegetationRasterRequests.get(page)).toBe(1);
-
-  const accessibilityResults = await new AxeBuilder({ page })
-    .exclude("#map")
-    .withTags(["wcag2a", "wcag2aa"])
-    .analyze();
-  expect(accessibilityResults.violations).toEqual([]);
-});
-
 test("filters all environmental overlays and opens area-weighted municipality summaries", async ({ page }) => {
   const panel = page.locator("#detail-panel");
   await page.locator("#municipality-select").selectOption("Beersel");
@@ -1078,6 +845,7 @@ test("filters all environmental overlays and opens area-weighted municipality su
 
   await showControls(page);
   const search = page.locator("#sector-search");
+
   await search.fill("23003A001");
   await search.press("Enter");
   await expect(panel).toContainText("23003A001");

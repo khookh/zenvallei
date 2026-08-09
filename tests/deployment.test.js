@@ -41,6 +41,7 @@ describe("GitHub Pages deployment contract", () => {
     expect(workflow).toContain("continue-on-error: true");
     expect(workflow).toContain("write-release-manifest.mjs");
     expect(workflow).toContain("verify-pages-release.mjs");
+    expect(workflow).toContain("pnpm test:live-pages");
     expect(workflow).toContain("write-deployment-summary.mjs");
     expect(workflow).not.toContain("configure-pages");
     expect(workflow).not.toContain("enablement: true");

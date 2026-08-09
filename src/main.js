@@ -8,7 +8,9 @@ import { buildLayerRegistry } from "./layers/registry.js";
 import { categoryLabel, LAYER_CATEGORIES } from "./layers/categories.js";
 import { createMapController } from "./map-controller.js";
 import { createMapSurfaceLayout } from "./map-surface-layout.js";
-import { createDetailPanel } from "./panel.js";
+import { renderLegendModel } from "./legend.js";
+import { validateProductContract } from "./product-contract.js";
+import { createDetailPanel } from "./panel-shell.js";
 import { createProjectIntro } from "./project-intro.js";
 import { safeExternalUrl } from "./security.js";
 
@@ -500,161 +502,12 @@ function updateLayerContext() {
   elements.map.setAttribute("aria-label", t("map.regionForLayer", { layer: layer.getLabel() }));
 }
 
-function createLegendItem(item, { score = false } = {}) {
-  const container = document.createElement(score ? "div" : "span");
-  if (score) container.className = "legend-item legend-score";
-  const swatch = document.createElement(score ? "span" : "i");
-  swatch.style.setProperty("--swatch", item.color);
-  const label = document.createElement(score ? "b" : "span");
-  label.textContent = item.label;
-  container.append(swatch, label);
-  return container;
-}
-
-function createSurfaceSelector(model) {
-  const wrapper = document.createElement("section");
-  wrapper.className = "comparison-surface-selector";
-  const heading = document.createElement("h3");
-  heading.textContent = model.title;
-  const help = document.createElement("p");
-  help.textContent = model.help;
-  const groups = document.createElement("div");
-  groups.className = "comparison-surface-groups";
-  model.groups.forEach((group) => {
-    const section = document.createElement("section");
-    section.className = "comparison-surface-family";
-    const header = document.createElement("div");
-    header.className = "comparison-surface-family-header";
-    const family = group.family;
-    const select = document.createElement("button");
-    select.type = "button";
-    select.dataset.comparisonSeries = family.key;
-    select.className = "comparison-surface-family-select";
-    select.setAttribute("aria-pressed", String(family.selected));
-    select.classList.toggle("is-selected", family.selected);
-    const swatch = document.createElement("i");
-    swatch.style.setProperty("--swatch", family.color);
-    swatch.setAttribute("aria-hidden", "true");
-    const label = document.createElement("span");
-    label.textContent = group.title;
-    select.append(swatch, label);
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "comparison-surface-family-toggle";
-    toggle.dataset.comparisonFamilyToggle = group.id;
-    toggle.setAttribute("aria-expanded", String(group.expanded));
-    toggle.setAttribute("aria-controls", `comparison-family-${group.id}`);
-    toggle.setAttribute("aria-label", t(group.expanded ? "comparison.collapseFamily" : "comparison.expandFamily", { family: group.title }));
-    toggle.textContent = group.expanded ? "−" : "+";
-    header.append(select, toggle);
-    const options = document.createElement("div");
-    options.className = "comparison-surface-options";
-    options.id = `comparison-family-${group.id}`;
-    options.hidden = !group.expanded;
-    group.items.forEach((item) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.comparisonSeries = item.key;
-      button.className = "comparison-surface-button";
-      button.setAttribute("aria-pressed", String(item.selected));
-      button.classList.toggle("is-selected", item.selected);
-      const swatch = document.createElement("i");
-      swatch.style.setProperty("--swatch", item.color);
-      swatch.setAttribute("aria-hidden", "true");
-      const label = document.createElement("span");
-      label.textContent = item.label;
-      button.append(swatch, label);
-      options.append(button);
-    });
-    section.append(header, options);
-    groups.append(section);
-  });
-  const feedback = document.createElement("p");
-  feedback.className = "comparison-surface-feedback";
-  feedback.dataset.comparisonFeedback = "";
-  feedback.setAttribute("aria-live", "polite");
-  wrapper.append(heading, help, groups, feedback);
-  return wrapper;
-}
-
-function createDensitySelector(model) {
-  const wrapper = document.createElement("section");
-  wrapper.className = "density-class-selector";
-  const heading = document.createElement("h3");
-  heading.textContent = model.title;
-  const options = document.createElement("div");
-  options.setAttribute("role", "group");
-  options.setAttribute("aria-label", model.title);
-  model.items.forEach((item) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.densityClass = String(item.code);
-    button.setAttribute("aria-pressed", String(item.selected));
-    button.classList.toggle("is-selected", item.selected);
-    const swatch = document.createElement("i");
-    swatch.style.setProperty("--swatch", item.color);
-    swatch.setAttribute("aria-hidden", "true");
-    const label = document.createElement("span");
-    label.textContent = item.label;
-    button.append(swatch, label);
-    options.append(button);
-  });
-  const feedback = document.createElement("p");
-  feedback.dataset.densityFeedback = "";
-  feedback.setAttribute("aria-live", "polite");
-  wrapper.append(heading, options, feedback);
-  return wrapper;
-}
-
 function renderLegend() {
   if (!application.layers) return;
   const model = activeComparison()?.isActive()
     ? activeComparison().getLegendModel()
     : activeLayer().getLegendModel();
-  elements.legendTitle.textContent = model.title;
-  elements.legendNote.textContent = model.note ?? "";
-  const footnote = model.footnote ? document.createElement("p") : null;
-  if (footnote) {
-    footnote.className = "legend-footnote";
-    footnote.textContent = model.footnote;
-  }
-
-  if (model.layout === "scale") {
-    const scale = document.createElement("div");
-    scale.className = "legend-scale";
-    scale.append(...model.groups[0].items.map((item) => createLegendItem(item, { score: true })));
-    const statuses = document.createElement("div");
-    statuses.className = "legend-statuses";
-    statuses.append(...(model.groups[1]?.items ?? []).map((item) => createLegendItem(item)));
-    if (model.comparisonSeries?.length) {
-      statuses.append(...model.comparisonSeries.map((item) => createLegendItem(item)));
-    }
-    const selector = model.surfaceSelector ? createSurfaceSelector(model.surfaceSelector) : null;
-    const densitySelector = model.densitySelector ? createDensitySelector(model.densitySelector) : null;
-    elements.legend.replaceChildren(
-      scale, statuses, ...(selector ? [selector] : []), ...(densitySelector ? [densitySelector] : []), ...(footnote ? [footnote] : []),
-    );
-    return;
-  }
-
-  const hasGroups = model.groups.some((group) => group.title);
-  const wrapper = document.createElement("div");
-  wrapper.className = hasGroups ? "urban-atlas-legend" : "land-cover-legend";
-  model.groups.forEach((group) => {
-    if (!group.items.length) return;
-    if (hasGroups) {
-      const section = document.createElement("section");
-      const heading = document.createElement("h3");
-      heading.textContent = group.title;
-      const items = document.createElement("div");
-      items.append(...group.items.map((item) => createLegendItem(item)));
-      section.append(heading, items);
-      wrapper.append(section);
-    } else {
-      wrapper.append(...group.items.map((item) => createLegendItem(item)));
-    }
-  });
-  elements.legend.replaceChildren(wrapper, ...(footnote ? [footnote] : []));
+  renderLegendModel({ title: elements.legendTitle, note: elements.legendNote, content: elements.legend }, model);
 }
 
 function populateMunicipalities(provenance) {
@@ -732,18 +585,18 @@ async function start() {
   performance.mark("heat-map-start");
   const data = await loadApplicationData();
   application.data = data;
-  elements.mapControls.classList.toggle("has-local-layers", Object.keys(data.localLayers ?? {}).length > 0);
+  elements.mapControls.classList.toggle("has-official-layers", Object.keys(data.officialLayers ?? {}).length > 0);
   const extraLayers = [];
-  if (Object.keys(data.localLayers ?? {}).length) {
-    extraLayers.push(...(await import("./layers/local-official-layers.js")).createLocalOfficialLayers(data.localLayers));
-    if (data.localLayers.landgebruik) {
+  if (Object.keys(data.officialLayers ?? {}).length) {
+    extraLayers.push(...(await import("./layers/local-official-layers.js")).createOfficialRasterLayers(data.officialLayers));
+    if (data.officialLayers.landgebruik) {
       extraLayers.push((await import("./layers/landgebruik-layer.js")).createLandgebruikLayer({
-        descriptor: data.localLayers.landgebruik,
+        descriptor: data.officialLayers.landgebruik,
       }));
     }
-    if (data.localLayers["landsat-temperature"]) {
+    if (data.officialLayers["landsat-temperature"]) {
       extraLayers.push((await import("./layers/landsat-temperature-layer.js")).createLandsatTemperatureLayer({
-        descriptor: data.localLayers["landsat-temperature"],
+        descriptor: data.officialLayers["landsat-temperature"],
       }));
     }
   }
@@ -779,8 +632,8 @@ async function start() {
     methodology: data.methodology,
     urbanAtlas: data.urbanAtlas,
     income: data.income,
-    localLayers: data.localLayers,
-    localComparisons: data.localComparisons,
+    officialLayers: data.officialLayers,
+    comparisons: data.comparisons,
   };
   const panel = createDetailPanel({
     panel: elements.detailPanel,
@@ -902,22 +755,25 @@ async function start() {
     },
   });
   const landsatLayer = application.layers.get("landsat-temperature");
-  if (landsatLayer && data.localComparisons?.["landsat-urban-atlas"]) {
+  if (landsatLayer && data.comparisons?.["landsat-urban-atlas"]) {
     const { createLandsatUrbanAtlasComparison } = await import("./comparisons/landsat-urban-atlas.js");
     const comparison = createLandsatUrbanAtlasComparison({
-      descriptor: data.localComparisons["landsat-urban-atlas"], landsatLayer,
+      descriptor: data.comparisons["landsat-urban-atlas"], landsatLayer,
       urbanAtlasLayer: application.layers.get("urban-atlas"), urbanAtlas: data.urbanAtlas,
     });
     application.comparisons.set(comparison.id, comparison);
   }
-  if (landsatLayer && data.localComparisons?.["landsat-jaarbak"] && application.layers.has("jaarbak")) {
+  if (landsatLayer && data.comparisons?.["landsat-jaarbak"] && application.layers.has("jaarbak")) {
     const { createLandsatJaarbakComparison } = await import("./comparisons/landsat-jaarbak.js");
     const comparison = createLandsatJaarbakComparison({
-      descriptor: data.localComparisons["landsat-jaarbak"], landsatLayer,
+      descriptor: data.comparisons["landsat-jaarbak"], landsatLayer,
       jaarbakLayer: application.layers.get("jaarbak"),
     });
     application.comparisons.set(comparison.id, comparison);
   }
+  validateProductContract(application.layers, application.comparisons, {
+    playground: import.meta.env.MODE === "playground",
+  });
   application.comparisons.forEach((comparison) => comparison.subscribe(() => {
     if (!comparison.isActive()) return;
     renderLegend();

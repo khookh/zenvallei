@@ -23,7 +23,7 @@ const manifest = {
 };
 
 describe("Landsat-Urban Atlas comparison contract", () => {
-  it("validates the local-only comparison identity", () => {
+  it("validates the comparison identity", () => {
     expect(validateComparisonManifest(manifest)).toBe(manifest);
     expect(() => validateComparisonManifest({ ...manifest, maximumSeries: 5 })).toThrow(/incomplete/i);
   });

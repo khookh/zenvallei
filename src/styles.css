@@ -281,7 +281,7 @@ a:focus-visible {
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(16px);
 }
-.map-controls.has-local-layers {
+.map-controls.has-official-layers {
   max-height: calc(100% - 40px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -569,11 +569,6 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .summary-card > span { grid-column: 1 / -1; margin-bottom: 8px; color: var(--muted); font-size: 0.7rem; font-weight: 700; }
 .summary-card strong { color: var(--score-color); font-size: 1.75rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .summary-card small { color: var(--muted); font-size: 0.64rem; }
-.land-cover-summary-grid { grid-template-areas: "combined trees" "built cropland"; }
-.land-cover-combined { grid-area: combined; }
-.land-cover-trees { grid-area: trees; }
-.land-cover-cropland { grid-area: cropland; }
-.land-cover-built { grid-area: built; }
 .score-summary-card p { grid-column: 1 / -1; margin: 11px 0 0; padding-top: 9px; border-top: 1px solid #e4eae7; color: #536a70; font-size: 0.64rem; line-height: 1.42; }
 .land-cover-metric strong { font-size: 1.22rem; }
 .calculation-note { margin: 11px 2px 0; color: #536a70; font-size: 0.69rem; line-height: 1.48; }
@@ -613,17 +608,6 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .urban-atlas-breakdown-group + .urban-atlas-breakdown-group { margin-top: 8px; border-top: 1px solid #edf0ee; }
 .urban-atlas-breakdown-group h4 { margin: 0 0 5px; color: var(--teal); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.07em; }
 .urban-atlas-valid-area { margin: 10px 2px 0; color: var(--muted); font-size: 0.67rem; }
-.vegetation-summary-grid .summary-card > span,
-.vegetation-valid-area { color: #536a70; }
-.vegetation-intro { margin-bottom: 12px; }
-.vegetation-composition { display: flex; width: 100%; height: 20px; overflow: hidden; border: 1px solid #cbd8d4; border-radius: 999px; background: #edf1ef; }
-.vegetation-composition span { display: block; min-width: 2px; height: 100%; background: var(--segment); }
-.vegetation-composition-key { display: grid; gap: 7px; margin-top: 12px; }
-.vegetation-composition-key > span { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 7px; color: #496267; font-size: 0.68rem; }
-.vegetation-composition-key i { width: 11px; height: 11px; border: 1px solid rgba(0,0,0,.12); border-radius: 3px; background: var(--swatch); }
-.vegetation-composition-key b { font-weight: 700; }
-.vegetation-composition-key strong { color: var(--ink); font-size: 0.66rem; font-variant-numeric: tabular-nums; }
-.vegetation-definition { margin: 0 0 11px; padding: 11px 12px; border-left: 3px solid var(--teal-bright); border-radius: 4px 11px 11px 4px; color: #36555b; background: #edf7f4; font-size: 0.73rem; line-height: 1.5; }
 .panel-subtitle { margin: 8px 0 0; color: #cce3e1; font-size: 0.76rem; font-weight: 720; }
 .local-layer-hero .relative-note { margin-top: 17px; }
 .local-layer-body { padding-bottom: 8px; }
@@ -854,7 +838,7 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
   .header-status { max-width: 120px; overflow: hidden; padding: 7px 9px; font-size: 0.65rem; text-overflow: ellipsis; }
   .header-actions { gap: 6px; }
   .map-controls { top: 10px; left: 10px; width: calc(100vw - 20px); padding: 13px 14px; border-radius: 16px; }
-  .map-controls.has-local-layers { max-height: calc(100% - 20px); }
+  .map-controls.has-official-layers { max-height: calc(100% - 20px); }
   .control-heading { margin-bottom: 7px; }
   .control-heading h2 { font-size: 1rem; }
   .map-controls.is-collapsed { width: calc(100vw - 20px); }
@@ -929,7 +913,6 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
   .summary-grid { grid-template-columns: 1fr; }
   .local-breakdown-row { grid-template-columns: 14px minmax(0, 1fr) minmax(88px, auto); gap: 8px; }
   .local-breakdown-value small { max-width: 100px; }
-  .land-cover-summary-grid { grid-template-areas: "combined" "trees" "cropland" "built"; }
   .legend:not([open]) { width: 195px; }
 }
 
@@ -969,7 +952,6 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .indicator-label,
 .indicator-value strong,
 .land-cover-row,
-.vegetation-definition,
 .local-layer-definition,
 .local-breakdown-label,
 .local-breakdown-label strong,

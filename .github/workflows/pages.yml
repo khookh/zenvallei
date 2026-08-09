@@ -111,6 +111,13 @@ jobs:
           --timeout-ms 300000
           --interval-ms 5000
 
+      - name: Smoke-test the live application
+        id: live_application
+        if: steps.live_verification.outcome == 'success'
+        env:
+          LIVE_PAGES_URL: ${{ env.PAGES_URL }}
+        run: pnpm test:live-pages
+
       - name: Summarise deployment
         if: always()
         env:
@@ -122,6 +129,7 @@ jobs:
           UPLOAD_OUTCOME: ${{ steps.artifact_upload.outcome }}
           DEPLOY_OUTCOME: ${{ steps.deployment.outcome }}
           LIVE_OUTCOME: ${{ steps.live_verification.outcome }}
+          LIVE_APPLICATION_OUTCOME: ${{ steps.live_application.outcome }}
           LIVE_FAILURE_CODE: ${{ steps.live_verification.outputs.failure_code }}
           PUBLISHED_SHA: ${{ steps.live_verification.outputs.published_sha }}
         run: node scripts/write-deployment-summary.mjs

@@ -23,7 +23,7 @@
  * @property {() => SecondaryControlModel|null} [getSecondaryControl] Optional nested control.
  * @property {() => TemporalControlModel|null} [getTemporalControl] Optional discrete temporal control.
  * @property {() => string[]} [getAnalysisTargets] Optional layer IDs for future cross-layer analysis.
- * @property {() => object} [getRuntimeData] Read-only, already-loaded data for a local comparison module.
+ * @property {() => object} [getRuntimeData] Read-only, already-loaded data for a comparison module.
  * @property {(map: object, name: string, value: string) => boolean} [setOption] Update a layer-specific option.
  * @property {(name: string) => string|null} [getOption] Read a layer-specific option.
  * @property {(point: {lng:number,lat:number}, context?: {signal?:AbortSignal}) => Promise<object>} [inspectPoint] Optional local pixel or feature inspection.

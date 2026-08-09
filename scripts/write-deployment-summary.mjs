@@ -33,6 +33,7 @@ export function buildDeploymentSummary(environment = process.env) {
     `| Artifact upload | ${outcome(environment.UPLOAD_OUTCOME)} |`,
     `| Pages deployment action | ${outcome(environment.DEPLOY_OUTCOME)} |`,
     `| Live commit verification | ${outcome(environment.LIVE_OUTCOME)} |`,
+    `| Live application smoke test | ${outcome(environment.LIVE_APPLICATION_OUTCOME)} |`,
     "",
     `- Requested SHA: \`${requestedSha}\``,
     `- Published SHA: \`${publishedSha}\``,
@@ -46,8 +47,10 @@ export function buildDeploymentSummary(environment = process.env) {
     lines.push(
       `The Pages action reported \`${outcome(environment.DEPLOY_OUTCOME)}\`, but the exact requested commit is live. Publication succeeded; this was a Pages status API error. Check [GitHub Status](${STATUS_URL}) before retrying anything.`,
     );
+  } else if (liveSucceeded && environment.LIVE_APPLICATION_OUTCOME === "failure") {
+    lines.push("The requested commit is live, but the application smoke test failed. Inspect the named browser assertion before sharing the release.");
   } else if (liveSucceeded) {
-    lines.push("No action is required. Smoke-test the public map in English and Dutch.");
+    lines.push("No action is required. The live seven-layer product contract and both Landsat comparisons passed their browser smoke test.");
   } else if (environment.PYTHON_OUTCOME === "failure") {
     lines.push("Reproduce the failure with `python -m pytest playground/ndvi/tests -q`.");
   } else if (environment.APPLICATION_OUTCOME === "failure") {

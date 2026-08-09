@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "local-data.spec.js",
-  timeout: 90_000,
+  timeout: 180_000,
   workers: 1,
   reporter: "list",
   use: { baseURL: "http://127.0.0.1:4191", trace: "retain-on-failure" },

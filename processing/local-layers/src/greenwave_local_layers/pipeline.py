@@ -2,9 +2,6 @@
 
 Statistics are calculated on the native projected raster. A separate RGBA
 GeoTIFF is created only as an intermediate visual derivative for PMTiles.
-
-The TCD-specific branches in this module are deprecated and unreachable from
-the active CLI/catalogue. They remain temporarily for old-cache reproducibility.
 """
 
 from __future__ import annotations
@@ -24,22 +21,19 @@ import numpy as np
 import rasterio
 from pmtiles.reader import MmapSource, Reader
 from pyproj import CRS
-from shapely import from_wkt
-from rasterio.features import geometry_mask, geometry_window
+from rasterio.features import geometry_mask
 from rasterio.mask import mask
 from rasterio.transform import from_origin
 
 from .constants import (
     ANB_WCS, ANB_WMS, CACHE_ROOT, GROENKAART_CLASSES, GROENKAART_YEARS,
     JAARBAK_CLASSES, JAARBAK_DOWNLOADS, JAARBAK_LAYERS, JAARBAK_YEARS,
-    MERCATOR_WCS, MUNICIPALITIES, SECTORS_PATH, TCD_CATALOGUE, TCD_STYLE,
-    TCD_YEARS,
+    MERCATOR_WCS, MUNICIPALITIES, SECTORS_PATH,
 )
 from .sources import (
-    download_file, download_tcd_product, file_hash, locate_geotiff,
-    parse_tcd_palette, read_tcd_catalogue, request_wcs_tiff,
+    download_file, file_hash, request_wcs_tiff,
 )
-from .statistics import categorical_statistics, jaarbak_statistics, tcd_statistics
+from .statistics import categorical_statistics, jaarbak_statistics
 from .density import prepare_density_dataset
 
 
@@ -149,17 +143,9 @@ def _validate_raster(
             raise ValueError(f"{path.name}: contains no classified pixels inside Zennevallei.")
 
 
-def _source_for(dataset_id: str, year: int, sources: dict[int, Path], bbox_31370, catalogue=None) -> tuple[Path, dict]:
+def _source_for(dataset_id: str, year: int, sources: dict[int, Path], bbox_31370) -> tuple[Path, dict]:
     if year in sources:
         path = sources[year].resolve()
-        if dataset_id == "tcd":
-            row = catalogue[year]
-            if path.stat().st_size != int(row["content_length"]) or file_hash(path, "md5") != row["checksum_value"].lower():
-                raise ValueError(f"Manual TCD source for {year} does not match the official catalogue size and MD5.")
-            raster = locate_geotiff(path, CACHE_ROOT / "raw" / "tcd" / f"{row['id']}-manual")
-            return raster, {"retrieval": "manual", "productId": row["id"], "productName": row["name"],
-                            "size": int(row["content_length"]), "md5": row["checksum_value"],
-                            "sourceSha256": file_hash(path), "rasterSha256": file_hash(raster)}
         return path, {"retrieval": "manual", "sourceSha256": file_hash(path), "sourceBytes": path.stat().st_size}
     raw = CACHE_ROOT / "raw" / dataset_id
     raw.mkdir(parents=True, exist_ok=True)
@@ -178,15 +164,7 @@ def _source_for(dataset_id: str, year: int, sources: dict[int, Path], bbox_31370
         if not destination.exists():
             _wcs_subset(ANB_WCS, coverage, bbox_31370, destination)
         return destination, {"retrieval": "WCS", "coverageId": coverage, "sourceSha256": file_hash(destination), "sourceBytes": destination.stat().st_size}
-    row = catalogue[year]
-    product = raw / f"{row['name']}.bin"
-    download_tcd_product(row, product)
-    path = locate_geotiff(product, raw / f"{row['id']}-extracted")
-    return path, {
-        "retrieval": "CDSE OData", "productId": row["id"], "productName": row["name"],
-        "size": int(row["content_length"]), "md5": row["checksum_value"], "bbox": row["bbox"],
-        "sourceSha256": file_hash(path),
-    }
+    raise ValueError(f"Unsupported raster dataset: {dataset_id}")
 
 
 def _area_stats(source_path: Path, areas: gpd.GeoDataFrame, dataset_id: str, key_field: str):
@@ -203,26 +181,6 @@ def _area_stats(source_path: Path, areas: gpd.GeoDataFrame, dataset_id: str, key
         pixel_area = abs(source.transform.a * source.transform.e) / 10000.0
         for (_, feature), (_, area_feature) in zip(projected.iterrows(), equal_area.iterrows()):
             complete_area = area_feature.geometry.area / 10000.0
-            if dataset_id == "tcd":
-                window = geometry_window(source, [feature.geometry], pad_x=1, pad_y=1)
-                values = source.read(1, window=window)
-                source_valid = source.read_masks(1, window=window) > 0
-                factor = 10
-                high_shape = (values.shape[0] * factor, values.shape[1] * factor)
-                high_transform = source.window_transform(window) * rasterio.Affine.scale(1 / factor)
-                high_inside = geometry_mask(
-                    [feature.geometry], out_shape=high_shape, transform=high_transform, invert=True
-                )
-                fractions = high_inside.reshape(
-                    values.shape[0], factor, values.shape[1], factor
-                ).mean(axis=(1, 3))
-                weighted_values = np.ma.array(values, mask=~source_valid)
-                stats = tcd_statistics(
-                    weighted_values, pixel_area, complete_area, fractions * pixel_area
-                )
-                key = feature[key_field]
-                result[str(key)] = stats
-                continue
             try:
                 values, _ = mask(source, [feature.geometry], crop=True, filled=False, indexes=1)
             except ValueError:
@@ -279,8 +237,7 @@ def _rgba_derivative(source_path: Path, destination: Path, cutline, dataset_id: 
                     valid = inside & source_valid & np.isin(values, tuple(range(1, 20)))
                     colors = {int(value): _hex_rgb(color) for value, color in palette.items()}
                 else:
-                    valid = inside & source_valid & (values <= 100) & (values != 255)
-                    colors = {value: _hex_rgb(color) for value, color in enumerate(palette)}
+                    raise ValueError(f"Unsupported visual raster dataset: {dataset_id}")
                 for value, color in colors.items():
                     selected = valid & (values == value)
                     for band, component in enumerate(color):
@@ -337,12 +294,7 @@ def _validate_statistics(records: dict, dataset_id: str, expected_count: int):
         elif dataset_id == "landgebruik":
             reconciled = sum(item["areaHa"] for item in stats["classes"]) + stats["noDataAreaHa"]
         else:
-            reconciled = stats["zeroDensityAreaHa"] + stats["treePresenceAreaHa"] + stats["noDataAreaHa"]
-            density_area = sum(item["areaHa"] for item in stats["densityClasses"])
-            if abs(density_area - stats["treePresenceAreaHa"]) > max(0.01, complete * 0.005):
-                raise ValueError(f"{dataset_id} {key}: density classes do not match detected-tree area.")
-            if stats["crownEquivalentAreaHa"] > stats["treePresenceAreaHa"] + 1e-9:
-                raise ValueError(f"{dataset_id} {key}: crown-equivalent area exceeds detected-tree area.")
+            raise ValueError(f"Unsupported statistics dataset: {dataset_id}")
         if abs(reconciled - complete) > max(0.01, complete * 0.005):
             raise ValueError(f"{dataset_id} {key}: areas do not reconcile with the complete Statbel area.")
 
@@ -352,14 +304,22 @@ def _source_metadata(dataset_id: str):
         return {"name": "Jaarlijkse bodemafdekkingskaart (JaarBAK)", "url": "https://www.vlaanderen.be/datavindplaats/catalogus/jaarlijkse-bodemafdekkingskaart-jaarbak-1-m-resolutie-2023", "attribution": {"en": "Department of Environment & Spatial Development, Government of Flanders", "nl": "Departement Omgeving van de Vlaamse overheid"}, "resolutionLabel": "1 m", "crs": "EPSG:31370"}
     if dataset_id == "groenkaart":
         return {"name": "Groenkaart Vlaanderen", "url": "https://www.vlaanderen.be/datavindplaats/catalogus/groenkaart-vlaanderen-2021", "attribution": {"en": "Agency for Nature and Forests, Government of Flanders, and Digital Flanders Agency", "nl": "Agentschap voor Natuur en Bos van de Vlaamse overheid en Digitaal Vlaanderen"}, "resolutionLabel": "1 m", "crs": "EPSG:31370", "producer": "Agentschap voor Natuur en Bos / Digitaal Vlaanderen", "styleUrl": f"{ANB_WMS}?service=WMS&request=GetLegendGraphic&layer=Grnkrt21&format=image/png"}
-    return {"name": "Copernicus Tree Cover Density", "url": "https://land.copernicus.eu/en/products/high-resolution-layer-forests-and-tree-cover/tree-cover-density-2018-present-raster-10-m-europe-yearly", "attribution": {"en": "European Union Copernicus Land Monitoring Service", "nl": "Copernicus Land Monitoring Service van de Europese Unie"}, "resolutionLabel": "10 m", "crs": "EPSG:3035", "doi": "10.2909/e677441e-fb94-431c-b4f9-304f10e4dfd8", "catalogueUrl": TCD_CATALOGUE, "styleUrl": TCD_STYLE}
+    raise ValueError(f"Unsupported raster dataset: {dataset_id}")
 
 
 def prepare(dataset_id: str, sources: dict[int, Path]):
+    """Prepare the two active 1 m official classifications and density views."""
+    years_by_dataset = {"jaarbak": JAARBAK_YEARS, "groenkaart": GROENKAART_YEARS}
+    if dataset_id not in years_by_dataset:
+        raise ValueError(f"Unsupported raster dataset: {dataset_id}")
+
     sectors, municipalities = load_areas()
     raw_bounds = sectors.to_crs("EPSG:31370").total_bounds
-    bounds_31370 = (math.floor(raw_bounds[0]), math.floor(raw_bounds[1]), math.ceil(raw_bounds[2]), math.ceil(raw_bounds[3]))
-    years = {"jaarbak": JAARBAK_YEARS, "groenkaart": GROENKAART_YEARS, "tcd": TCD_YEARS}[dataset_id]
+    bounds_31370 = tuple(
+        operation(value)
+        for operation, value in zip((math.floor, math.floor, math.ceil, math.ceil), raw_bounds)
+    )
+    years = years_by_dataset[dataset_id]
     output_root = CACHE_ROOT / dataset_id
     output_root.mkdir(parents=True, exist_ok=True)
     manifest_path = output_root / "manifest.json"
@@ -370,37 +330,31 @@ def prepare(dataset_id: str, sources: dict[int, Path]):
             if previous.get("schemaVersion") in (1, 2, 3) and previous.get("datasetId") == dataset_id:
                 previous_years = previous.get("years", {})
         except (OSError, ValueError):
-            previous_years = {}
-    catalogue = read_tcd_catalogue(CACHE_ROOT / "raw" / "tcd-catalogue.csv") if dataset_id == "tcd" else None
-    if catalogue is not None and not set(years).issubset(catalogue):
-        raise ValueError("The TCD catalogue does not contain every pinned 2018–2024 E39N30 product.")
-    if catalogue is not None:
-        zennevallei = sectors.geometry.union_all()
-        for year in years:
-            footprint = from_wkt(catalogue[year]["bbox"])
-            if not footprint.contains(zennevallei):
-                raise ValueError(f"TCD E39N30 does not fully contain Zennevallei in {year}.")
-    if dataset_id == "tcd":
-        style_cache = CACHE_ROOT / "raw" / "tcd-style.js"
-        if not style_cache.exists():
-            download_file(TCD_STYLE, style_cache)
-        tcd_palette = parse_tcd_palette(style_cache.read_text(encoding="utf-8"))
-        scale = {"items": [
-            {"minimum": 0, "maximum": 0, "label": {"en": "0% tree cover", "nl": "0% boomkroonbedekking"}, "color": tcd_palette[0]},
-            *[{"minimum": start, "maximum": end, "label": {"en": f"{start}–{end}%", "nl": f"{start}–{end}%"}, "color": tcd_palette[(start + end) // 2]} for start, end in ((1, 20), (21, 40), (41, 60), (61, 80), (81, 100))],
-        ], "palette": tcd_palette}
-    else:
-        scale = {"items": list(JAARBAK_CLASSES if dataset_id == "jaarbak" else GROENKAART_CLASSES)}
-        tcd_palette = None
+            pass
+
     manifest = {
-        "schemaVersion": 3 if dataset_id in ("jaarbak", "groenkaart") else 2, "datasetId": dataset_id,
-        "kind": "continuous" if dataset_id == "tcd" else "categorical",
-        "availableYears": list(years), "defaultYear": max(years), "opacity": 0.68,
-        "classesOrScale": scale, "source": _source_metadata(dataset_id), "years": {},
+        "schemaVersion": 3,
+        "datasetId": dataset_id,
+        "kind": "categorical",
+        "availableYears": list(years),
+        "defaultYear": max(years),
+        "opacity": 0.68,
+        "classesOrScale": {
+            "items": list(JAARBAK_CLASSES if dataset_id == "jaarbak" else GROENKAART_CLASSES)
+        },
+        "source": _source_metadata(dataset_id),
+        "years": {},
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "sectorGeometrySha256": file_hash(SECTORS_PATH),
-        "processing": {"tileSize": 256, "format": "PNG", "resampling": "nearest", "cutline": "Statbel Zennevallei union", "statisticsGrid": "native"},
+        "processing": {
+            "tileSize": 256,
+            "format": "PNG",
+            "resampling": "nearest",
+            "cutline": "Statbel Zennevallei union",
+            "statisticsGrid": "native",
+        },
     }
+
     cutlines = CACHE_ROOT / "cutlines"
     cutlines.mkdir(parents=True, exist_ok=True)
     all_cutline = cutlines / "zennevallei.geojson"
@@ -410,122 +364,103 @@ def prepare(dataset_id: str, sources: dict[int, Path]):
         path = cutlines / f"{slug(row['municipality'])}.geojson"
         _write_cutline(path, row.geometry)
         municipality_cutlines[row["municipality"]] = path
+
     for year in years:
         previous_entry = previous_years.get(str(year))
-        expected_maxzoom = 14 if dataset_id == "tcd" else 17
-        if previous_entry:
-            variants = previous_entry.get("pmtilesVariants", {})
-            expected_keys = {"all", *MUNICIPALITIES}
-            archives_are_valid = set(variants) == expected_keys
-            if archives_are_valid:
-                try:
-                    for relative_path in variants.values():
-                        _validate_pmtiles(CACHE_ROOT / relative_path, 10, expected_maxzoom)
-                except (FileNotFoundError, ValueError, OSError):
-                    archives_are_valid = False
-            statistics_are_current = dataset_id != "tcd" or all(
-                "treePresenceAreaHa" in stats and len(stats.get("densityClasses", [])) == 5
-                for stats in previous_entry.get("sectorStats", {}).values()
-            )
-            if statistics_are_current:
-                try:
-                    _validate_statistics(previous_entry.get("sectorStats", {}), dataset_id, 154)
-                    _validate_statistics(previous_entry.get("municipalityStats", {}), dataset_id, 7)
-                except ValueError:
-                    statistics_are_current = False
-            if (
-                archives_are_valid
-                and len(previous_entry.get("sectorStats", {})) == 154
-                and set(previous_entry.get("municipalityStats", {})) == set(MUNICIPALITIES)
-                and statistics_are_current
-            ):
-                previous_entry["status"] = (
-                    "provisional" if dataset_id == "jaarbak" and year == 2024 else "final"
-                )
-                manifest["years"][str(year)] = previous_entry
-                print(f"{dataset_id} {year}: reusing completed year", flush=True)
-                continue
+        if previous_entry and _can_reuse_year(previous_entry, dataset_id):
+            previous_entry["status"] = "provisional" if dataset_id == "jaarbak" and year == 2024 else "final"
+            manifest["years"][str(year)] = previous_entry
+            print(f"{dataset_id} {year}: reusing completed year", flush=True)
+            continue
+
         print(f"{dataset_id} {year}: validating source", flush=True)
-        source, provenance = _source_for(dataset_id, year, sources, bounds_31370, catalogue)
-        expected_crs = "EPSG:3035" if dataset_id == "tcd" else "EPSG:31370"
-        resolution = 10 if dataset_id == "tcd" else 1
-        values = range(0, 101) if dataset_id == "tcd" else ((0, 1, 255) if dataset_id == "jaarbak" else range(0, 5))
-        validation_bounds = tuple(sectors.to_crs(expected_crs).total_bounds)
-        classified_values = (
-            range(0, 101) if dataset_id == "tcd" else ((0, 1) if dataset_id == "jaarbak" else range(1, 5))
-        )
+        source, provenance = _source_for(dataset_id, year, sources, bounds_31370)
+        valid_values = (0, 1, 255) if dataset_id == "jaarbak" else range(0, 5)
+        classified_values = (0, 1) if dataset_id == "jaarbak" else range(1, 5)
+        validation_bounds = tuple(sectors.to_crs("EPSG:31370").total_bounds)
         try:
-            _validate_raster(source, expected_crs, resolution, values, validation_bounds, classified_values)
+            _validate_raster(source, "EPSG:31370", 1, valid_values, validation_bounds, classified_values)
         except ValueError:
-            if year in sources or dataset_id == "tcd":
+            if year in sources:
                 raise
             print(f"{dataset_id} {year}: cached source is incomplete; downloading it again", flush=True)
             source.unlink(missing_ok=True)
-            source, provenance = _source_for(dataset_id, year, sources, bounds_31370, catalogue)
-            _validate_raster(source, expected_crs, resolution, values, validation_bounds, classified_values)
+            source, provenance = _source_for(dataset_id, year, sources, bounds_31370)
+            _validate_raster(source, "EPSG:31370", 1, valid_values, validation_bounds, classified_values)
+
         print(f"{dataset_id} {year}: calculating sector and municipality statistics", flush=True)
         sector_stats = _area_stats(source, sectors, dataset_id, "sectorId")
         municipality_stats = _area_stats(source, municipalities, dataset_id, "municipality")
         _validate_statistics(sector_stats, dataset_id, 154)
         _validate_statistics(municipality_stats, dataset_id, 7)
+
         rgba = output_root / f"{dataset_id}-{year}-visual.tif"
         variants = {}
         archive_hashes = {}
-        zooms = "10..14" if dataset_id == "tcd" else "10..17"
-        targets = {"all": all_cutline, **municipality_cutlines}
-        for name, cutline in targets.items():
-            key = "all" if name == "all" else name
-            filename = f"{dataset_id}-{year}-{slug(key)}.pmtiles"
+        for name, cutline in {"all": all_cutline, **municipality_cutlines}.items():
+            filename = f"{dataset_id}-{year}-{slug(name)}.pmtiles"
             target = output_root / filename
             try:
-                _validate_pmtiles(target, 10, 14 if dataset_id == "tcd" else 17)
+                _validate_pmtiles(target, 10, 17)
                 print(f"{dataset_id} {year}: reusing {filename}", flush=True)
             except (FileNotFoundError, ValueError, OSError):
                 target.unlink(missing_ok=True)
                 print(f"{dataset_id} {year}: creating {filename}", flush=True)
                 if not rgba.exists():
-                    _rgba_derivative(source, rgba, sectors.geometry.union_all(), dataset_id, tcd_palette)
-                _pmtiles(rgba, target, cutline, zooms)
-                _validate_pmtiles(target, 10, 14 if dataset_id == "tcd" else 17)
-            variants[key] = f"{dataset_id}/{filename}"
-            archive_hashes[key] = file_hash(target)
+                    _rgba_derivative(source, rgba, sectors.geometry.union_all(), dataset_id, None)
+                _pmtiles(rgba, target, cutline, "10..17")
+                _validate_pmtiles(target, 10, 17)
+            variants[name] = f"{dataset_id}/{filename}"
+            archive_hashes[name] = file_hash(target)
         rgba.unlink(missing_ok=True)
+
         manifest["years"][str(year)] = {
             "status": "provisional" if dataset_id == "jaarbak" and year == 2024 else "final",
-            "note": {"en": "Production method changed from this year.", "nl": "De productiemethode wijzigde vanaf dit jaar."} if dataset_id == "jaarbak" and year == 2023 else None,
-            "bounds": list(sectors.total_bounds), "minzoom": 10, "maxzoom": 14 if dataset_id == "tcd" else 17,
-            "pmtilesVariants": variants, "sectorStats": sector_stats, "municipalityStats": municipality_stats,
-            "pmtilesSha256": archive_hashes, "outputCount": len(variants),
-            "retrievedAt": datetime.now(timezone.utc).isoformat(), "provenance": provenance,
+            "note": {"en": "Production method changed from this year.", "nl": "De productiemethode wijzigde vanaf dit jaar."}
+            if dataset_id == "jaarbak" and year == 2023 else None,
+            "bounds": list(sectors.total_bounds),
+            "minzoom": 10,
+            "maxzoom": 17,
+            "pmtilesVariants": variants,
+            "sectorStats": sector_stats,
+            "municipalityStats": municipality_stats,
+            "pmtilesSha256": archive_hashes,
+            "outputCount": len(variants),
+            "retrievedAt": datetime.now(timezone.utc).isoformat(),
+            "provenance": provenance,
         }
-        manifest_path.write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         update_index()
         print(f"{dataset_id} {year}: complete", flush=True)
-    if dataset_id in ("jaarbak", "groenkaart"):
-        source_paths = {
-            year: sources.get(year, CACHE_ROOT / "raw" / dataset_id / f"{dataset_id}-{year}.tif")
-            for year in years
-        }
-        missing_sources = [str(path) for path in source_paths.values() if not Path(path).exists()]
-        if missing_sources:
-            raise FileNotFoundError(f"Density preparation is missing source rasters: {', '.join(missing_sources)}")
-        manifest["density"] = prepare_density_dataset(
-            dataset_id,
-            years,
-            sectors,
-            municipalities,
-            source_paths,
-        )
 
-    # Persist contract-only upgrades even when every native raster and PMTiles
-    # archive was reused and the processing loop performed no heavy work.
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    source_paths = {
+        year: sources.get(year, CACHE_ROOT / "raw" / dataset_id / f"{dataset_id}-{year}.tif")
+        for year in years
+    }
+    missing_sources = [str(path) for path in source_paths.values() if not Path(path).exists()]
+    if missing_sources:
+        raise FileNotFoundError(f"Density preparation is missing source rasters: {', '.join(missing_sources)}")
+    manifest["density"] = prepare_density_dataset(
+        dataset_id, years, sectors, municipalities, source_paths
     )
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     update_index()
     return manifest
+
+
+def _can_reuse_year(entry: dict, dataset_id: str) -> bool:
+    """Validate a cached year before avoiding expensive raster processing."""
+    variants = entry.get("pmtilesVariants", {})
+    if set(variants) != {"all", *MUNICIPALITIES}:
+        return False
+    try:
+        for relative_path in variants.values():
+            _validate_pmtiles(CACHE_ROOT / relative_path, 10, 17)
+        _validate_statistics(entry.get("sectorStats", {}), dataset_id, 154)
+        _validate_statistics(entry.get("municipalityStats", {}), dataset_id, 7)
+    except (FileNotFoundError, ValueError, OSError):
+        return False
+    return set(entry.get("municipalityStats", {})) == set(MUNICIPALITIES)
 
 
 def update_index():

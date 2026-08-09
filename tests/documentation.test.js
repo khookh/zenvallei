@@ -41,4 +41,12 @@ describe("active documentation", () => {
       for (const name of obsoleteNames) expect(content, `${path.relative(projectRoot, file)} contains ${name}`).not.toContain(name);
     }
   });
+
+  it("documents both Landsat comparisons as public lazy-loaded features", async () => {
+    const landsat = await fs.readFile(path.join(projectRoot, "docs", "landsat-surface-temperature.md"), "utf8");
+    expect(landsat).toContain("used by local and GitHub Pages builds");
+    expect(landsat).not.toMatch(/comparisons?.{0,80}(?:local-only|available only through)/i);
+    expect(landsat).toContain("Urban Atlas 2021");
+    expect(landsat).toContain("JaarBAK soil sealing");
+  });
 });

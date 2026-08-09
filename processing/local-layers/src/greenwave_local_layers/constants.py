@@ -17,27 +17,12 @@ MUNICIPALITIES = (
 
 JAARBAK_YEARS = tuple(range(2018, 2025))
 GROENKAART_YEARS = (2018, 2021)
-TCD_YEARS = tuple(range(2018, 2025))
 LANDGEBRUIK_YEARS = (2019, 2022, 2025)
 
 MERCATOR_WCS = "https://www.mercator.vlaanderen.be/raadpleegdienstenmercatorpubliek/ows"
 ANB_WCS = "https://geo.api.vlaanderen.be/anb/wcs"
 ANB_WMS = "https://geo.api.vlaanderen.be/ANB/wms"
 AGPA_FEATURES = "https://geoservices.landbouwvlaanderen.be/AGPA/ogc/features/v1"
-TCD_CATALOGUE = (
-    "https://s3.waw3-1.cloudferro.com/swift/v1/CatalogueCSV/"
-    "landcover_landuse/tree_cover_density/"
-    "clms_vlcc_tree-cover-density_europe_10m_yearly_v1/"
-    "clms_vlcc_tree-cover-density_europe_10m_yearly_v1_cog.csv"
-)
-CDSE_DOWNLOAD = "https://download.dataspace.copernicus.eu/odata/v1/Products"
-TCD_STYLE = (
-    "https://raw.githubusercontent.com/eu-cdse/sentinel-hub-custom-scripts/main/"
-    "clms/land-cover-and-land-use-mapping/tree-cover-and-forests/tree-cover-density/"
-    "tree-cover-density/clms_vlcc_tree-cover-density_europe_10m_yearly_v1/scripts/"
-    "tree_cover_density.js"
-)
-
 JAARBAK_LAYERS = {
     **{year: f"lc:lc_jaarbak_1m_{year}" for year in range(2018, 2022)},
     2022: "lc_jaarbak_1m_2022",

@@ -5,15 +5,15 @@ import pytest
 
 from greenwave_local_layers.cli import parse_source
 from greenwave_local_layers.constants import (
-    GROENKAART_CLASSES, GROENKAART_YEARS, JAARBAK_LAYERS, JAARBAK_YEARS, TCD_YEARS,
+    GROENKAART_CLASSES, GROENKAART_YEARS, JAARBAK_LAYERS, JAARBAK_YEARS,
 )
-from greenwave_local_layers.sources import extract_tiff_payload, parse_tcd_palette
+from greenwave_local_layers.sources import extract_tiff_payload
 from greenwave_local_layers.constants import (
     AGPA_CROP_GROUP_COLORS, LANDGEBRUIK_CLASSES, LANDGEBRUIK_LAYERS, LANDGEBRUIK_YEARS,
 )
 from greenwave_local_layers.pipeline import _crs_is_equivalent
 from greenwave_local_layers.landgebruik import _parcel_value
-from greenwave_local_layers.statistics import categorical_statistics, jaarbak_statistics, tcd_statistics
+from greenwave_local_layers.statistics import categorical_statistics, jaarbak_statistics
 
 
 def test_wcs_direct_and_multipart_extraction():
@@ -32,9 +32,6 @@ def test_wcs_direct_and_multipart_extraction():
 def test_pinned_years_and_groenkaart_wms_colours():
     assert JAARBAK_YEARS == tuple(range(2018, 2025))
     assert GROENKAART_YEARS == (2018, 2021)
-    # TCD is retired from the active catalogue; its constants remain available
-    # only so old local caches and deprecated processing code stay testable.
-    assert TCD_YEARS == tuple(range(2018, 2025))
     assert [item["color"] for item in GROENKAART_CLASSES] == ["#1f7f00", "#bfff00", "#ffff00", "#adadad"]
 
 
@@ -43,7 +40,7 @@ def test_jaarbak_wcs_coverage_names_include_namespace():
     assert JAARBAK_LAYERS[2021] == "lc:lc_jaarbak_1m_2021"
 
 
-def test_tcd_crs_alias_is_projection_equivalent_to_epsg_3035():
+def test_projection_equivalence_helper_rejects_a_different_crs():
     assert _crs_is_equivalent("IGNF:ETRS89LAEA", "EPSG:3035")
     assert not _crs_is_equivalent("EPSG:31370", "EPSG:3035")
 
@@ -63,44 +60,6 @@ def test_groenkaart_preserves_exact_four_classes():
     assert [item["code"] for item in stats["classes"]] == [1, 2, 3, 4]
     assert all(item["percentage"] == 20 for item in stats["classes"])
     assert stats["noDataPercentage"] == pytest.approx(20)
-
-
-def test_tcd_preserves_zero_and_excludes_255():
-    values = np.array([[0, 25, 50, 100, 255]])
-    stats = tcd_statistics(values, 0.2, 1.0)
-    assert stats["meanDensity"] == pytest.approx(43.75)
-    assert stats["medianDensity"] == pytest.approx(37.5)
-    assert stats["crownEquivalentAreaHa"] == pytest.approx(0.35)
-    assert stats["noDataPercentage"] == pytest.approx(20)
-    assert stats["treePresenceAreaHa"] == pytest.approx(0.6)
-    assert stats["treePresencePercentage"] == pytest.approx(60)
-    assert stats["meanDensityWherePresent"] == pytest.approx(58.3333333)
-    assert stats["zeroDensityAreaHa"] == pytest.approx(0.2)
-    assert sum(item["areaHa"] for item in stats["densityClasses"]) == pytest.approx(0.6)
-
-
-def test_tcd_supports_fractional_boundary_pixel_weights():
-    values = np.array([[0, 50], [100, 255]])
-    weights = np.array([[0.0025, 0.005], [0.0075, 0.01]])
-    stats = tcd_statistics(values, 0.01, 0.025, weights)
-    assert stats["validAreaHa"] == pytest.approx(0.015)
-    assert stats["noDataAreaHa"] == pytest.approx(0.01)
-    assert stats["meanDensity"] == pytest.approx(66.6666667)
-    assert stats["medianDensity"] == 50
-    assert stats["crownEquivalentAreaHa"] == pytest.approx(0.01)
-    assert stats["treePresenceAreaHa"] == pytest.approx(0.0125)
-    assert stats["meanDensityWherePresent"] == pytest.approx(80)
-    assert stats["densityClasses"][-1]["areaHa"] == pytest.approx(0.0075)
-
-
-def test_official_tcd_palette_requires_all_values():
-    script = "const ColorBar = [" + ",".join(f"[{value}, [{value}, 1, 2]]" for value in range(1, 101)) + "];"
-    palette = parse_tcd_palette(script)
-    assert len(palette) == 101
-    assert palette[0] == "#edf0ec"
-    assert palette[100] == "#640102"
-    with pytest.raises(ValueError):
-        parse_tcd_palette("[[1, [1, 2, 3]]]")
 
 
 def test_landgebruik_source_contract_preserves_three_editions_and_nineteen_classes():

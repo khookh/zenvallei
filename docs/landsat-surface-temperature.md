@@ -56,15 +56,15 @@ The UI uses one fixed 15-50 degrees Celsius inferno scale for comparability. The
 
 Surface temperature is not air temperature or perceived temperature. It shows how warm roofs, roads, vegetation and other surfaces were around the overpass. These spatial differences are highly relevant for understanding urban heat islands and radiant heat at street level, but one image does not represent an entire heatwave or prove a cause.
 
-## Local comparisons
+## Surface comparisons
 
-Both comparisons reuse the prepared Landsat analytical rasters. They download no satellite or reference data, stay below `.cache/local-layers`, and are available only through `pnpm dev:local-data` or `Start Greenwave.cmd`.
+Both comparisons reuse the prepared Landsat analytical rasters and download no satellite or reference data. Preparation stays below `.cache/local-layers`; `pnpm official-layers:publish` copies only the validated browser derivatives used by local and GitHub Pages builds.
 
 ### Urban Atlas 2021
 
 Run `pnpm landsat-urban-atlas:prepare` after preparing Landsat. It reuses the cached analytical rasters and `public/data/urban-atlas.geojson`; it downloads nothing. For every 30 m Landsat pixel, a 6 by 6 grid of 5 m sample points is evaluated. A pixel receives one Urban Atlas class only when a unique class covers at least 18 of the 36 points. Ties and mixed pixels without a majority are excluded.
 
-The generated files stay below `.cache/local-layers/landsat-urban-atlas`. The comparison manifest defines fixed 0.5 degree Celsius bins from 15 to 50 degrees Celsius. Per-observation files contain distributions for 154 sectors, seven municipalities and the complete Zennevallei, plus lossless browser-selection PNGs. The browser uses these PNGs only for display; all metrics come from the aligned EPSG:32631 analytical grid.
+The preparation files stay below `.cache/local-layers/landsat-urban-atlas`. The comparison manifest defines fixed 0.5 degree Celsius bins from 15 to 50 degrees Celsius. Per-observation files contain distributions for 154 sectors, seven municipalities and the complete Zennevallei, plus lossless browser-selection PNGs. The browser uses these PNGs only for display; all metrics come from the aligned EPSG:32631 analytical grid.
 
 Choose Landsat surface temperature, select **Compare**, then **Urban Atlas 2021**. The default curves compare pooled green urban areas with continuous urban fabric. Up to four analysis families or individual classes can be shown. The families are artificial surfaces; green urban areas; agriculture; forest and semi-natural vegetation; sports and leisure; wetlands; and water. Family and child selections are mutually exclusive.
 

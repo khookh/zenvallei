@@ -1,4 +1,4 @@
-"""Prepare the local Landsat surface-temperature x Urban Atlas comparison.
+"""Prepare the Landsat surface-temperature x Urban Atlas comparison.
 
 Scientific distributions are calculated on the aligned 30 m Landsat grid.
 The PNG files are compact, lossless browser derivatives used only to update a

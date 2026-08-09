@@ -25,27 +25,6 @@ function classAreas(records, collections) {
   return areas;
 }
 
-function _aggregateLandCover(records) {
-  const classifiedAreaHa = sum(records, "classifiedAreaHa");
-  const areas = classAreas(records, (record) => record.classes ?? []);
-  const classes = [...areas.entries()]
-    .map(([code, areaHa]) => ({ code: Number(code), areaHa: round(areaHa), percentage: percentage(areaHa, classifiedAreaHa) }))
-    .sort((left, right) => right.areaHa - left.areaHa || left.code - right.code);
-  const vegetationAreaHa = sum(records, "vegetationAreaHa");
-  const builtUpAreaHa = sum(records, "builtUpAreaHa");
-  return {
-    totalAreaHa: round(sum(records, "totalAreaHa")),
-    classifiedAreaHa: round(classifiedAreaHa),
-    unclassifiableAreaHa: round(sum(records, "unclassifiableAreaHa")),
-    vegetationAreaHa: round(vegetationAreaHa),
-    vegetationPercentage: percentage(vegetationAreaHa, classifiedAreaHa),
-    builtUpAreaHa: round(builtUpAreaHa),
-    builtUpPercentage: percentage(builtUpAreaHa, classifiedAreaHa),
-    dominantClassCode: classes[0]?.code ?? null,
-    classes,
-  };
-}
-
 function metricClasses(codes, areas, denominator, metricArea) {
   return codes.map((code) => {
     const areaHa = areas.get(String(code)) ?? 0;
@@ -95,36 +74,6 @@ function aggregateUrbanAtlas(records, urbanAtlas) {
     otherClasses,
   };
 }
-
-function _aggregateVegetation(records) {
-  const sectorAreaHa = sum(records, "sectorAreaHa");
-  const validAreaHa = sum(records, "validAreaHa");
-  const likelyAreaHa = sum(records, "likelyVegetatedAreaHa");
-  const belowAreaHa = sum(records, "belowThresholdAreaHa");
-  const croplandAreaHa = sum(records, "excludedCroplandAreaHa") || sum(records, "excludedArableAreaHa");
-  const waterAreaHa = sum(records, "excludedWaterAreaHa");
-  const weightedMedian = records.reduce((total, record) => total + Number(record.medianNdvi ?? 0) * Number(record.validAreaHa ?? 0), 0);
-  return {
-    sectorAreaHa: round(sectorAreaHa),
-    validAreaHa: round(validAreaHa),
-    likelyVegetatedAreaHa: round(likelyAreaHa),
-    likelyVegetatedPercentage: percentage(likelyAreaHa, sectorAreaHa),
-    belowThresholdAreaHa: round(belowAreaHa),
-    belowThresholdPercentage: percentage(belowAreaHa, sectorAreaHa),
-    excludedCroplandAreaHa: round(croplandAreaHa),
-    excludedCroplandPercentage: percentage(croplandAreaHa, sectorAreaHa),
-    excludedWaterAreaHa: round(waterAreaHa),
-    excludedWaterPercentage: percentage(waterAreaHa, sectorAreaHa),
-    missingObservationAreaHa: round(sum(records, "missingObservationAreaHa")),
-    medianNdvi: validAreaHa > 0 ? round(weightedMedian / validAreaHa, 3) : null,
-    medianIsAreaWeightedApproximation: true,
-  };
-}
-
-// Deprecated aggregators are retained only to make the retired experiments
-// reproducible. They are not exported or reachable from the active registry.
-void _aggregateLandCover;
-void _aggregateVegetation;
 
 /** Add area-weighted municipality summaries without changing source records. */
 export function addMunicipalityStatistics({ scores, urbanAtlas }) {

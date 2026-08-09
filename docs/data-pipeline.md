@@ -32,7 +32,7 @@ pnpm urban-atlas:prepare -- --source "C:\data\CLMS_UA_LCU_S2021_BE001L3"
 
 This validates the product, EPSG:3035, FUA, year and class style. Equal-area intersections produce `urban-atlas.geojson` and `urban-atlas.json`.
 
-## Local official layers
+## Prepared official layers
 
 ```powershell
 pnpm local-data:setup

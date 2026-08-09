@@ -1,4 +1,4 @@
-"""Truth-table tests for the local Landsat x JaarBAK comparison."""
+"""Truth-table tests for the Landsat x JaarBAK comparison."""
 
 import numpy as np
 

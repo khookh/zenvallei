@@ -36,6 +36,7 @@
     "test:e2e": "playwright test",
     "test:e2e:cross-browser": "playwright test --config playwright.smoke.config.js",
     "test:pages": "playwright test --config playwright.pages.config.js",
+    "test:live-pages": "playwright test --config playwright.live.config.js",
     "test:playground-map": "playwright test --config playwright.playground.config.js",
     "test:local-data": "playwright test --config playwright.local-data.config.js",
     "test:lan": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-lan.ps1",

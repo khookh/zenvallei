@@ -91,7 +91,8 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
   addMunicipalityStatistics({ scores: scorePayload.sectors, urbanAtlas });
   return {
     geojson, scores: scorePayload.sectors, methodology, provenance, urbanAtlas, income, notebookTest,
-    localLayers: officialData.layers, localComparisons: officialData.comparisons,
+    officialLayers: officialData.layers,
+    comparisons: officialData.comparisons,
   };
 }
 

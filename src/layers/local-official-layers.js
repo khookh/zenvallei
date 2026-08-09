@@ -1,4 +1,4 @@
-/** Local-only official rasters prepared from native source grids. */
+/** Official raster layers prepared from validated native source grids. */
 import { formatNumber, getLanguage, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
 import { authorityLink, authorityName } from "../source-authorities.js";
@@ -33,7 +33,7 @@ const localized = (value, fallback = "") => typeof value === "string"
   : value?.[getLanguage()] ?? value?.en ?? value?.nl ?? fallback;
 
 export function validateLocalTemporalManifest(manifest, expectedId) {
-  if (!manifest || ![1, 2, 3].includes(manifest.schemaVersion)) throw new TypeError(`${expectedId}: unsupported local manifest schema.`);
+  if (!manifest || ![1, 2, 3].includes(manifest.schemaVersion)) throw new TypeError(`${expectedId}: unsupported manifest schema.`);
   if (manifest.datasetId !== expectedId) throw new TypeError(`${expectedId}: dataset identifier does not match.`);
   if (!["categorical", "continuous"].includes(manifest.kind)) throw new TypeError(`${expectedId}: invalid raster kind.`);
   if (!Array.isArray(manifest.availableYears) || !manifest.availableYears.length) throw new TypeError(`${expectedId}: no years are available.`);
@@ -98,10 +98,10 @@ function statsFor(manifest, year, record) {
 
 function temporalNote(manifest, year) {
   const yearData = manifest.years[year];
-  if (yearData.status === "provisional") return t("localLayers.provisionalYear");
+  if (yearData.status === "provisional") return t("officialData.provisionalYear");
   if (manifest.datasetId === "jaarbak" && year >= 2023) return t("jaarbak.methodChangeNote");
   if (yearData.note) return localized(yearData.note);
-  return t("localLayers.referenceYear", { year });
+  return t("officialData.referenceYear", { year });
 }
 
 function legendModel(manifest, year, config) {
@@ -110,7 +110,7 @@ function legendModel(manifest, year, config) {
   return {
     title: t(`${config.contextKey}.legend`, { year }),
     note: temporalNote(manifest, year),
-    footnote: t("localLayers.visualDerivative"),
+    footnote: t("officialData.visualDerivative"),
     layout: "groups",
     groups: [{
       items: items.map((item) => ({
@@ -122,13 +122,13 @@ function legendModel(manifest, year, config) {
 }
 
 function popupLines(config, stats, manifest) {
-  if (!stats) return [t("localLayers.noData")];
+  if (!stats) return [t("officialData.noData")];
   if (config.id === "jaarbak") return [`${t("jaarbak.sealed")}: ${formatNumber(stats.sealedPercentage)}%`];
   const dominant = stats.classes?.reduce((best, item) => item.areaHa > (best?.areaHa ?? -1) ? item : best, null);
   const definition = manifest.classesOrScale?.items?.find((item) => String(item.value) === String(dominant?.code));
   return dominant
     ? [`${t("groenkaart.dominant")}: ${localized(definition?.label, dominant.code)} (${formatNumber(dominant.percentage)}%)`]
-    : [t("localLayers.noData")];
+    : [t("officialData.noData")];
 }
 
 export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest: inputManifest, datasetId, loadManifest = fetchLocalManifest }) {
@@ -209,7 +209,7 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     categoryId: "land-green",
     supportsMunicipalitySummary: true,
     isAvailable: () => Boolean(descriptor?.available !== false && !loadError),
-    getUnavailableReasonKey: () => loadError ? "localLayers.loadError" : "localLayers.unavailable",
+    getUnavailableReasonKey: () => loadError ? "officialData.loadError" : "officialData.unavailable",
     getLabel: () => t(config.labelKey, { year: activeYear }),
     getDatasetStatus: () => t("dataset.readyLocalRaster", { year: activeYear, resolution: descriptor?.source?.resolutionLabel ?? "" }),
     getContext: () => ({
@@ -242,10 +242,10 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
       optionName: "year",
       values: manifest?.availableYears ?? descriptor.availableYears,
       activeValue: activeYear,
-      label: t("localLayers.year"),
-      note: manifest ? temporalNote(manifest, activeYear) : t("localLayers.referenceYear", { year: activeYear }),
-      previousLabel: t("localLayers.previousYear"),
-      nextLabel: t("localLayers.nextYear"),
+      label: t("officialData.year"),
+      note: manifest ? temporalNote(manifest, activeYear) : t("officialData.referenceYear", { year: activeYear }),
+      previousLabel: t("officialData.previousYear"),
+      nextLabel: t("officialData.nextYear"),
     }),
     async mount(map, context) {
       await ensureManifest();
@@ -305,8 +305,8 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
   });
 }
 
-export function createLocalOfficialLayers(localLayers = {}) {
+export function createOfficialRasterLayers(officialLayers = {}) {
   return Object.keys(DATASET_CONFIG)
-    .filter((datasetId) => localLayers[datasetId])
-    .map((datasetId) => createLocalOfficialLayer({ descriptor: localLayers[datasetId], datasetId }));
+    .filter((datasetId) => officialLayers[datasetId])
+    .map((datasetId) => createLocalOfficialLayer({ descriptor: officialLayers[datasetId], datasetId }));
 }

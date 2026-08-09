@@ -34,15 +34,27 @@ test("serves the complete application below the GitHub Pages project path", asyn
   expect(policy).not.toContain("frame-ancestors");
 
   await page.locator("#project-intro-primary").click();
+  await expect(page.locator("#analysis-compare")).toBeVisible();
+  await expect(page.locator("#map-mode-action")).toBeHidden();
   await page.locator('[data-layer="urban-atlas"]').click();
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#analysis-compare")).toBeHidden();
+  await expect(page.locator("#map-mode-action")).toBeHidden();
   expect(ownResponses.some((url) => url.includes("/zenvallei/data/urban-atlas.geojson"))).toBe(true);
   await page.locator('[data-layer="landsat-temperature"]').click();
   await expect(page.locator("#analysis-compare")).toBeVisible();
   await expect(page.locator("#analysis-compare")).toHaveText(/Compare/);
-  for (const layerId of ["jaarbak", "groenkaart", "landgebruik", "income"]) {
+  for (const layerId of ["jaarbak", "groenkaart"]) {
     await page.locator(`[data-layer="${layerId}"]`).click();
     await expect(page.locator(`[data-layer="${layerId}"]`)).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#map-mode-action")).toBeVisible();
+    await expect(page.locator("#analysis-compare")).toBeHidden();
+  }
+  for (const layerId of ["landgebruik", "income"]) {
+    await page.locator(`[data-layer="${layerId}"]`).click();
+    await expect(page.locator(`[data-layer="${layerId}"]`)).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#map-mode-action")).toBeHidden();
+    await expect(page.locator("#analysis-compare")).toBeHidden();
   }
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/landsat-temperature/manifest.json"))).toBe(true);
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/jaarbak/manifest.json"))).toBe(true);

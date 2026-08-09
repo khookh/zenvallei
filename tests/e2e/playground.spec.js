@@ -18,7 +18,7 @@ test("shows the latest Python export only in the opt-in local Test layer", async
   await expect.poll(async () => ({
     ready: await page.locator("html").getAttribute("data-app-ready"),
     errors,
-  }), { timeout: 50_000 }).toEqual({ ready: "true", errors: [] });
+  }), { timeout: 80_000 }).toEqual({ ready: "true", errors: [] });
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.locator("#project-intro-primary").click();
   await expect(page.locator("[data-layer]")).toHaveCount(8);

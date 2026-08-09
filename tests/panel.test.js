@@ -1,55 +1,14 @@
+
 import fs from "node:fs/promises";
 import path from "node:path";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { setLanguage } from "../src/i18n.js";
-import { createDetailPanel, renderSectorPanelModel } from "../src/panel.js";
+import { createDetailPanel } from "../src/panel-shell.js";
+import { renderSectorPanelModel } from "../src/panel.js";
 
 const dataDir = path.resolve(import.meta.dirname, "..", "public", "data");
 let methodology;
 let records;
-
-const landCover = {
-  activeYear: 2020,
-  generatedAt: "2026-08-05T10:00:00.000Z",
-  source: { productUrl: "https://land.copernicus.eu/example" },
-  classes: [
-    { code: 10, key: "treeCover", color: "#006400" },
-    { code: 30, key: "grassland", color: "#ffff4c" },
-    { code: 40, key: "cropland", color: "#f096ff" },
-    { code: 90, key: "builtUp", color: "#fa0000" },
-  ],
-  sectorStats: {
-    "23003A001": {
-      classifiedAreaHa: 24.5,
-      vegetationAreaHa: 15,
-      vegetationPercentage: 61.22,
-      builtUpAreaHa: 5.5,
-      builtUpPercentage: 22.45,
-      dominantClassCode: 10,
-      classes: [
-        { code: 10, areaHa: 10, percentage: 40.82 },
-        { code: 30, areaHa: 5, percentage: 20.41 },
-        { code: 40, areaHa: 4, percentage: 16.33 },
-        { code: 90, areaHa: 5.5, percentage: 22.45 },
-      ],
-    },
-  },
-  change: {
-    available: true,
-    baseYear: 2020,
-    comparisonYear: 2026,
-    sectorStats: {
-      "23003A001": {
-        gainedAreaHa: 1.25,
-        gainedPercentage: 5,
-        lostAreaHa: 0.75,
-        lostPercentage: 3,
-        netChangeAreaHa: 0.5,
-        unchangedVegetationAreaHa: 17.2,
-      },
-    },
-  },
-};
 
 const urbanAtlas = {
   available: true,
@@ -110,49 +69,6 @@ const urbanAtlas = {
   },
 };
 
-const vegetation = {
-  available: true,
-  activeYear: 2020,
-  generatedAt: "2026-08-05T20:00:00.000Z",
-  palette: { likelyVegetated: "#238B45", belowThreshold: "#D9DEDA" },
-  source: {
-    productUrl: "https://dataspace.copernicus.eu/sentinel-2",
-    accessedAt: "2026-08-05T19:00:00.000Z",
-    attribution: "Derived using European Union Copernicus Sentinel-2 information.",
-    products: [{ id: "S2A_TEST_UFS" }, { id: "S2A_TEST_UES" }],
-  },
-  years: {
-    2020: {
-      acquisitionDate: "2020-06-24",
-      threshold: 0.697,
-      calibration: {
-        sensitivity: 0.881,
-        specificity: 0.797,
-        balancedAccuracy: 0.839,
-        auc: 0.911,
-        positive: { count: 342627 },
-        negative: { count: 20847 },
-      },
-      sectorStats: {
-        "23003A001": {
-          sectorAreaHa: 60,
-          validAreaHa: 51.4,
-          likelyVegetatedAreaHa: 27.06,
-          likelyVegetatedPercentage: 45.1,
-          belowThresholdAreaHa: 24.34,
-          belowThresholdPercentage: 40.57,
-          excludedArableAreaHa: 0,
-          excludedArablePercentage: 0,
-          excludedWaterAreaHa: 0,
-          excludedWaterPercentage: 0,
-          missingObservationAreaHa: 8.6,
-          medianNdvi: 0.681,
-        },
-      },
-    },
-  },
-};
-
 beforeAll(async () => {
   methodology = JSON.parse(await fs.readFile(path.join(dataDir, "methodology.json"), "utf8"));
   records = JSON.parse(await fs.readFile(path.join(dataDir, "scores.json"), "utf8")).sectors;
@@ -173,20 +89,14 @@ function fixture(options = {}) {
       const sharedData = {
         record,
         methodology,
-        landCover: options.landCover,
         urbanAtlas: options.urbanAtlas,
-        vegetation: options.vegetation,
       };
-      if (layerId === "land-cover") return { template: "land-cover", ...sharedData };
       if (layerId === "urban-atlas") return { template: "urban-atlas", ...sharedData };
-      if (layerId === "vegetation") return { template: "vegetation", ...sharedData };
       return { template: "heat", ...sharedData, heatMetric: panelState.heatMetric };
     },
     getAboutModel: () => ({
       methodology,
-      landCover: options.landCover,
       urbanAtlas: options.urbanAtlas,
-      vegetation: options.vegetation,
       provenance: options.provenance,
     }),
     onClose,
@@ -306,7 +216,7 @@ describe("progressive detail panel", () => {
   });
 
   it("rerenders a selected sector and closes dataset-specific details when the layer changes", () => {
-    const { api } = fixture({ landCover, urbanAtlas });
+    const { api } = fixture({ urbanAtlas });
     api.open(records["23003A001"], document.querySelector("#trigger"), "heat");
     document.querySelector('[data-section="indicators"]').open = true;
     api.setActiveLayer("urban-atlas");
@@ -320,7 +230,7 @@ describe("progressive detail panel", () => {
   });
 
   it("shows all six green categories and translated Urban Atlas methodology", () => {
-    const { api } = fixture({ landCover, urbanAtlas });
+    const { api } = fixture({ urbanAtlas });
     api.open(records["23003A001"], document.querySelector("#trigger"), "urban-atlas");
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Bossen");
@@ -348,7 +258,7 @@ describe("progressive detail panel", () => {
         municipalityCounts: { Beersel: 39, Drogenbos: 7, Halle: 41, Linkebeek: 7, Pepingen: 15, "Sint-Genesius-Rode": 22, "Sint-Pieters-Leeuw": 23 },
       },
     };
-    const { api } = fixture({ landCover, urbanAtlas, vegetation, provenance });
+    const { api } = fixture({ urbanAtlas, provenance });
     api.openAbout(document.querySelector("#trigger"));
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Wat elke laag vertelt");

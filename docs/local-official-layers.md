@@ -15,7 +15,7 @@ pnpm landsat-urban-atlas:prepare
 pnpm landsat-soil-sealing:prepare
 ```
 
-`--dataset all` prepares the source layers and then both local Landsat comparisons. JaarBAK, Groenkaart and Landgebruik also accept `--source YEAR=C:\data\source.tif`. Landsat discovery reads public STAC metadata and signed source windows, without storing signed URLs. The comparison commands reuse prepared files and make no network request.
+`--dataset all` prepares the source layers and then both Landsat comparisons. JaarBAK, Groenkaart and Landgebruik also accept `--source YEAR=C:\data\source.tif`. Landsat discovery reads public STAC metadata and signed source windows, without storing signed URLs. The comparison commands reuse prepared files and make no network request.
 
 After validation, publish the browser derivatives:
 
@@ -31,7 +31,7 @@ JaarBAK and Groenkaart preparation also creates a 100 m focal-density product. N
 
 JaarBAK density always represents sealed surface. Groenkaart density can combine any of its four non-overlapping official classes and starts with high green plus low green. The density mode replaces the classification display but does not change the existing area summaries in the result panel.
 
-The optional `landsat-urban-atlas` and `landsat-jaarbak` comparisons are advertised only by the local catalogue. Their manifests, distributions and encoded PNGs remain below `.cache/local-layers` and are never copied by `official-layers:publish`.
+The `landsat-urban-atlas` and `landsat-jaarbak` comparisons are prepared below `.cache/local-layers`. `official-layers:publish` copies only their validated manifests, six distribution files, six display rasters and scope index into the static bundle. They remain lazy-loaded and are not requested before a visitor chooses a comparison.
 
 ## Open and test
 

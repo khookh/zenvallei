@@ -1,5 +1,5 @@
-"""Prepare local-only official raster layers for the Greenwave map."""
+"""Prepare official raster layers and public-safe browser derivatives."""
 
-from .statistics import categorical_statistics, tcd_statistics
+from .statistics import categorical_statistics, jaarbak_statistics
 
-__all__ = ["categorical_statistics", "tcd_statistics"]
+__all__ = ["categorical_statistics", "jaarbak_statistics"]

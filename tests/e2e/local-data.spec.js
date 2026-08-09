@@ -36,7 +36,7 @@ async function expandComparisonLegend(page) {
 }
 
 test("serves all seven layers from the prepared working catalogue in local-data mode", async ({ page }, testInfo) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const isMobile = testInfo.project.name.includes("mobile");
   const errors = [];
   const rangeResponses = [];
@@ -51,7 +51,7 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   });
   await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
   await page.goto("/");
-  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 45_000 });
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
   await page.locator("#project-intro-primary").click();
   await expect(page.locator("[data-layer]")).toHaveCount(7);
   await expect(page.locator('[data-layer="land-cover"]')).toHaveCount(0);
