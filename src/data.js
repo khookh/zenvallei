@@ -50,7 +50,7 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
           available: true,
         }]];
       }));
-      const comparisons = localMode && index.schemaVersion >= 3
+      const comparisons = index.schemaVersion >= 3
         ? Object.fromEntries(Object.entries(index.comparisons ?? {}).flatMap(([id, descriptor]) => {
           if (!descriptor || descriptor.comparisonId !== id
             || !/^[a-z0-9-]+\/manifest\.json$/i.test(descriptor.manifestUrl ?? "")) return [];

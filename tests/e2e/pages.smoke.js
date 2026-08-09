@@ -37,7 +37,10 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await page.locator('[data-layer="urban-atlas"]').click();
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-pressed", "true");
   expect(ownResponses.some((url) => url.includes("/zenvallei/data/urban-atlas.geojson"))).toBe(true);
-  for (const layerId of ["landsat-temperature", "jaarbak", "groenkaart", "landgebruik", "income"]) {
+  await page.locator('[data-layer="landsat-temperature"]').click();
+  await expect(page.locator("#analysis-compare")).toBeVisible();
+  await expect(page.locator("#analysis-compare")).toHaveText(/Compare/);
+  for (const layerId of ["jaarbak", "groenkaart", "landgebruik", "income"]) {
     await page.locator(`[data-layer="${layerId}"]`).click();
     await expect(page.locator(`[data-layer="${layerId}"]`)).toHaveAttribute("aria-pressed", "true");
   }
@@ -57,11 +60,23 @@ test("serves the complete application below the GitHub Pages project path", asyn
   ]);
   expect(landsatManifest.timelineItems.every(({ kind }) => kind === "heatwave")).toBe(true);
   expect(landsatManifest.timelineItems.some(({ value }) => value === "landsat-2020-08-16")).toBe(false);
-  expect(ownResponses.some((url) => url.includes("/__local-data__/")
-    || url.includes("/landsat-urban-atlas/manifest.json"))).toBe(false);
+  expect(ownResponses.some((url) => url.includes("/__local-data__/"))).toBe(false);
+  expect(ownResponses.some((url) => url.includes("/landsat-urban-atlas/manifest.json")
+    || url.includes("/landsat-jaarbak/manifest.json"))).toBe(false);
 
   if (!testInfo.project.name.includes("mobile")) {
     await page.locator('[data-layer="landsat-temperature"]').click();
+    await page.locator("#analysis-compare").click();
+    await expect(page.locator('[data-layer="urban-atlas"]')).toHaveClass(/is-comparison-target/);
+    await expect(page.locator('[data-layer="jaarbak"]')).toHaveClass(/is-comparison-target/);
+    await page.locator('[data-layer="urban-atlas"]').click();
+    await expect(page.locator("#analysis-pair-label")).toContainText("Urban Atlas 2021");
+    await expect.poll(() => ownResponses.some((url) => url.endsWith("/landsat-urban-atlas/manifest.json"))).toBe(true);
+    await page.locator("#analysis-pair-change").click();
+    await page.locator('[data-layer="jaarbak"]').click();
+    await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing");
+    await expect.poll(() => ownResponses.some((url) => url.endsWith("/landsat-jaarbak/manifest.json"))).toBe(true);
+    await page.locator("#analysis-pair-remove").click();
     const point = await page.evaluate(() => {
       const projected = window.__heatMap.map.project([4.29, 50.73]);
       const rectangle = window.__heatMap.map.getCanvas().getBoundingClientRect();

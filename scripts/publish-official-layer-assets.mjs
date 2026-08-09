@@ -6,6 +6,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const sourceRoot = path.join(projectRoot, ".cache", "local-layers");
 const outputRoot = path.join(projectRoot, "public", "data", "official-layers");
 const datasetIds = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature"];
+const comparisonIds = ["landsat-urban-atlas", "landsat-jaarbak"];
 const forbiddenText = /(?:Bearer\s+eyJ|client_secret|[A-Z]:\\Users\\|se=\d{4}-\d{2}-\d{2}T)/i;
 
 async function readJson(file) {
@@ -83,23 +84,62 @@ async function publishDataset(datasetId, descriptor) {
   await writeJson(path.join(outputRoot, datasetId, "manifest.json"), manifest);
 }
 
+async function publishComparison(comparisonId, descriptor) {
+  const sourceManifestPath = path.join(sourceRoot, safeRelativeAsset(descriptor.manifestUrl, ".json"));
+  const manifest = await readJson(sourceManifestPath);
+  if (manifest.comparisonId !== comparisonId) throw new Error(`${comparisonId}: manifest identifier mismatch.`);
+
+  await copyAsset(manifest.scopeIndexUrl, ".png");
+  for (const observation of Object.values(manifest.observations ?? {})) {
+    await copyAsset(observation.pixelDataUrl, ".png");
+    await copyAsset(observation.distributionUrl, ".json");
+  }
+  await writeJson(path.join(outputRoot, comparisonId, "manifest.json"), manifest);
+}
+
 const index = await readJson(path.join(sourceRoot, "index.json"));
 if (![2, 3].includes(index.schemaVersion)) throw new Error("The prepared official-layer catalogue must use schema version 2 or 3.");
 const missing = datasetIds.filter((id) => !index.datasets?.[id]);
 if (missing.length) throw new Error(`Prepared datasets are missing: ${missing.join(", ")}.`);
+const missingComparisons = comparisonIds.filter((id) => !index.comparisons?.[id]);
+if (missingComparisons.length) throw new Error(`Prepared comparisons are missing: ${missingComparisons.join(", ")}.`);
 
 await fs.rm(outputRoot, { recursive: true, force: true });
 const publishedIndex = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   distribution: "public-static",
   datasets: Object.fromEntries(datasetIds.map((id) => [id, {
     ...index.datasets[id],
     manifestUrl: `${id}/manifest.json`,
     available: true,
   }])),
+  comparisons: Object.fromEntries(comparisonIds.map((id) => [id, {
+    ...index.comparisons[id],
+    manifestUrl: `${id}/manifest.json`,
+    available: true,
+  }])),
 };
 for (const id of datasetIds) await publishDataset(id, publishedIndex.datasets[id]);
+for (const id of comparisonIds) await publishComparison(id, publishedIndex.comparisons[id]);
 await writeJson(path.join(outputRoot, "index.json"), publishedIndex);
+
+const comparisonBytes = (await Promise.all(comparisonIds.map(async (comparisonId) => {
+  const comparisonRoot = path.join(outputRoot, comparisonId);
+  const entries = [];
+  async function collectComparison(directory) {
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) await collectComparison(target);
+      else entries.push(target);
+    }
+  }
+  await collectComparison(comparisonRoot);
+  return (await Promise.all(entries.map(async (file) => (await fs.stat(file)).size)))
+    .reduce((sum, size) => sum + size, 0);
+}))).reduce((sum, size) => sum + size, 0);
+if (comparisonBytes > 20 * 1024 * 1024) {
+  throw new Error(`Comparison derivatives exceed the 20 MiB budget (${(comparisonBytes / 1024 / 1024).toFixed(1)} MiB).`);
+}
 
 const densityBytes = (await Promise.all(
   ["jaarbak", "groenkaart"].flatMap((datasetId) => {

@@ -63,5 +63,5 @@ await budget("data/urban-atlas.geojson", 25_000_000);
 const officialBytes = (await Promise.all(files
   .filter((file) => file.includes(`${path.sep}data${path.sep}official-layers${path.sep}`))
   .map(async (file) => (await fs.stat(file)).size))).reduce((sum, size) => sum + size, 0);
-if (officialBytes > 650_000_000) throw new Error(`Published official layers exceed the 650 MB budget (${officialBytes} bytes).`);
+if (officialBytes > 550 * 1024 * 1024) throw new Error(`Published official layers exceed the 550 MiB budget (${officialBytes} bytes).`);
 console.log("Distribution contains no detected secrets or external scripts and remains within asset budgets.");
