@@ -13,15 +13,20 @@ test("live release exposes seven layers and both Landsat comparisons", async ({ 
   await page.locator("#project-intro-primary").click();
   await expect(page.locator("[data-layer]")).toHaveCount(7);
 
-  await page.locator('[data-layer="landsat-temperature"]').click();
+  const landsatButton = page.locator('[data-layer="landsat-temperature"]');
+  await landsatButton.click();
+  await expect(landsatButton).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
+  await expect(page.locator("#active-layer-title")).toHaveText("Landsat surface temperature");
   await expect(page.locator("#analysis-compare")).toBeVisible();
   await page.locator("#analysis-compare").click();
+  await expect(page.locator('[data-layer="urban-atlas"]')).toHaveClass(/is-comparison-target/);
   await page.locator('[data-layer="urban-atlas"]').click();
-  await expect(page.locator("#analysis-pair-label")).toContainText("Urban Atlas 2021");
+  await expect(page.locator("#analysis-pair-label")).toContainText("Urban Atlas 2021", { timeout: 20_000 });
 
   await page.locator("#analysis-pair-change").click();
+  await expect(page.locator('[data-layer="jaarbak"]')).toHaveClass(/is-comparison-target/);
   await page.locator('[data-layer="jaarbak"]').click();
-  await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing");
+  await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing", { timeout: 20_000 });
   await expect.poll(() => failedSameOrigin).toEqual([]);
 
   await page.locator("#language-toggle").click();
