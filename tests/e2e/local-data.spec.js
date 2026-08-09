@@ -21,6 +21,14 @@ async function expandControls(page) {
   await expect(page.locator("#map-controls-body")).toBeVisible();
 }
 
+async function closePanelIfOpen(page) {
+  const panel = page.locator("#detail-panel");
+  if (await panel.getAttribute("aria-hidden") === "true") return;
+  await expect(page.locator("#panel-close")).toBeVisible();
+  await page.locator("#panel-close").click();
+  await expect(panel).toHaveAttribute("aria-hidden", "true");
+}
+
 async function expandComparisonLegend(page) {
   const legend = page.locator("#legend");
   if (!await legend.evaluate((element) => element.open)) {
@@ -116,6 +124,7 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   if (isMobile) await expandControls(page);
   await page.locator("#sector-search").fill("23003A001");
   await page.locator("#sector-search").press("Enter");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
   await expect.poll(() => page.locator("#detail-panel").evaluate((element) => element.scrollTop)).toBeLessThan(5);
   await expect(page.locator("#detail-panel")).toContainText("High green");
   await expect(page.locator("#detail-panel")).toContainText("Vegetation higher than 3 m");
@@ -127,7 +136,7 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   const agricultureValueColor = await agricultureRow.locator(".local-breakdown-value strong").evaluate((element) => getComputedStyle(element).color);
   expect(agricultureValueColor).not.toBe("rgb(255, 255, 0)");
   if (isMobile) {
-    await page.locator("#panel-close").click();
+    await closePanelIfOpen(page);
     await expandControls(page);
   }
   await page.locator("#map-mode-action").click();
@@ -235,6 +244,12 @@ test("serves all seven layers from the prepared working catalogue in local-data 
     .analyze();
   expect(accessibilityResults.violations).toEqual([]);
   await page.locator("#panel-close").click();
+  if (isMobile) {
+    await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
+    await expect(page.locator("#panel-title")).toHaveText("Entire Zennevallei");
+  } else {
+    await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  }
   if (isMobile) await expandControls(page);
   await page.locator("#municipality-select").selectOption("Halle");
   await expect(page.locator("#panel-title")).toHaveText("Halle");
@@ -245,13 +260,13 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   await expect(page.locator("#detail-panel")).toContainText("Temperatuurverdeling per oppervlak");
   await expect(page.locator("#detail-panel")).toContainText("niet de luchttemperatuur");
   if (isMobile) {
-    await page.locator("#panel-close").click();
+    await closePanelIfOpen(page);
     await expandControls(page);
   }
   await page.locator('[data-layer="jaarbak"]').click();
   expect(localRequests.filter((url) => url.includes("/jaarbak/manifest.json"))).toHaveLength(1);
   if (isMobile) {
-    await page.locator("#panel-close").click();
+    await closePanelIfOpen(page);
     await expandControls(page);
   }
 
@@ -272,7 +287,7 @@ test("serves all seven layers from the prepared working catalogue in local-data 
   await expect(page.locator("#detail-panel")).toContainText("20%");
   await expect(page.locator("#detail-panel")).toContainText("20 ha in 8 gekarteerde percelen");
   if (isMobile) {
-    await page.locator("#panel-close").click();
+    await closePanelIfOpen(page);
     await expandControls(page);
   }
   await page.locator("#temporal-previous").click();
