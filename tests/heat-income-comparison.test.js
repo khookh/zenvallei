@@ -62,8 +62,10 @@ describe("heat-income comparison", () => {
     expect(heatLayer.setVisible).toHaveBeenLastCalledWith(map, true);
     expect(incomeLayer.setVisible).toHaveBeenLastCalledWith(map, false);
     expect(map.addLayer).toHaveBeenCalledWith(expect.objectContaining({ id: "heat-income-symbols", type: "symbol" }), "heat-sectors-outline");
-    expect(comparison.getLegendModel().comparisonSeries.map(({ symbol }) => symbol)).toEqual(["€", "€€", "€€€", "–"]);
+    expect(comparison.getLegendModel().comparisonLegend.items.map(({ symbol }) => symbol)).toEqual(["€", "€€", "€€€", "–"]);
     expect(comparison.getPanelModel().points).toHaveLength(140);
+    comparison.setMunicipality("Halle");
+    expect(comparison.getPanelModel({ scope: "municipality", municipality: "Halle", sectorName: "Halle" }).points).toHaveLength(39);
     metric = "heat";
     expect(comparison.getPanelModel().metric).toBe("heat");
     comparison.deactivate();
@@ -97,11 +99,12 @@ describe("heat-income comparison", () => {
     }
   });
 
-  it("renders an unbinned, bilingual scatter plot for the complete Zennevallei", () => {
+  it("renders an unbinned, bilingual scatter plot for the active area", () => {
     const points = buildHeatIncomePoints(scores, income, "vulnerability");
     setLanguage("en");
     const english = renderSectorPanelModel({
       template: "heat-income-comparison",
+      record: { scope: "region", sectorName: "Entire Zennevallei", municipality: "", sectorId: "", sectorCount: 154 },
       metric: "vulnerability",
       incomeYear: 2023,
       points,
@@ -123,6 +126,7 @@ describe("heat-income comparison", () => {
     setLanguage("nl");
     const dutch = renderSectorPanelModel({
       template: "heat-income-comparison",
+      record: { scope: "region", sectorName: "Hele Zennevallei", municipality: "", sectorId: "", sectorCount: 154 },
       metric: "heat",
       incomeYear: 2023,
       points: buildHeatIncomePoints(scores, income, "heat"),

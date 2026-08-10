@@ -238,7 +238,6 @@ export function createLandsatTemperatureLayer({ descriptor: inputDescriptor, loa
         nextLabel: t("landsat.nextObservation"),
       };
     },
-    getAnalysisTargets: () => ["urban-atlas", "jaarbak"],
     getRuntimeData: () => ({ manifest, observation: current() }),
     async inspectPoint(point, { signal } = {}) {
       if (current()?.queryRaster) {

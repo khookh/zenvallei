@@ -79,7 +79,7 @@ const officialRoot = path.join(dataRoot, "official-layers");
 const officialIndex = JSON.parse(await fs.readFile(path.join(officialRoot, "index.json"), "utf8"));
 const officialIds = Object.keys(officialIndex.datasets ?? {});
 const expectedOfficialIds = ["groenkaart", "jaarbak", "landgebruik", "landsat-temperature"];
-const expectedComparisonIds = ["landsat-jaarbak", "landsat-urban-atlas"];
+const expectedComparisonIds = ["groenkaart-urban-atlas", "landsat-jaarbak", "landsat-urban-atlas"];
 const comparisonIds = Object.keys(officialIndex.comparisons ?? {}).sort();
 if (officialIndex.schemaVersion !== 3
   || JSON.stringify(officialIds.sort()) !== JSON.stringify(expectedOfficialIds)) {
@@ -123,6 +123,15 @@ for (const comparisonId of comparisonIds) {
   Object.values(manifest.observations ?? {}).forEach((observation) => {
     referencedAssets.push(observation.pixelDataUrl, observation.distributionUrl);
   });
+  if (comparisonId === "groenkaart-urban-atlas") {
+    referencedAssets.push(manifest.densityDataUrl, manifest.fabricMaskUrl, manifest.statisticsUrl);
+    if (manifest.analysisResolutionMeters !== 10
+      || manifest.densityRadiusMeters !== 100
+      || manifest.greenMapYear !== 2021
+      || manifest.urbanAtlasYear !== 2021) {
+      throw new Error(`${comparisonId}: published analytical contract is incompatible.`);
+    }
+  }
   for (const asset of referencedAssets) {
     if (typeof asset !== "string" || asset.includes("..") || path.isAbsolute(asset)) {
       throw new Error(`${comparisonId}: invalid published asset path '${asset}'.`);

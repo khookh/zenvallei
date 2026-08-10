@@ -3,12 +3,16 @@ import {
   compactEuroTick,
   createChartLayout,
   heatIncomeLayout,
+  heatPopulationBarLayout,
+  heatPopulationBoxLayout,
   landsatHistogramLayout,
 } from "../src/chart-layout.js";
 
 describe("shared chart geometry", () => {
   it("keeps plot bounds inside dedicated axis margins", () => {
-    for (const layout of [heatIncomeLayout(), landsatHistogramLayout()]) {
+    for (const layout of [
+      heatIncomeLayout(), heatPopulationBoxLayout(), heatPopulationBarLayout(25_000), landsatHistogramLayout(),
+    ]) {
       expect(layout.plot.left).toBeGreaterThan(0);
       expect(layout.plot.top).toBeGreaterThan(0);
       expect(layout.plot.left + layout.plot.width).toBeLessThan(layout.width);

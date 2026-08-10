@@ -58,7 +58,7 @@ pnpm landgebruik:prepare
 pnpm landsat-heat:prepare
 ```
 
-JaarBAK, Groenkaart and Landgebruik accept a cached source with `--source YEAR=C:\path\source.tif`. Native grids produce statistics; lossless Web Mercator PMTiles are visual derivatives only. JaarBAK and Groenkaart additionally create 100 m focal-density GeoTIFFs from padded native source windows. Landgebruik downloads bounded AGPA 2025 parcels from the official OGC API. Landsat uses public Planetary Computer STAC discovery and caches aligned source windows. The two comparison preparations reuse these validated caches and do not download data. `official-layers:publish` is the only supported route from the private cache to the static browser assets. See [Official raster layers](local-official-layers.md), [Landgebruik Vlaanderen](landgebruik-vlaanderen.md) and [Landsat surface temperature](landsat-surface-temperature.md).
+JaarBAK, Groenkaart and Landgebruik accept a cached source with `--source YEAR=C:\path\source.tif`. Native grids produce statistics; lossless Web Mercator PMTiles are visual derivatives only. JaarBAK and Groenkaart additionally create 100 m focal-density GeoTIFFs from padded native source windows. Landgebruik downloads bounded AGPA 2025 parcels from the official OGC API. Landsat uses public Planetary Computer STAC discovery and caches aligned source windows. The three raster-comparison preparations reuse these validated caches and do not download data. `official-layers:publish` is the only supported route from the private cache to the static browser assets. See [Official raster layers](local-official-layers.md), [Landgebruik Vlaanderen](landgebruik-vlaanderen.md) and [Landsat surface temperature](landsat-surface-temperature.md).
 
 ## Python research playground
 

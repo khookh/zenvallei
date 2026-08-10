@@ -28,6 +28,52 @@ async function rasterVisibility(page) {
   });
 }
 
+async function activateComparison(page, fromLayer, targetLayer, testInfo) {
+  if (testInfo.project.name.includes("mobile")) await showControls(page);
+  await page.locator(`[data-layer="${fromLayer}"]`).click();
+  if (testInfo.project.name.includes("mobile")) await showControls(page);
+  if (fromLayer === "groenkaart") {
+    const actionPositions = await Promise.all([
+      page.locator("#map-mode-action").boundingBox(),
+      page.locator("#analysis-compare").boundingBox(),
+    ]);
+    expect(actionPositions.every(Boolean)).toBe(true);
+    expect(Math.abs(actionPositions[0].y - actionPositions[1].y)).toBeLessThan(3);
+  }
+  await page.locator("#analysis-compare").click();
+  await expect(page.locator(`[data-layer="${targetLayer}"]`)).toHaveClass(/is-comparison-target/);
+  await page.locator(`[data-layer="${targetLayer}"]`).click();
+  await expect(page.locator("#active-layer-title")).toContainText("×", { timeout: 20_000 });
+  if (testInfo.project.name.includes("mobile")) await showControls(page);
+  await expect(page.locator("#analysis-pair-result")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(`[data-layer="${fromLayer}"]`)).toHaveClass(/is-linked-comparison/);
+  await expect(page.locator(`[data-layer="${targetLayer}"]`)).toHaveClass(/is-linked-comparison/);
+}
+
+async function removeComparison(page, restoredLayer, testInfo) {
+  if (testInfo.project.name.includes("mobile")) await showControls(page);
+  await page.locator("#analysis-pair-remove").click();
+  await expect(page.locator(`[data-layer="${restoredLayer}"]`)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#analysis-pair-result")).toBeHidden();
+}
+
+async function renderedPoint(page, layerId) {
+  return page.evaluate((id) => {
+    const map = window.__heatMap.map;
+    const canvas = map.getCanvas();
+    const bounds = canvas.getBoundingClientRect();
+    for (let y = 30; y < canvas.clientHeight - 30; y += 12) {
+      for (let x = 30; x < canvas.clientWidth - 30; x += 12) {
+        const topElement = document.elementFromPoint(bounds.left + x, bounds.top + y);
+        if (topElement === canvas && map.queryRenderedFeatures([x, y], { layers: [id] }).length) {
+          return { x: bounds.left + x, y: bounds.top + y };
+        }
+      }
+    }
+    return null;
+  }, layerId);
+}
+
 test("serves the complete application below the GitHub Pages project path", async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const failedOwnRequests = [];
@@ -65,9 +111,14 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await page.locator("#project-intro-primary").click();
   await expect(page.locator("#analysis-compare")).toBeVisible();
   await expect(page.locator("#map-mode-action")).toBeHidden();
+  await page.locator("#analysis-compare").click();
+  await expect(page.locator('[data-layer="income"]')).toHaveClass(/is-comparison-target/);
+  await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-comparison-target/);
+  await page.locator("#analysis-pick-cancel").click();
   await page.locator('[data-layer="urban-atlas"]').click();
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#analysis-compare")).toBeHidden();
+  if (testInfo.project.name.includes("mobile")) await showControls(page);
+  await expect(page.locator("#analysis-compare")).toBeVisible();
   await expect(page.locator("#map-mode-action")).toBeHidden();
   expect(ownResponses.some((url) => url.includes("/zenvallei/data/urban-atlas.geojson"))).toBe(true);
   if (testInfo.project.name.includes("mobile")) await showControls(page);
@@ -81,15 +132,20 @@ test("serves the complete application below the GitHub Pages project path", asyn
     await expect(page.locator(`[data-layer="${layerId}"]`)).toHaveAttribute("aria-pressed", "true");
     if (testInfo.project.name.includes("mobile")) await showControls(page);
     await expect(page.locator("#map-mode-action")).toBeVisible();
-    await expect(page.locator("#analysis-compare")).toBeHidden();
+    await expect(page.locator("#analysis-compare")).toBeVisible();
   }
-  for (const layerId of ["landgebruik", "population", "income"]) {
+  for (const layerId of ["population", "income"]) {
     if (testInfo.project.name.includes("mobile")) await showControls(page);
     await page.locator(`[data-layer="${layerId}"]`).click();
     await expect(page.locator(`[data-layer="${layerId}"]`)).toHaveAttribute("aria-pressed", "true");
+    if (testInfo.project.name.includes("mobile")) await showControls(page);
     await expect(page.locator("#map-mode-action")).toBeHidden();
-    await expect(page.locator("#analysis-compare")).toBeHidden();
+    await expect(page.locator("#analysis-compare")).toBeVisible();
   }
+  if (testInfo.project.name.includes("mobile")) await showControls(page);
+  await page.locator('[data-layer="landgebruik"]').click();
+  await expect(page.locator("#map-mode-action")).toBeHidden();
+  await expect(page.locator("#analysis-compare")).toBeHidden();
   if (testInfo.project.name.includes("mobile")) await showControls(page);
   await page.locator('[data-layer="population"]').click();
   await expect(page.locator("#active-layer-title")).toHaveText("Population density");
@@ -217,4 +273,58 @@ test("keeps classification visible when density loading fails", async ({ page },
         : "missing",
     };
   })).toEqual({ classification: "visible", density: "none" });
+});
+
+test("opens every public comparison from either participant and restores the initiating layer", async ({ page }, testInfo) => {
+  test.setTimeout(300_000);
+  await page.goto(".");
+  await page.locator("#project-intro-primary").click();
+
+  const cases = [
+    ["heat", "income", "heat-income"],
+    ["income", "heat", "heat-income"],
+    ["heat", "population", "heat-population"],
+    ["population", "heat", "heat-population"],
+    ["landsat-temperature", "urban-atlas", "landsat-urban-atlas"],
+    ["urban-atlas", "landsat-temperature", "landsat-urban-atlas"],
+    ["landsat-temperature", "jaarbak", "landsat-jaarbak"],
+    ["jaarbak", "landsat-temperature", "landsat-jaarbak"],
+    ["groenkaart", "urban-atlas", "groenkaart-urban-atlas"],
+    ["urban-atlas", "groenkaart", "groenkaart-urban-atlas"],
+  ];
+
+  for (const [fromLayer, targetLayer, comparisonId] of cases) {
+    await activateComparison(page, fromLayer, targetLayer, testInfo);
+    if (testInfo.project.name.includes("mobile")
+      && await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
+      await page.locator("#panel-peek").click();
+    }
+    if (comparisonId === "heat-income") {
+      await expect(page.locator("[data-heat-income-chart]:not(.is-expanded)")).toBeVisible();
+    } else if (comparisonId === "heat-population") {
+      await expect(page.locator("[data-heat-population-box-chart]:not(.is-expanded)")).toBeVisible();
+    } else if (comparisonId === "groenkaart-urban-atlas") {
+      await expect(page.locator('[data-green-urban-selector="green"]')).toHaveCount(4);
+      await expect(page.locator('[data-green-urban-selector="fabric"]')).toHaveCount(5);
+      await expect(page.locator("#detail-panel")).toContainText(/Mean selected green density|Gemiddelde geselecteerde groendichtheid/);
+      const greenChart = page.locator(".green-density-boxplot:not(.is-expanded)");
+      await expect(greenChart).toBeVisible();
+      await expect(greenChart.locator(".green-density-boxes > g")).toHaveCount(5);
+      await greenChart.locator("[data-green-density-box]").first().focus();
+      await greenChart.locator("[data-green-density-box]").first().press("ArrowRight");
+      await expect(greenChart.locator("[data-green-density-output]")).toContainText("median");
+      await greenChart.locator("[data-expand-comparison-chart]").click();
+      await expect(page.locator("[data-comparison-chart-dialog] .green-density-boxplot.is-expanded")).toBeVisible();
+      await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
+      if (!testInfo.project.name.includes("mobile")) {
+        const point = await renderedPoint(page, "groenkaart-urban-atlas-query");
+        expect(point).not.toBeNull();
+        await page.mouse.move(point.x, point.y);
+        await expect(page.locator(".maplibregl-popup")).toContainText(/Urban Atlas surface|Urban Atlas-oppervlak/);
+      }
+    } else {
+      await expect(page.locator("[data-expand-comparison-chart]")).toBeVisible();
+    }
+    await removeComparison(page, fromLayer, testInfo);
+  }
 });

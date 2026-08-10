@@ -9,7 +9,13 @@ import {
 } from "./heat-metric.js";
 import { escapeHtml, formatScore, interpretationFor, scoreColor, scorePercentage } from "./score-utils.js";
 import { safeExternalUrl } from "./security.js";
-import { compactEuroTick, heatIncomeLayout, landsatHistogramLayout } from "./chart-layout.js";
+import {
+  compactEuroTick,
+  heatIncomeLayout,
+  heatPopulationBarLayout,
+  heatPopulationBoxLayout,
+  landsatHistogramLayout,
+} from "./chart-layout.js";
 
 const safeHref = (value) => escapeHtml(safeExternalUrl(value));
 
@@ -1029,12 +1035,12 @@ function heatIncomeScatter(model, { expanded = false } = {}) {
     metric: t(`heatMetric.${model.metric}`),
     score: formatNumber(point.score, 0),
   });
-  return `<div class="heat-income-chart ${expanded ? "is-expanded" : ""}" data-heat-income-chart>
+  return `<div class="heat-income-chart ${expanded ? "is-expanded" : ""}" data-sector-comparison-chart data-heat-income-chart>
     ${expanded ? "" : `<div class="heat-income-chart-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("comparison.expandHistogram"))}</button></div>`}
     <p class="heat-income-boxplot-explanation">${escapeHtml(t("heatIncome.boxPlotExplanation"))}</p>
     <svg viewBox="0 0 ${layout.width} ${layout.height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
       <title id="${prefix}-title">${escapeHtml(t("heatIncome.chartTitle", { metric: t(`heatMetric.${model.metric}`) }))}</title>
-      <desc id="${prefix}-description">${escapeHtml(t("heatIncome.chartDescription", { count: model.points.length }))}</desc>
+      <desc id="${prefix}-description">${escapeHtml(t("heatIncome.chartDescription", { count: model.points.length, area: panelAreaName(model.record) }))}</desc>
       <g class="heat-income-grid" aria-hidden="true">
         ${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(value)}" y2="${y(value)}"></line>`).join("")}
       </g>
@@ -1066,10 +1072,10 @@ function heatIncomeScatter(model, { expanded = false } = {}) {
 }
 
 function heatIncomeChartDialog(model) {
-  return `<dialog class="comparison-chart-dialog heat-income-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("heatIncome.expandedTitle", { metric: t(`heatMetric.${model.metric}`) }))}">
+  return `<dialog class="comparison-chart-dialog heat-income-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("heatIncome.expandedTitle", { metric: t(`heatMetric.${model.metric}`), area: panelAreaName(model.record) }))}">
     <div class="comparison-chart-dialog-content">
-      <header><h3>${escapeHtml(t("heatIncome.expandedTitle", { metric: t(`heatMetric.${model.metric}`) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("comparison.closeHistogram"))}">×</button></header>
-      <p class="comparison-dialog-description">${escapeHtml(t("heatIncome.expandedDescription", { metric: t(`heatMetric.${model.metric}`), count: model.points.length }))}</p>
+      <header><h3>${escapeHtml(t("heatIncome.expandedTitle", { metric: t(`heatMetric.${model.metric}`), area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("comparison.closeHistogram"))}">×</button></header>
+      <p class="comparison-dialog-description">${escapeHtml(t("heatIncome.expandedDescription", { metric: t(`heatMetric.${model.metric}`), count: model.points.length, area: panelAreaName(model.record) }))}</p>
       ${heatIncomeScatter(model, { expanded: true })}
       <p class="comparison-academic-note">${escapeHtml(t("heatIncome.academicDetails"))}</p>
     </div>
@@ -1078,8 +1084,8 @@ function heatIncomeChartDialog(model) {
 
 function renderHeatIncomeComparison(model) {
   return `<div class="panel-hero comparison-hero heat-income-hero">
-    <p class="panel-eyebrow">${escapeHtml(t("heatIncome.heroKicker"))}</p>
-    <h2 id="panel-title">${escapeHtml(t("controls.allMunicipalities"))}</h2>
+    <p class="panel-eyebrow">${escapeHtml(t("heatIncome.heroKicker", { area: panelAreaName(model.record) }))}</p>
+    <h2 id="panel-title">${escapeHtml(panelAreaName(model.record))}</h2>
     <p class="panel-subtitle">${escapeHtml(t("heatIncome.chartTitle", { metric: t(`heatMetric.${model.metric}`) }))}</p>
     <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("heatIncome.sampleCount", { count: model.points.length, excluded: model.excludedCount }))}</p>
   </div>
@@ -1088,7 +1094,7 @@ function renderHeatIncomeComparison(model) {
       <div class="section-heading"><p class="section-kicker">${escapeHtml(t("heatIncome.title"))}</p><h3 id="heat-income-summary-title">${escapeHtml(t("heatIncome.relationshipTitle"))}</h3></div>
       <p class="comparison-definition">${escapeHtml(t("heatIncome.definition"))}</p>
       ${panelHeatMetricSelector(model.metric)}
-      <p class="section-intro">${escapeHtml(t("heatIncome.scopeNote"))}</p>
+      <p class="section-intro">${escapeHtml(t("heatIncome.scopeNote", { area: panelAreaName(model.record) }))}</p>
       ${heatIncomeScatter(model)}
       ${heatIncomeChartDialog(model)}
     </section>
@@ -1099,6 +1105,185 @@ function renderHeatIncomeComparison(model) {
         <p>${escapeHtml(t("heatIncome.methodologyScores"))}</p>
         <p>${escapeHtml(t("heatIncome.methodologyIncome"))}</p>
         <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("heatIncome.methodologyCaveat"))}</p>
+      </div>
+    </details>
+  </div>`;
+}
+
+function stableSectorOffset(sectorId) {
+  let hash = 2166136261;
+  for (const character of sectorId) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 1001 / 1000 - .5) * .42;
+}
+
+function heatPopulationPointLabel(model, point) {
+  return t("heatPopulation.pointLabel", {
+    sector: point.sectorName,
+    code: point.sectorId,
+    municipality: point.municipality,
+    population: formatNumber(point.population, 0),
+    metric: t(`heatMetric.${model.metric}`),
+    score: formatNumber(point.score, 0),
+  });
+}
+
+function heatPopulationBoxPlot(model, { expanded = false } = {}) {
+  const layout = heatPopulationBoxLayout();
+  const { plot } = layout;
+  const yTicks = [0, 2, 4, 6, 8, 10];
+  const selectedPoint = model.points.find(({ sectorId }) => sectorId === model.highlightedSectorId);
+  const initialPoint = selectedPoint ?? model.points[0];
+  const prefix = expanded ? "heat-population-box-expanded" : "heat-population-box-inline";
+  return `<div class="heat-population-chart ${expanded ? "is-expanded" : ""}" data-sector-comparison-chart data-heat-population-box-chart>
+    <h4>${escapeHtml(t("heatPopulation.boxTitle"))}</h4>
+    <p class="heat-population-chart-intro">${escapeHtml(t("heatPopulation.boxPlotExplanation"))}</p>
+    <svg viewBox="0 0 ${layout.width} ${layout.height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
+      <title id="${prefix}-title">${escapeHtml(t("heatPopulation.boxTitle"))}</title>
+      <desc id="${prefix}-description">${escapeHtml(t("heatPopulation.boxDescription", { count: model.points.length, area: panelAreaName(model.record) }))}</desc>
+      <g class="heat-population-grid" aria-hidden="true">
+        ${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${layout.y(value)}" y2="${layout.y(value)}"></line>`).join("")}
+      </g>
+      <g class="heat-population-boxplots" aria-hidden="true">
+        ${(model.levelSummaries ?? []).filter(({ count }) => count > 0).map((summary) => {
+          const centre = layout.x(summary.level);
+          const left = layout.x(summary.level - .22);
+          const right = layout.x(summary.level + .22);
+          return `<g>
+            <line class="heat-population-whisker" x1="${centre}" x2="${centre}" y1="${layout.y(summary.whiskerLow)}" y2="${layout.y(summary.whiskerHigh)}"></line>
+            <line class="heat-population-whisker-cap" x1="${left}" x2="${right}" y1="${layout.y(summary.whiskerLow)}" y2="${layout.y(summary.whiskerLow)}"></line>
+            <line class="heat-population-whisker-cap" x1="${left}" x2="${right}" y1="${layout.y(summary.whiskerHigh)}" y2="${layout.y(summary.whiskerHigh)}"></line>
+            <rect x="${left}" y="${layout.y(summary.q3)}" width="${right - left}" height="${Math.max(1, layout.y(summary.q1) - layout.y(summary.q3))}" rx="5"></rect>
+            <line class="heat-population-box-median" x1="${left}" x2="${right}" y1="${layout.y(summary.median)}" y2="${layout.y(summary.median)}"></line>
+            <text class="heat-population-group-count" x="${centre}" y="${plot.top - 10}" text-anchor="middle">n=${summary.count}</text>
+          </g>`;
+        }).join("")}
+      </g>
+      <g class="heat-population-axis-values" aria-hidden="true">
+        ${yTicks.map((value) => `<text x="${plot.left - 14}" y="${layout.y(value) + 5}" text-anchor="end">${value}</text>`).join("")}
+        ${Array.from({ length: 5 }, (_, index) => index + 1).map((level) => `<g>
+          <text x="${layout.x(level)}" y="${plot.top + plot.height + 30}" text-anchor="middle">${level}</text>
+          <text class="heat-population-range-tick" x="${layout.x(level)}" y="${plot.top + plot.height + 55}" text-anchor="middle">${escapeHtml(t(`heatPopulation.levelShort${level}`))}</text>
+        </g>`).join("")}
+      </g>
+      <text class="heat-population-axis-label" x="${plot.left + plot.width / 2}" y="${layout.height - 24}" text-anchor="middle">${escapeHtml(t("heatPopulation.axisPopulationBand"))}</text>
+      <text class="heat-population-axis-label" transform="translate(28 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("heatPopulation.axisScore", { metric: t(`heatMetric.${model.metric}`) }))}</text>
+      <g class="heat-population-points" role="group" aria-label="${escapeHtml(t("heatPopulation.pointsLabel"))}">
+        ${model.points.map((point, index) => {
+          const highlighted = point.sectorId === model.highlightedSectorId;
+          const label = heatPopulationPointLabel(model, point);
+          return `<circle cx="${layout.x(point.level + stableSectorOffset(point.sectorId)).toFixed(2)}" cy="${layout.y(point.score).toFixed(2)}" r="5" role="button" tabindex="${highlighted || (!model.highlightedSectorId && index === 0) ? 0 : -1}" class="heat-population-point ${highlighted ? "is-selected" : ""}" data-scatter-sector="${escapeHtml(point.sectorId)}" data-scatter-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></circle>`;
+        }).join("")}
+      </g>
+    </svg>
+    <p class="heat-population-output" data-scatter-output aria-live="polite">${initialPoint ? escapeHtml(heatPopulationPointLabel(model, initialPoint)) : ""}</p>
+  </div>`;
+}
+
+function compactPopulationTick(value) {
+  if (!value) return "0";
+  return `${formatNumber(value / 1_000, value < 10_000 ? 1 : 0)}k`;
+}
+
+function heatPopulationBarChart(model, { expanded = false } = {}) {
+  const maximum = Math.max(...model.populationByScore.map(({ population }) => population), 1);
+  const axisMaximum = Math.ceil(maximum / 5_000) * 5_000;
+  const layout = heatPopulationBarLayout(axisMaximum);
+  const { plot } = layout;
+  const yTicks = Array.from({ length: 5 }, (_, index) => axisMaximum / 4 * index);
+  const bandWidth = plot.width / 11;
+  const barWidth = bandWidth * .68;
+  const prefix = expanded ? "heat-population-bars-expanded" : "heat-population-bars-inline";
+  const barLabel = (entry) => t("heatPopulation.barLabel", {
+    score: entry.score,
+    population: formatNumber(entry.population, 0),
+    sectors: entry.sectorCount,
+    share: formatNumber(entry.populationShare, 1),
+  });
+  return `<div class="heat-population-chart ${expanded ? "is-expanded" : ""}" data-heat-population-bar-chart>
+    <h4>${escapeHtml(t("heatPopulation.barTitle"))}</h4>
+    <p class="heat-population-chart-intro">${escapeHtml(t("heatPopulation.barDefinition"))}</p>
+    <svg viewBox="0 0 ${layout.width} ${layout.height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
+      <title id="${prefix}-title">${escapeHtml(t("heatPopulation.barTitle"))}</title>
+      <desc id="${prefix}-description">${escapeHtml(t("heatPopulation.barDescription", { area: panelAreaName(model.record) }))}</desc>
+      <g class="heat-population-grid" aria-hidden="true">
+        ${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${layout.y(value)}" y2="${layout.y(value)}"></line>`).join("")}
+      </g>
+      <g class="heat-population-axis-values" aria-hidden="true">
+        ${yTicks.map((value) => `<text x="${plot.left - 14}" y="${layout.y(value) + 5}" text-anchor="end">${escapeHtml(compactPopulationTick(value))}</text>`).join("")}
+        ${model.populationByScore.map(({ score }) => `<text x="${layout.x(score)}" y="${plot.top + plot.height + 30}" text-anchor="middle">${score}</text>`).join("")}
+      </g>
+      <text class="heat-population-axis-label" x="${plot.left + plot.width / 2}" y="${layout.height - 20}" text-anchor="middle">${escapeHtml(t("heatPopulation.axisHeatScore", { metric: t(`heatMetric.${model.metric}`) }))}</text>
+      <text class="heat-population-axis-label" transform="translate(28 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("heatPopulation.axisResidents"))}</text>
+      <g class="heat-population-bars" role="group" aria-label="${escapeHtml(t("heatPopulation.barTitle"))}">
+        ${model.populationByScore.map((entry, index) => {
+          const barHeight = plot.top + plot.height - layout.y(entry.population);
+          const label = barLabel(entry);
+          return `<rect x="${layout.x(entry.score) - barWidth / 2}" y="${layout.y(entry.population)}" width="${barWidth}" height="${Math.max(1, barHeight)}" rx="4" style="--bar:${escapeHtml(model.scoreColors[entry.score] ?? "#6b7d81")}" role="button" tabindex="${index === 0 ? 0 : -1}" data-population-score-bar data-bar-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></rect>`;
+        }).join("")}
+      </g>
+    </svg>
+    <p class="heat-population-output" data-population-bar-output aria-live="polite">${escapeHtml(barLabel(model.populationByScore[0]))}</p>
+  </div>`;
+}
+
+function heatPopulationCharts(model, { expanded = false } = {}) {
+  return `<div class="heat-population-charts ${expanded ? "is-expanded" : ""}">
+    ${expanded ? "" : `<div class="heat-population-chart-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("heatPopulation.expandCharts"))}</button></div>`}
+    ${heatPopulationBoxPlot(model, { expanded })}
+    ${heatPopulationBarChart(model, { expanded })}
+  </div>`;
+}
+
+function heatPopulationChartDialog(model) {
+  return `<dialog class="comparison-chart-dialog heat-population-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("heatPopulation.expandedTitle", { area: panelAreaName(model.record) }))}">
+    <div class="comparison-chart-dialog-content">
+      <header><h3>${escapeHtml(t("heatPopulation.expandedTitle", { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("heatPopulation.closeCharts"))}">×</button></header>
+      <p class="comparison-dialog-description">${escapeHtml(t("heatPopulation.expandedDescription", { metric: t(`heatMetric.${model.metric}`), area: panelAreaName(model.record) }))}</p>
+      ${heatPopulationCharts(model, { expanded: true })}
+      <p class="comparison-academic-note">${escapeHtml(t("heatPopulation.academicDetails"))}</p>
+    </div>
+  </dialog>`;
+}
+
+function renderHeatPopulationComparison(model) {
+  return `<div class="panel-hero comparison-hero heat-population-hero">
+    <p class="panel-eyebrow">${escapeHtml(t("heatPopulation.heroKicker", { area: panelAreaName(model.record) }))}</p>
+    <h2 id="panel-title">${escapeHtml(panelAreaName(model.record))}</h2>
+    <p class="panel-subtitle">${escapeHtml(t("heatPopulation.relationshipTitle"))}</p>
+    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("heatPopulation.sampleCount", { count: model.points.length, excluded: model.excludedCount }))}</p>
+  </div>
+  <div class="panel-body comparison-body heat-population-body">
+    <section aria-labelledby="heat-population-summary-title">
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("heatPopulation.title"))}</p><h3 id="heat-population-summary-title">${escapeHtml(t("heatPopulation.relationshipTitle"))}</h3></div>
+      <p class="comparison-definition">${escapeHtml(t("heatPopulation.definition"))}</p>
+      ${panelHeatMetricSelector(model.metric)}
+      <p class="section-intro">${escapeHtml(t("heatPopulation.scopeNote", { area: panelAreaName(model.record) }))}</p>
+      <p class="heat-population-coverage"><strong>${escapeHtml(t("heatPopulation.comparablePopulation", {
+        population: formatNumber(model.comparablePopulation, 0),
+        total: formatNumber(model.totalPopulation, 0),
+        excluded: formatNumber(model.excludedPopulation, 0),
+      }))}</strong></p>
+      ${heatPopulationCharts(model)}
+      ${heatPopulationChartDialog(model)}
+    </section>
+    <details class="detail-accordion" data-section="heat-population-details">
+      <summary data-focus-key="heat-population-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("heatPopulation.detailsTitle"))}</span></summary>
+      <div class="accordion-content methodology-copy">
+        <p>${escapeHtml(t("heatPopulation.boxPlotExplanation"))}</p>
+        <p>${escapeHtml(t("heatPopulation.weightExplanation"))}</p>
+        <p>${escapeHtml(t("heatPopulation.excludedExplanation", { count: model.excludedCount, population: formatNumber(model.excludedPopulation, 0) }))}</p>
+      </div>
+    </details>
+    <details class="detail-accordion methodology-accordion" data-section="heat-population-methodology">
+      <summary data-focus-key="heat-population-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("heatPopulation.methodologyTitle"))}</span></summary>
+      <div class="accordion-content methodology-copy">
+        <p>${escapeHtml(t("heatPopulation.methodologySources"))}</p>
+        <p>${escapeHtml(t("heatPopulation.methodologyScores"))}</p>
+        <p>${escapeHtml(t("heatPopulation.methodologyPopulation"))}</p>
+        <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("heatPopulation.methodologyCaveat"))}</p>
       </div>
     </details>
   </div>`;
@@ -1264,6 +1449,112 @@ function renderPopulation(model) {
     </article>`;
 }
 
+function greenUrbanDensityBoxPlot(model, { expanded = false } = {}) {
+  const series = model.selectedFabricClasses.filter(({ densityDistribution }) => densityDistribution?.count);
+  if (!series.length) return `<p class="panel-empty-state">${escapeHtml(t("greenUrbanComparison.noData"))}</p>`;
+  const width = 900;
+  const height = expanded ? 590 : 500;
+  const plot = { left: 104, top: 42, width: 760, height: expanded ? 390 : 300 };
+  const y = (value) => plot.top + plot.height - Math.max(0, Math.min(100, value)) / 100 * plot.height;
+  const step = plot.width / series.length;
+  const boxWidth = Math.min(92, step * .55);
+  const ticks = [0, 20, 40, 60, 80, 100];
+  const valueLabel = (item) => {
+    const stats = item.densityDistribution;
+    return t("greenUrbanComparison.boxValue", {
+      surface: item.label,
+      median: formatNumber(stats.median, 1),
+      q1: formatNumber(stats.q1, 1),
+      q3: formatNumber(stats.q3, 1),
+      count: stats.count,
+    });
+  };
+  const prefix = expanded ? "green-density-chart-expanded" : "green-density-chart-inline";
+  return `<div class="green-density-boxplot ${expanded ? "is-expanded" : ""}" data-green-density-chart>
+    <div class="green-density-chart-heading">
+      <div><h4 id="${prefix}-heading">${escapeHtml(t("greenUrbanComparison.boxTitle"))}</h4>
+      <p>${escapeHtml(t("greenUrbanComparison.boxExplanation"))}</p></div>
+      ${expanded ? "" : `<button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("greenUrbanComparison.expandChart"))}</button>`}
+    </div>
+    <div class="green-density-series-key">${series.map((item) => `<span><i style="--series:${escapeHtml(item.color)}" aria-hidden="true"></i><b>${escapeHtml(item.code)}</b> ${escapeHtml(item.label)} <small>n=${escapeHtml(formatNumber(item.densityDistribution.count, 0))}</small></span>`).join("")}</div>
+    <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
+      <title id="${prefix}-title">${escapeHtml(t("greenUrbanComparison.boxTitle"))}</title>
+      <desc id="${prefix}-description">${escapeHtml(t("greenUrbanComparison.boxDescription", { area: panelAreaName(model.record), classes: model.greenClassLabels.join(", ") }))}</desc>
+      <g class="green-density-grid" aria-hidden="true">${ticks.map((tick) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(tick)}" y2="${y(tick)}"></line>`).join("")}</g>
+      <g class="green-density-axis-values" aria-hidden="true">
+        ${ticks.map((tick) => `<text x="${plot.left - 16}" y="${y(tick) + 5}" text-anchor="end">${tick}%</text>`).join("")}
+        ${series.map((item, index) => `<text x="${plot.left + step * (index + .5)}" y="${plot.top + plot.height + 38}" text-anchor="middle">${escapeHtml(item.code)}</text>`).join("")}
+      </g>
+      <text class="green-density-axis-label" transform="translate(30 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("greenUrbanComparison.axisDensity"))}</text>
+      <text class="green-density-axis-label" x="${plot.left + plot.width / 2}" y="${height - 28}" text-anchor="middle">${escapeHtml(t("greenUrbanComparison.axisFabric"))}</text>
+      <g class="green-density-boxes" role="list">${series.map((item, index) => {
+        const stats = item.densityDistribution;
+        const centre = plot.left + step * (index + .5);
+        const left = centre - boxWidth / 2;
+        const right = centre + boxWidth / 2;
+        const label = valueLabel(item);
+        return `<g role="listitem" tabindex="${index === 0 ? "0" : "-1"}" data-green-density-box data-green-density-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" style="--series:${escapeHtml(item.color)}">
+          <line class="green-density-whisker" x1="${centre}" x2="${centre}" y1="${y(stats.whiskerHigh)}" y2="${y(stats.whiskerLow)}"></line>
+          <line class="green-density-whisker" x1="${left}" x2="${right}" y1="${y(stats.whiskerHigh)}" y2="${y(stats.whiskerHigh)}"></line>
+          <line class="green-density-whisker" x1="${left}" x2="${right}" y1="${y(stats.whiskerLow)}" y2="${y(stats.whiskerLow)}"></line>
+          <rect x="${left}" y="${y(stats.q3)}" width="${boxWidth}" height="${Math.max(1, y(stats.q1) - y(stats.q3))}" rx="5"></rect>
+          <line class="green-density-median" x1="${left}" x2="${right}" y1="${y(stats.median)}" y2="${y(stats.median)}"></line>
+        </g>`;
+      }).join("")}</g>
+    </svg>
+    <p class="green-density-output" data-green-density-output aria-live="polite">${escapeHtml(valueLabel(series[0]))}</p>
+  </div>`;
+}
+
+function greenUrbanDensityChartDialog(model) {
+  return `<dialog class="comparison-chart-dialog green-density-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("greenUrbanComparison.expandedTitle", { area: panelAreaName(model.record) }))}">
+    <div class="comparison-chart-dialog-content">
+      <header><h3>${escapeHtml(t("greenUrbanComparison.expandedTitle", { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("greenUrbanComparison.closeChart"))}">&times;</button></header>
+      <p class="comparison-dialog-description">${escapeHtml(t("greenUrbanComparison.expandedDescription", {
+        area: panelAreaName(model.record), classes: model.greenClassLabels.join(", "), radius: model.densityRadiusMeters,
+      }))}</p>
+      ${greenUrbanDensityBoxPlot(model, { expanded: true })}
+      <p class="comparison-academic-note">${escapeHtml(t("greenUrbanComparison.academicDetails", { resolution: model.analysisResolutionMeters }))}</p>
+    </div>
+  </dialog>`;
+}
+
+function renderGroenkaartUrbanAtlasComparison(model) {
+  const selectedGreen = model.greenClassLabels.join(", ");
+  return `<div class="panel-hero comparison-hero green-urban-comparison-hero">
+    <p class="panel-eyebrow">${escapeHtml(t("greenUrbanComparison.heroKicker"))}</p>
+    <h2 id="panel-title">${escapeHtml(panelAreaName(model.record))}</h2>
+    <p class="panel-subtitle">${escapeHtml(t("greenUrbanComparison.panelSubtitle"))}</p>
+    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("greenUrbanComparison.selectedGreen", { classes: selectedGreen }))}</p>
+  </div>
+  <div class="panel-body comparison-body green-urban-comparison-body">
+    <section aria-labelledby="green-urban-results-title">
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("greenUrbanComparison.title"))}</p><h3 id="green-urban-results-title">${escapeHtml(t("greenUrbanComparison.resultsTitle"))}</h3></div>
+      <p class="comparison-definition">${escapeHtml(t("greenUrbanComparison.definition", { radius: model.densityRadiusMeters }))}</p>
+      ${greenUrbanDensityBoxPlot(model)}
+      ${greenUrbanDensityChartDialog(model)}
+      <div class="green-urban-results-list">
+        ${model.selectedFabricClasses.map((item) => `<article class="green-urban-result-card" style="--series:${escapeHtml(item.color)}">
+          <header><i aria-hidden="true"></i><h4>${escapeHtml(item.label)}</h4></header>
+          ${item.stats?.validCellCount ? `<strong>${escapeHtml(formatNumber(item.meanDensity, 1))}%</strong>
+            <span>${escapeHtml(t("greenUrbanComparison.meanDensity"))}</span>
+            <small>${escapeHtml(t("greenUrbanComparison.validArea", { area: formatNumber(item.stats.validAreaHa, 1) }))}</small>`
+            : `<p>${escapeHtml(t("greenUrbanComparison.noData"))}</p>`}
+        </article>`).join("")}
+      </div>
+    </section>
+    <details class="detail-accordion methodology-accordion" data-section="green-urban-methodology">
+      <summary data-focus-key="green-urban-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("greenUrbanComparison.methodologyTitle"))}</span></summary>
+      <div class="accordion-content methodology-copy">
+        <p>${escapeHtml(t("greenUrbanComparison.methodologyDensity", { radius: model.densityRadiusMeters }))}</p>
+        <p>${escapeHtml(t("greenUrbanComparison.methodologyAssignment", { resolution: model.analysisResolutionMeters }))}</p>
+        <p>${escapeHtml(t("greenUrbanComparison.methodologyYears"))}</p>
+        <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("greenUrbanComparison.methodologyCaveat"))}</p>
+      </div>
+    </details>
+  </div>`;
+}
+
 function renderMetricSummary(model) {
 
   const value = Number.isFinite(model.value) ? formatNumber(model.value) : t("value.notAvailable");
@@ -1296,6 +1587,8 @@ export function renderSectorPanelModel(model) {
   if (model.template === "landsat-urban-atlas-comparison") return renderLandsatUrbanAtlasComparison(model);
   if (model.template === "landsat-jaarbak-comparison") return renderLandsatJaarbakComparison(model);
   if (model.template === "heat-income-comparison") return renderHeatIncomeComparison(model);
+  if (model.template === "heat-population-comparison") return renderHeatPopulationComparison(model);
+  if (model.template === "groenkaart-urban-atlas-comparison") return renderGroenkaartUrbanAtlasComparison(model);
   if (model.template === "income") return renderIncome(model);
   if (model.template === "population") return renderPopulation(model);
   if (model.template === "metric-summary") return renderMetricSummary(model);

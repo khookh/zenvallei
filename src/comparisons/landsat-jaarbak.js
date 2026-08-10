@@ -304,9 +304,13 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
         title: t("soilComparison.legendTitle"),
         note: t("soilComparison.legendNote", { year: activeObservation()?.secondaryYear ?? "" }),
         gradient: comparisonHeatGradient(),
-        comparisonSeries: manifest?.series?.filter((series) => series.id === "sealed").map((series) => ({
-          ...series, label: t(`soilComparison.${series.id}`), selected: true,
-        })) ?? [],
+        // The faint JaarBAK base renders sealed pixels only. Keep that visual
+        // key separate from the thermal scale and do not imply that unsealed
+        // pixels receive a second map colour.
+        comparisonLegend: {
+          title: t("soilComparison.baseLegendTitle"),
+          items: [{ label: t("soilComparison.sealed"), color: "#a11d2f" }],
+        },
         observation: runtime.observation,
       };
     },

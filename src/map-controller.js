@@ -2,6 +2,7 @@ import * as maplibregl from "maplibre-gl";
 import mapLibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { collectionBounds, geometryBounds } from "./data.js";
 import { t } from "./i18n.js";
+import { createMapSourceDialog } from "./map-source-dialog.js";
 
 maplibregl.setWorkerUrl(mapLibreWorkerUrl);
 
@@ -141,9 +142,6 @@ export function createMapController({
     return true;
   };
 
-  const attributions = [...new Set(
-    [...layers.values()].flatMap((layer) => layer.getAttributions?.() ?? []),
-  )];
   const map = new maplibregl.Map({
     container,
     style: {
@@ -169,31 +167,9 @@ export function createMapController({
     attributionControl: false,
   });
 
+  const sourceDialog = createMapSourceDialog({ config, layers });
+  map.addControl(sourceDialog.control, "bottom-right");
   map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), "bottom-right");
-  map.addControl(new maplibregl.AttributionControl({
-    compact: true,
-    customAttribution: attributions.length ? attributions.join(" · ") : undefined,
-  }), "bottom-right");
-
-  const attributionDisclosure = container.querySelector(".maplibregl-ctrl-attrib");
-  const attributionButton = container.querySelector(".maplibregl-ctrl-attrib-button");
-  const syncAttributionState = () => attributionButton?.setAttribute(
-    "aria-expanded",
-    String(attributionDisclosure?.classList.contains("maplibregl-compact-show") ?? false),
-  );
-  // MapLibre deliberately opens compact attribution on first render. Greenwave
-  // keeps the complete source list available, but starts with the compact
-  // information button so the map is not obscured.
-  attributionDisclosure?.removeAttribute("open");
-  attributionDisclosure?.classList.remove("maplibregl-compact-show");
-  syncAttributionState();
-  const attributionObserver = new MutationObserver(syncAttributionState);
-  if (attributionDisclosure) {
-    attributionObserver.observe(attributionDisclosure, {
-      attributes: true,
-      attributeFilter: ["class", "open"],
-    });
-  }
 
   const currentLayer = () => layers.get(activeLayerId);
 
@@ -201,7 +177,6 @@ export function createMapController({
     const translatedControls = [
       [container.querySelector(".maplibregl-ctrl-zoom-in"), "maplibre.zoomIn"],
       [container.querySelector(".maplibregl-ctrl-zoom-out"), "maplibre.zoomOut"],
-      [container.querySelector(".maplibregl-ctrl-attrib-button"), "maplibre.toggleAttribution"],
     ];
     translatedControls.forEach(([element, key]) => {
       if (!element) return;
@@ -212,6 +187,7 @@ export function createMapController({
     const canvas = map.getCanvas();
     canvas.setAttribute("aria-label", t("map.regionForLayer", { layer: currentLayer()?.getLabel() ?? "" }));
     canvas.setAttribute("title", t("maplibre.mapTitle"));
+    sourceDialog.updateLanguage();
   };
   updateMapAccessibility();
 
@@ -287,7 +263,7 @@ export function createMapController({
           map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: true });
           if (!inspectPoint(event.lngLat)) {
             const record = scores[feature.properties.sectorId];
-            const model = popupModelProvider?.(feature, record) ?? currentLayer().getPopupModel(feature, record);
+            const model = popupModelProvider?.(feature, record, event) ?? currentLayer().getPopupModel(feature, record);
             popup.setLngLat(event.lngLat).setDOMContent(renderPopup(model)).addTo(map);
           }
         });
@@ -489,6 +465,13 @@ export function createMapController({
       return true;
     },
     getActiveLayer() { return activeLayerId; },
+    getCamera() {
+      return {
+        center: map.getCenter().toArray(), zoom: map.getZoom(), bearing: map.getBearing(),
+        pitch: map.getPitch(), padding: map.getPadding(),
+      };
+    },
+    restoreCamera(camera) { if (camera) map.jumpTo(camera); },
     setLayerOption,
     getLayerOption(layerId, name) { return layers.get(layerId)?.getOption?.(name) ?? null; },
     // Kept as a compatibility convenience for existing diagnostics and tests.
@@ -501,7 +484,7 @@ export function createMapController({
     },
     destroy() {
       clearInspection();
-      attributionObserver.disconnect();
+      sourceDialog.destroy();
       popup.remove();
       map.remove();
     },

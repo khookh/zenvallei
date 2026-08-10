@@ -56,6 +56,108 @@ async function rasterVisibility(page) {
   });
 }
 
+test("compares heat vulnerability with authoritative sector population", async ({ page }) => {
+  const errors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
+    status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
+  }));
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
+  await page.locator("#project-intro-primary").click();
+
+  await expandControls(page);
+  await page.locator("#analysis-compare").click();
+  await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-comparison-target/);
+  await page.locator('[data-layer="population"]').click();
+  await expect(page.locator("#active-layer-title")).toHaveText("Heat vulnerability × population");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
+  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
+    await page.locator("#panel-peek").click();
+  }
+
+  const inlineBox = page.locator("[data-heat-population-box-chart]:not(.is-expanded)");
+  const inlineBars = page.locator("[data-heat-population-bar-chart]:not(.is-expanded)");
+  await expect(inlineBox.locator("[data-scatter-sector]")).toHaveCount(140);
+  await expect(inlineBars.locator("[data-population-score-bar]")).toHaveCount(11);
+  await expect(page.locator("#detail-panel")).toContainText("139,939 of 140,122 residents are represented");
+  await expect(inlineBox.locator("svg")).toHaveScreenshot("heat-population-comparison.png", {
+    animations: "disabled", maxDiffPixelRatio: .001,
+  });
+  await expect(inlineBars.locator("svg")).toHaveScreenshot("heat-population-bars.png", {
+    animations: "disabled", maxDiffPixelRatio: .001,
+  });
+
+  expect(await page.evaluate(() => ({
+    heat: window.__heatMap.map.getLayoutProperty("heat-sectors-fill", "visibility"),
+    populationGrid: window.__heatMap.map.getLayer("population-grid-2025-fill")
+      ? window.__heatMap.map.getLayoutProperty("population-grid-2025-fill", "visibility")
+      : "missing",
+    symbols: window.__heatMap.map.getLayoutProperty("heat-population-symbols", "visibility"),
+    images: Array.from({ length: 5 }, (_, index) => window.__heatMap.map.hasImage(`heat-population-level-${index + 1}`)),
+  }))).toEqual({ heat: "visible", populationGrid: "missing", symbols: "visible", images: [true, true, true, true, true] });
+
+  await expandComparisonLegend(page);
+  await expect(page.locator("#legend-content .legend-person-strip")).toHaveCount(5);
+  await expect(page.locator("#legend-content")).toContainText(/2,000/);
+  await expect(page.locator(".legend-comparison-section div > span").last())
+    .toHaveAttribute("aria-label", /Five-person symbol.*2,000 residents or more/i);
+
+  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
+    await page.locator("#panel-peek").click();
+  }
+  await page.locator('[data-panel-heat-metric="vulnerability"]').click();
+  await expect(page.locator("#detail-panel")).toContainText("Vulnerability score (0–10)");
+  await expect(inlineBox.locator("[data-scatter-sector]")).toHaveCount(140);
+  const firstPoint = inlineBox.locator("[data-scatter-sector]").first();
+  await firstPoint.focus();
+  await firstPoint.press("ArrowRight");
+  await expect(inlineBox.locator("[data-scatter-output]")).toContainText("Population");
+  const firstBar = inlineBars.locator("[data-population-score-bar]").first();
+  await firstBar.focus();
+  await firstBar.press("End");
+  await expect(inlineBars.locator("[data-population-bar-output]")).toContainText("Score 10");
+
+  await page.locator("[data-expand-comparison-chart]").click();
+  const dialog = page.locator("[data-comparison-chart-dialog]");
+  await expect(dialog).toContainText("Heat vulnerability and population in Entire Zennevallei");
+  await expect(dialog.locator("[data-heat-population-box-chart].is-expanded")).toBeVisible();
+  await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded")).toBeVisible();
+  await expect(dialog.locator("[data-heat-population-box-chart].is-expanded svg")).toHaveScreenshot("heat-population-expanded.png", {
+    animations: "disabled", maxDiffPixelRatio: .001,
+  });
+  await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded svg")).toHaveScreenshot("heat-population-bars-expanded.png", {
+    animations: "disabled", maxDiffPixelRatio: .001,
+  });
+  await dialog.locator("[data-close-comparison-chart]").click();
+
+  const accessibility = await new AxeBuilder({ page })
+    .include("#detail-panel")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+
+  await expandControls(page);
+  await page.locator("#municipality-select").selectOption("Halle");
+  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
+    await page.locator("#panel-peek").click();
+  }
+  await expect(inlineBox.locator("[data-scatter-sector]")).toHaveCount(39);
+  await expect(page.locator("#detail-panel")).toContainText("42,846 of 42,877 residents are represented");
+  expect(await page.evaluate(() => window.__heatMap.map.getFilter("heat-population-symbols")))
+    .toEqual(["==", ["get", "municipality"], "Halle"]);
+
+  await expandControls(page);
+  await page.locator("#analysis-pair-remove").click();
+  expect(await page.evaluate(() => ({
+    heat: window.__heatMap.map.getLayoutProperty("heat-sectors-fill", "visibility"),
+    symbols: window.__heatMap.map.getLayoutProperty("heat-population-symbols", "visibility"),
+  }))).toEqual({ heat: "visible", symbols: "none" });
+  expect(errors).toEqual([]);
+});
+
 test("loads JaarBAK before revealing the first Landsat soil-sealing comparison", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes("mobile"), "The reported first-load race is covered at desktop size.");
   const jaarbakResponses = [];
@@ -398,7 +500,7 @@ test("serves all eight layers from the prepared working catalogue in local-data 
     .analyze();
   expect(heatIncomeAccessibility.violations).toEqual([]);
   await inlineHeatIncomeChart.locator("[data-expand-comparison-chart]").click();
-  await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("Eindscore en belastbaar inkomen in de sectoren van de Zennevallei");
+  await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("Eindscore en belastbaar inkomen in Hele Zennevallei");
   await expect(page.locator("[data-comparison-chart-dialog] .heat-income-boxplots rect")).not.toHaveCount(0);
   await expect(page.locator("[data-comparison-chart-dialog]")).toHaveScreenshot("heat-income-expanded.png", {
     animations: "disabled", maxDiffPixelRatio: .001,
@@ -430,7 +532,8 @@ test("serves all eight layers from the prepared working catalogue in local-data 
 
   await expandControls(page);
   await page.locator("#municipality-select").selectOption("Halle");
-  await expect(inlineHeatIncomeChart.locator("[data-scatter-sector]")).toHaveCount(140);
+  await expect(inlineHeatIncomeChart.locator("[data-scatter-sector]")).toHaveCount(39);
+  await expect(page.locator("#detail-panel")).toContainText("39 vergelijkbare sectoren");
   if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
     await page.locator("#panel-peek").click();
   }

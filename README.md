@@ -51,10 +51,11 @@ pnpm landgebruik:prepare
 pnpm landsat-heat:prepare
 pnpm landsat-urban-atlas:prepare  # Landsat x Urban Atlas comparison
 pnpm landsat-soil-sealing:prepare # Landsat x JaarBAK comparison
+pnpm groenkaart-urban-atlas:prepare # Green density x Urban Atlas urban fabric
 pnpm dev:local-data
 ```
 
-Raw downloads and analytical caches stay below `.cache/local-layers`. To refresh the validated browser derivatives, including both Landsat comparisons, run `pnpm official-layers:publish` after preparation. See [Official raster layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md) and [Landsat surface temperature](docs/landsat-surface-temperature.md).
+Raw downloads and analytical caches stay below `.cache/local-layers`. To refresh the validated browser derivatives, including all prepared comparisons, run `pnpm official-layers:publish` after preparation. The five published comparisons can be opened from either participating layer: two demographic comparisons, two Landsat surface comparisons and Green Map density within Urban Atlas urban fabric. See [Official raster layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md), [Landsat surface temperature](docs/landsat-surface-temperature.md) and [Demography data](docs/demography-data.md).
 
 Soil sealing and Flanders Green Map also provide a **Show density** mode. It calculates the source-class share within a fixed 100 m radius; preparation creates the density derivatives alongside their ordinary classifications.
 

@@ -1,5 +1,5 @@
 /**
- * Local descriptive comparison between the published 2026 heat scores and
+ * Descriptive comparison between the published 2026 heat scores and
  * Statbel's 2023 median taxable income. No regression or inferred values are
  * calculated here: the controller only joins existing sector records.
  */
@@ -94,13 +94,20 @@ export function createHeatIncomeComparison({ scores, income, heatLayer, incomeLa
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
   const metric = () => heatLayer.getOption("metric");
-  const points = () => buildHeatIncomePoints(scores, income, metric(), INCOME_YEAR);
+  const allPoints = () => buildHeatIncomePoints(scores, income, metric(), INCOME_YEAR);
+  const points = () => allPoints().filter((point) => (
+    !activeMunicipality || point.municipality === activeMunicipality
+  ));
+  const scopeRecords = () => Object.values(scores).filter((record) => (
+    !activeMunicipality || record.municipality === activeMunicipality
+  ));
 
   return {
     id: "heat-income",
     primaryLayerId: "heat",
     secondaryLayerId: "income",
     isPanelPersistent: true,
+    panelScope: "area",
     isActive: () => active,
     hasLoadError: () => false,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
@@ -162,6 +169,7 @@ export function createHeatIncomeComparison({ scores, income, heatLayer, incomeLa
           ? ["==", ["get", "municipality"], municipality]
           : null);
       }
+      if (active) notify();
       return true;
     },
     refreshMetric() { if (active) notify(); },
@@ -171,11 +179,11 @@ export function createHeatIncomeComparison({ scores, income, heatLayer, incomeLa
       if (active) notify();
     },
     getLabel: () => t("heatIncome.title"),
-    getActiveNote: () => t("heatIncome.activeNote"),
+    getActiveNote: () => t("heatIncome.activeNote", { area: activeMunicipality || t("controls.allMunicipalities") }),
     getContext: () => ({
-      meta: t("heatIncome.contextMeta"),
+      meta: t("heatIncome.contextMeta", { count: points().length }),
       text: t("heatIncome.contextText", { metric: t(`heatMetric.${metric()}`) }),
-      note: t("heatIncome.contextNote"),
+      note: t("heatIncome.contextNote", { area: activeMunicipality || t("controls.allMunicipalities") }),
       sources: [
         authorityLink("departmentCare", HEAT_SOURCE_URL),
         authorityLink("statbel", income.source.pageUrl),
@@ -185,12 +193,15 @@ export function createHeatIncomeComparison({ scores, income, heatLayer, incomeLa
       const legend = heatLayer.getLegendModel();
       return {
         ...legend,
-        comparisonSeries: [
+        comparisonLegend: {
+          title: t("heatIncome.legendSection"),
+          items: [
           { label: t("heatIncome.incomeLow"), symbol: "€", color: "#fffdf7" },
           { label: t("heatIncome.incomeMiddle"), symbol: "€€", color: "#fffdf7" },
           { label: t("heatIncome.incomeHigh"), symbol: "€€€", color: "#fffdf7" },
           { label: t("heatIncome.incomeUnavailable"), symbol: "–", color: "#eae2de" },
-        ],
+          ],
+        },
         footnote: t("heatIncome.legendFootnote"),
       };
     },
@@ -205,23 +216,24 @@ export function createHeatIncomeComparison({ scores, income, heatLayer, incomeLa
         ] : [t("heatIncome.noComparableValue")],
       };
     },
-    getPanelModel() {
+    getPanelModel(record) {
       const comparablePoints = points();
+      const records = scopeRecords();
       return {
         template: "heat-income-comparison",
-        record: {
-          scope: "region",
-          municipality: "",
+        record: record?.scope ? record : {
+          scope: activeMunicipality ? "municipality" : "region",
+          municipality: activeMunicipality,
           sectorId: "",
-          sectorName: t("controls.allMunicipalities"),
-          sectorCount: Object.keys(scores).length,
+          sectorName: activeMunicipality || t("controls.allMunicipalities"),
+          sectorCount: records.length,
         },
         metric: metric(),
         incomeYear: INCOME_YEAR,
         points: comparablePoints,
         scoreSummaries: summarizeIncomeByScore(comparablePoints),
-        totalSectorCount: Object.keys(scores).length,
-        excludedCount: Object.keys(scores).length - comparablePoints.length,
+        totalSectorCount: records.length,
+        excludedCount: records.length - comparablePoints.length,
         highlightedSectorId,
       };
     },

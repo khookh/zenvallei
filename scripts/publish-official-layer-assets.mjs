@@ -6,7 +6,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const sourceRoot = path.join(projectRoot, ".cache", "local-layers");
 const outputRoot = path.join(projectRoot, "public", "data", "official-layers");
 const datasetIds = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature"];
-const comparisonIds = ["landsat-urban-atlas", "landsat-jaarbak"];
+const comparisonIds = ["landsat-urban-atlas", "landsat-jaarbak", "groenkaart-urban-atlas"];
 const forbiddenText = /(?:Bearer\s+eyJ|client_secret|[A-Z]:\\Users\\|se=\d{4}-\d{2}-\d{2}T)/i;
 
 async function readJson(file) {
@@ -89,7 +89,12 @@ async function publishComparison(comparisonId, descriptor) {
   const manifest = await readJson(sourceManifestPath);
   if (manifest.comparisonId !== comparisonId) throw new Error(`${comparisonId}: manifest identifier mismatch.`);
 
-  await copyAsset(manifest.scopeIndexUrl, ".png");
+  if (comparisonId === "groenkaart-urban-atlas") {
+    await copyAsset(manifest.fabricMaskUrl, ".png");
+    await copyAsset(manifest.statisticsUrl, ".json");
+  } else {
+    await copyAsset(manifest.scopeIndexUrl, ".png");
+  }
   for (const observation of Object.values(manifest.observations ?? {})) {
     await copyAsset(observation.pixelDataUrl, ".png");
     await copyAsset(observation.distributionUrl, ".json");

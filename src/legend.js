@@ -5,14 +5,35 @@ function legendItem(item, { score = false } = {}) {
   if (score) container.className = "legend-item legend-score";
   const swatch = document.createElement(score ? "span" : "i");
   swatch.style.setProperty("--swatch", item.color);
-  if (item.symbol) {
+  if (item.personCount) {
+    swatch.classList.add("legend-person-strip");
+    swatch.setAttribute("aria-hidden", "true");
+    swatch.replaceChildren(...Array.from({ length: item.personCount }, () => {
+      const person = document.createElement("span");
+      person.className = "legend-person";
+      return person;
+    }));
+  } else if (item.symbol) {
     swatch.classList.add("legend-symbol");
     swatch.textContent = item.symbol;
   }
   const label = document.createElement(score ? "b" : "span");
   label.textContent = item.label;
   container.append(swatch, label);
+  if (item.accessibleLabel) container.setAttribute("aria-label", item.accessibleLabel);
   return container;
+}
+
+function comparisonLegend(model) {
+  if (!model?.items?.length) return null;
+  const section = document.createElement("section");
+  section.className = "legend-comparison-section";
+  const heading = document.createElement("h3");
+  heading.textContent = model.title;
+  const items = document.createElement("div");
+  items.append(...model.items.map((item) => legendItem(item)));
+  section.append(heading, items);
+  return section;
 }
 
 function surfaceSelector(model) {
@@ -109,6 +130,41 @@ function densitySelector(model) {
   return wrapper;
 }
 
+function dualSelector(model) {
+  const wrapper = document.createElement("section");
+  wrapper.className = "comparison-dual-selector";
+  Object.entries(model).forEach(([type, group]) => {
+    const section = document.createElement("section");
+    const heading = document.createElement("h3");
+    heading.textContent = group.title;
+    const options = document.createElement("div");
+    options.setAttribute("role", "group");
+    options.setAttribute("aria-label", group.title);
+    group.items.forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.greenUrbanSelector = type;
+      button.dataset.greenUrbanValue = String(item.value);
+      button.setAttribute("aria-pressed", String(item.selected));
+      button.classList.toggle("is-selected", item.selected);
+      const swatch = document.createElement("i");
+      swatch.style.setProperty("--swatch", item.color);
+      swatch.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.textContent = item.label;
+      button.append(swatch, label);
+      options.append(button);
+    });
+    section.append(heading, options);
+    wrapper.append(section);
+  });
+  const feedback = document.createElement("p");
+  feedback.dataset.greenUrbanFeedback = "";
+  feedback.setAttribute("aria-live", "polite");
+  wrapper.append(feedback);
+  return wrapper;
+}
+
 /** Render a complete legend view model without knowing which layer produced it. */
 export function renderLegendModel({ title, note, content }, model) {
   title.textContent = model.title;
@@ -125,10 +181,11 @@ export function renderLegendModel({ title, note, content }, model) {
     const statuses = document.createElement("div");
     statuses.className = "legend-statuses";
     statuses.append(...(model.groups[1]?.items ?? []).map((item) => legendItem(item)));
-    if (model.comparisonSeries?.length) statuses.append(...model.comparisonSeries.map((item) => legendItem(item)));
+    const comparison = comparisonLegend(model.comparisonLegend);
     const surfaces = model.surfaceSelector ? surfaceSelector(model.surfaceSelector) : null;
     const density = model.densitySelector ? densitySelector(model.densitySelector) : null;
-    content.replaceChildren(scale, statuses, ...(surfaces ? [surfaces] : []), ...(density ? [density] : []), ...(footnote ? [footnote] : []));
+    const dual = model.dualSelector ? dualSelector(model.dualSelector) : null;
+    content.replaceChildren(scale, statuses, ...(comparison ? [comparison] : []), ...(surfaces ? [surfaces] : []), ...(density ? [density] : []), ...(dual ? [dual] : []), ...(footnote ? [footnote] : []));
     return;
   }
   const hasGroups = model.groups.some((group) => group.title);
@@ -148,5 +205,6 @@ export function renderLegendModel({ title, note, content }, model) {
     section.append(heading, items);
     wrapper.append(section);
   });
-  content.replaceChildren(wrapper, ...(footnote ? [footnote] : []));
+  const comparison = comparisonLegend(model.comparisonLegend);
+  content.replaceChildren(wrapper, ...(comparison ? [comparison] : []), ...(footnote ? [footnote] : []));
 }

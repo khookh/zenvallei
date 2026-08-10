@@ -116,7 +116,6 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
         active: metric === activeMetric,
       })),
     }),
-    getAnalysisTargets: () => ["income"],
     setOption(map, name, value) {
       if (name !== "metric" || !HEAT_METRICS.includes(value)) return false;
       activeMetric = value;

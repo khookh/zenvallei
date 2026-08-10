@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from itertools import combinations
 from pathlib import Path
 
 import geopandas as gpd
@@ -385,6 +386,80 @@ soil_manifest = {
     } for item in landsat_items},
 }
 (soil_root / "manifest.json").write_text(json.dumps(soil_manifest), encoding="utf-8")
+
+# Green Map x Urban Atlas fixture. It deliberately reuses the prepared 64 px
+# Green Map density COG so browser tests exercise the real worker and selector
+# lifecycle without copying production-size analytical arrays.
+green_comparison_root = ROOT / "groenkaart-urban-atlas"
+green_comparison_root.mkdir(parents=True, exist_ok=True)
+fabric_codes = ["11100", "11210", "11220", "11230", "11240"]
+fabric_mask = np.zeros((64, 64, 4), dtype=np.uint8)
+for index in range(5):
+    fabric_mask[:, index * 12:(index + 1) * 12, 0] = index + 1
+fabric_mask[..., 3] = 255
+Image.fromarray(fabric_mask, mode="RGBA").save(green_comparison_root / "urban-fabric-index.png")
+fabric_stats = {
+    code: {
+        "validCellCount": 100 + index,
+        "validAreaHa": 1 + index / 10,
+        "meanDensityByGreenClass": {"1": 25 + index, "2": 20 + index, "3": 15, "4": 40 - 2 * index},
+        "densityDistributions": {
+            "+".join(map(str, selected)): {
+                "count": 100 + index,
+                "q1": min(100, 20 + index + 5 * len(selected)),
+                "median": min(100, 30 + index + 5 * len(selected)),
+                "q3": min(100, 40 + index + 5 * len(selected)),
+                "whiskerLow": max(0, 10 + index),
+                "whiskerHigh": min(100, 55 + index + 5 * len(selected)),
+            }
+            for size in range(1, 5)
+            for selected in combinations([1, 2, 3, 4], size)
+        },
+    }
+    for index, code in enumerate(fabric_codes)
+}
+(green_comparison_root / "statistics.json").write_text(json.dumps({
+    "schemaVersion": 1,
+    "comparisonId": "groenkaart-urban-atlas",
+    "scopes": {scope_id: {"classes": fabric_stats} for scope_id in scope_ids},
+}), encoding="utf-8")
+green_manifest = json.loads((ROOT / "groenkaart" / "manifest.json").read_text(encoding="utf-8"))
+fabric_source = {str(item["code"]): item for item in urban_atlas["classes"]}
+green_comparison_manifest = {
+    "schemaVersion": 1,
+    "comparisonId": "groenkaart-urban-atlas",
+    "primaryLayerId": "groenkaart",
+    "secondaryLayerId": "urban-atlas",
+    "greenMapYear": 2021,
+    "urbanAtlasYear": 2021,
+    "densityRadiusMeters": 100,
+    "analysisResolutionMeters": 10,
+    "defaultGreenClasses": [1, 2],
+    "defaultFabricClasses": fabric_codes,
+    "greenClasses": list(GROENKAART_CLASSES),
+    "fabricClasses": [
+        {
+            "code": code,
+            "index": index + 1,
+            "sourceLabel": fabric_source[code].get("sourceLabel", code),
+            "color": fabric_source[code]["color"],
+        }
+        for index, code in enumerate(fabric_codes)
+    ],
+    "excludedUrbanAtlasCodes": ["11300"],
+    "coordinates": green_manifest["density"]["coordinates"],
+    "imageSize": [64, 64],
+    "densityDataUrl": "groenkaart/density/groenkaart-2021-density.tif",
+    "densityBands": green_manifest["density"]["bands"],
+    "densityEncodingScale": 100,
+    "densityNoDataValue": 65535,
+    "scopeIndexUrl": "groenkaart/density/scope-index.png",
+    "municipalityIndexes": green_manifest["density"]["municipalityIndexes"],
+    "fabricMaskUrl": "groenkaart-urban-atlas/urban-fabric-index.png",
+    "statisticsUrl": "groenkaart-urban-atlas/statistics.json",
+}
+(green_comparison_root / "manifest.json").write_text(json.dumps(green_comparison_manifest), encoding="utf-8")
+
 (ROOT / "index.json").write_text(json.dumps({
     "schemaVersion": 3, "datasets": descriptors,
     "comparisons": {
@@ -395,6 +470,10 @@ soil_manifest = {
         "landsat-jaarbak": {
             "comparisonId": "landsat-jaarbak", "primaryLayerId": "landsat-temperature",
             "secondaryLayerId": "jaarbak", "manifestUrl": "landsat-jaarbak/manifest.json",
+        },
+        "groenkaart-urban-atlas": {
+            "comparisonId": "groenkaart-urban-atlas", "primaryLayerId": "groenkaart",
+            "secondaryLayerId": "urban-atlas", "manifestUrl": "groenkaart-urban-atlas/manifest.json",
         },
     },
 }), encoding="utf-8")

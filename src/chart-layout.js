@@ -45,3 +45,23 @@ export function heatIncomeLayout() {
     yDomain: [0, 10],
   });
 }
+
+export function heatPopulationBoxLayout() {
+  return createChartLayout({
+    width: 800,
+    height: 570,
+    margins: { left: 92, right: 34, top: 42, bottom: 118 },
+    xDomain: [.55, 5.45],
+    yDomain: [0, 10],
+  });
+}
+
+export function heatPopulationBarLayout(maximumPopulation = 1) {
+  return createChartLayout({
+    width: 800,
+    height: 500,
+    margins: { left: 108, right: 34, top: 42, bottom: 104 },
+    xDomain: [0, 10],
+    yDomain: [0, Math.max(1, maximumPopulation)],
+  });
+}

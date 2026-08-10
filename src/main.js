@@ -13,6 +13,9 @@ import { validateProductContract } from "./product-contract.js";
 import { createDetailPanel } from "./panel-shell.js";
 import { createProjectIntro } from "./project-intro.js";
 import { safeExternalUrl } from "./security.js";
+import {
+  comparisonContains, comparisonForLayers, comparisonPair, comparisonTargets,
+} from "./comparison-pairs.js";
 
 const elements = {
   map: document.querySelector("#map"),
@@ -92,10 +95,10 @@ const application = {
   activeLayer: "heat",
   activeHeatMetric: DEFAULT_HEAT_METRIC,
   mapControlsCollapsed: false,
-  analysisPairings: {},
   analysisPickMode: null,
   comparisons: new Map(),
   activeComparisonId: null,
+  comparisonSession: null,
   activateAnalysisPairing: null,
   deactivateAnalysisPairing: null,
   surfaceLayout: null,
@@ -104,12 +107,10 @@ const application = {
 
 const activeLayer = () => application.layers?.get(application.activeLayer);
 const activeComparison = () => application.comparisons.get(application.activeComparisonId) ?? null;
-const activeAnalysisTargets = (layer) => {
-  const declared = layer?.getAnalysisTargets?.() ?? [];
-  if (layer?.id !== "landsat-temperature") return declared;
-  return declared.filter((targetId) => [...application.comparisons.values()]
-    .some((comparison) => comparison.primaryLayerId === layer.id && comparison.secondaryLayerId === targetId));
-};
+const activeAnalysisTargets = (layer) => comparisonTargets(
+  layer?.id,
+  [...application.comparisons.keys()],
+);
 const supportsMunicipalitySummary = () => Boolean(activeLayer()?.supportsMunicipalitySummary);
 const supportsRegionSummary = () => Boolean(activeLayer()?.supportsRegionSummary);
 
@@ -123,7 +124,6 @@ function updateMapControlsDisclosure({ refreshMap = true } = {}) {
   elements.mapControlsToggle.title = label;
   elements.mapControlsToggleIcon.textContent = collapsed ? "+" : "\u2212";
   elements.mapControlsBody.hidden = collapsed;
-  elements.aboutButton.hidden = collapsed;
   elements.mapControls.classList.toggle("is-collapsed", collapsed);
 
   if (refreshMap) {
@@ -194,11 +194,12 @@ function updateLayerControls() {
     const layer = application.layers.get(button.dataset.layer);
     const normallyAvailable = Boolean(layer?.isAvailable());
     const pick = application.analysisPickMode;
-    const isPrimary = Boolean(pick && layer?.id === pick.primaryLayerId);
+    const isPrimary = Boolean(pick && layer?.id === pick.initiatorLayerId);
     const isCompatible = Boolean(pick?.targetIds.includes(layer?.id));
     const available = pick ? isCompatible : normallyAvailable;
     const label = layer?.getLabel() ?? button.dataset.layer;
-    const linkedSecondary = application.analysisPairings[application.activeLayer] === layer?.id;
+    const linkedComparison = application.comparisonSession
+      && comparisonContains(application.comparisonSession.id, layer?.id);
     button.replaceChildren();
     if (pick && isCompatible) {
       const icon = document.createElement("span");
@@ -214,13 +215,13 @@ function updateLayerControls() {
       button.removeAttribute("aria-label");
     }
     if (isPrimary) button.setAttribute("aria-label", t("analysisPairing.locked", { layer: label }));
-    if (linkedSecondary && !pick) button.setAttribute("aria-label", t("analysisPairing.comparisonLayer", { layer: label }));
+    if (linkedComparison && !pick) button.setAttribute("aria-label", t("analysisPairing.comparisonLayer", { layer: label }));
     button.setAttribute("aria-disabled", String(!available));
     button.setAttribute("aria-pressed", String(application.activeLayer === layer?.id));
     button.classList.toggle("is-active", application.activeLayer === layer?.id);
     button.classList.toggle("is-comparison-target", isCompatible);
     button.classList.toggle("is-comparison-primary", isPrimary);
-    button.classList.toggle("is-linked-comparison", linkedSecondary && !pick);
+    button.classList.toggle("is-linked-comparison", Boolean(linkedComparison && !pick));
     button.classList.toggle("is-comparison-muted", Boolean(pick && !isCompatible && !isPrimary));
   });
 }
@@ -271,14 +272,11 @@ function updateAnalysisPairing() {
   const targets = activeAnalysisTargets(layer)
     .map((id) => application.layers.get(id))
     .filter((candidate) => candidate?.isAvailable());
-  const picking = application.analysisPickMode?.primaryLayerId === layer?.id;
-  const mapModeAction = layer?.getMapModeAction?.() ?? null;
-  const selectedId = targets.some(({ id }) => id === application.analysisPairings[layer.id])
-    ? application.analysisPairings[layer.id]
-    : "";
-  const selectedComparison = selectedId && activeComparison()?.secondaryLayerId === selectedId
-    ? activeComparison()
-    : null;
+  const picking = application.analysisPickMode?.initiatorLayerId === layer?.id;
+  const selectedComparison = activeComparison()?.isActive() ? activeComparison() : null;
+  const selectedPair = selectedComparison ? comparisonPair(selectedComparison.id) : null;
+  const selectedId = selectedPair?.layers.find((id) => id !== selectedPair.canonicalLayerId) ?? "";
+  const mapModeAction = selectedComparison ? null : layer?.getMapModeAction?.() ?? null;
   const comparisonFailed = Boolean(selectedComparison?.hasLoadError?.());
   elements.analysisPairing.hidden = targets.length === 0 && !mapModeAction;
   elements.mapModeAction.hidden = !mapModeAction;
@@ -301,14 +299,12 @@ function updateAnalysisPairing() {
   elements.analysisPairNote.hidden = !selectedId || picking;
   if (selectedId) {
     elements.analysisPairLabel.textContent = t("analysisPairing.selected", {
-      primary: layer.getLabel(),
+      primary: application.layers.get(selectedPair.canonicalLayerId).getLabel(),
       secondary: application.layers.get(selectedId).getLabel(),
     });
     elements.analysisPairNote.textContent = comparisonFailed
       ? t("analysisPairing.loadFailed")
-      : selectedComparison?.isActive()
-        ? selectedComparison.getActiveNote?.() ?? t("analysisPairing.activeNote")
-        : t("analysisPairing.previewNote");
+      : selectedComparison.getActiveNote?.() ?? t("analysisPairing.activeNote");
   }
   if (picking) {
     elements.analysisPairingHelp.textContent = t("analysisPairing.instruction", { layer: layer.getLabel() });
@@ -320,7 +316,7 @@ function enterAnalysisPickMode(trigger = elements.analysisCompare) {
   const targetIds = activeAnalysisTargets(layer)
     .filter((id) => application.layers.get(id)?.isAvailable());
   if (!targetIds.length) return;
-  application.analysisPickMode = { primaryLayerId: layer.id, targetIds, returnFocus: trigger };
+  application.analysisPickMode = { initiatorLayerId: layer.id, targetIds, returnFocus: trigger };
   updateLayerControls();
   updateAnalysisPairing();
   application.announcement = {
@@ -346,8 +342,7 @@ function cancelAnalysisPickMode({ restoreFocus = true } = {}) {
 async function selectAnalysisPairing(targetId) {
   const pick = application.analysisPickMode;
   if (!pick?.targetIds.includes(targetId)) return false;
-  application.analysisPairings[pick.primaryLayerId] = targetId;
-  const primary = application.layers.get(pick.primaryLayerId);
+  const primary = application.layers.get(pick.initiatorLayerId);
   const secondary = application.layers.get(targetId);
   application.analysisPickMode = null;
   updateLayerControls();
@@ -359,7 +354,7 @@ async function selectAnalysisPairing(targetId) {
   };
   updateAnnouncement();
   try {
-    const activated = await application.activateAnalysisPairing?.(pick.primaryLayerId, targetId);
+    const activated = await application.activateAnalysisPairing?.(pick.initiatorLayerId, targetId);
     if (activated === false) {
       updateAnalysisPairing();
       elements.analysisPairRetry.focus();
@@ -379,11 +374,9 @@ async function selectAnalysisPairing(targetId) {
   return true;
 }
 
-function removeAnalysisPairing() {
-  const layer = activeLayer();
-  if (!layer || !application.analysisPairings[layer.id]) return;
-  delete application.analysisPairings[layer.id];
-  application.deactivateAnalysisPairing?.(layer.id);
+async function removeAnalysisPairing() {
+  if (!activeComparison()?.isActive()) return;
+  await application.deactivateAnalysisPairing?.();
   updateAnalysisPairing();
   application.announcement = { type: "analysisPairing", key: "analysisPairing.removed", parameters: {} };
   updateAnnouncement();
@@ -679,7 +672,7 @@ async function start() {
   const openCurrentScopeSummary = (trigger = elements.municipality) => {
     const comparison = activeComparison();
     if (comparison?.isActive()) {
-      const record = comparison.id === "heat-income"
+      const record = comparison.panelScope === "region"
         ? regionRecord()
         : elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord();
       panel.open(record, trigger, application.activeLayer);
@@ -803,18 +796,34 @@ async function start() {
     });
     application.comparisons.set(comparison.id, comparison);
   }
-  if (import.meta.env.MODE === "local-data") {
-    const heatLayer = application.layers.get("heat");
-    const incomeLayer = application.layers.get("income");
-    const { createHeatIncomeComparison } = await import("./comparisons/heat-income.js");
-    const comparison = createHeatIncomeComparison({
-      scores: data.scores,
-      income: data.income,
-      heatLayer,
-      incomeLayer,
+  if (data.comparisons?.["groenkaart-urban-atlas"]
+    && application.layers.has("groenkaart") && application.layers.has("urban-atlas")) {
+    const { createGroenkaartUrbanAtlasComparison } = await import("./comparisons/groenkaart-urban-atlas.js");
+    const comparison = createGroenkaartUrbanAtlasComparison({
+      descriptor: data.comparisons["groenkaart-urban-atlas"],
+      groenkaartLayer: application.layers.get("groenkaart"),
+      urbanAtlasLayer: application.layers.get("urban-atlas"),
+      urbanAtlas: data.urbanAtlas,
     });
     application.comparisons.set(comparison.id, comparison);
   }
+  const heatLayer = application.layers.get("heat");
+  const { createHeatIncomeComparison } = await import("./comparisons/heat-income.js");
+  const incomeComparison = createHeatIncomeComparison({
+    scores: data.scores,
+    income: data.income,
+    heatLayer,
+    incomeLayer: application.layers.get("income"),
+  });
+  application.comparisons.set(incomeComparison.id, incomeComparison);
+  const { createHeatPopulationComparison } = await import("./comparisons/heat-population.js");
+  const populationComparison = createHeatPopulationComparison({
+    scores: data.scores,
+    population: data.population,
+    heatLayer,
+    populationLayer: application.layers.get("population"),
+  });
+  application.comparisons.set(populationComparison.id, populationComparison);
   validateProductContract(application.layers, application.comparisons, {
     playground: import.meta.env.MODE === "playground",
     localData: import.meta.env.MODE === "local-data",
@@ -826,19 +835,56 @@ async function start() {
     updateAnalysisPairing();
     updateLayerControls();
   }));
-  application.activateAnalysisPairing = async (primaryId, targetId) => {
-    const next = [...application.comparisons.values()].find((comparison) => (
-      comparison.primaryLayerId === primaryId && comparison.secondaryLayerId === targetId
-    ));
+  // Comparison modules are lazy imports, so the initial controls were rendered
+  // before this registry existed. Reconcile once after registration; otherwise
+  // the first active layer would hide a valid Compare action until layer change.
+  updateAnalysisPairing();
+  updateLayerControls();
+  application.activateAnalysisPairing = async (initiatorLayerId, targetId) => {
+    const pair = comparisonForLayers(initiatorLayerId, targetId);
+    const next = pair ? application.comparisons.get(pair.id) : null;
     if (!next) return false;
     const current = activeComparison();
     if (current && current !== next) current.deactivate();
+    const rememberedOptions = Object.fromEntries(["metric", "year", "observation", "dataset"].flatMap((name) => {
+      const value = application.mapController.getLayerOption(initiatorLayerId, name);
+      return value == null ? [] : [[name, value]];
+    }));
+    application.comparisonSession = {
+      id: pair.id,
+      initiatorLayerId,
+      canonicalLayerId: pair.canonicalLayerId,
+      camera: application.mapController.getCamera(),
+      rememberedOptions,
+    };
+    if (application.activeLayer !== pair.canonicalLayerId) {
+      const changed = await application.mapController.setLayer(pair.canonicalLayerId);
+      if (!changed) {
+        application.comparisonSession = null;
+        return false;
+      }
+      application.activeLayer = pair.canonicalLayerId;
+      application.announcement = {
+        type: "analysisPairing", key: "analysisPairing.canonicalChanged",
+        parameters: { layer: application.layers.get(pair.canonicalLayerId).getLabel() },
+      };
+      updateAnnouncement();
+    }
     application.activeComparisonId = next.id;
-    const activated = await next.activate(application.mapController.map);
+    let activated = false;
+    try {
+      activated = await next.activate(application.mapController.map);
+    } catch (error) {
+      console.error(error);
+    }
     if (activated === false) {
+      // Recoverable comparison failures keep their canonical layer and session.
+      // Ordinary Landsat remains visible while the Retry action re-arms the
+      // failed PMTiles source without requiring a layer change.
       renderLegend();
       updateLayerContext();
       updateLayerControls();
+      updateSecondaryControls();
       updateAnalysisPairing();
       return false;
     }
@@ -850,26 +896,39 @@ async function start() {
     updateAnalysisPairing();
     next.setHighlightedSector?.(selectedSectorId);
     panel.open(
-      selectedSectorId ? data.scores[selectedSectorId] : regionRecord(),
+      selectedSectorId
+        ? data.scores[selectedSectorId]
+        : elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(),
       elements.analysisPairChange,
-      primaryId,
+      pair.canonicalLayerId,
     );
     return true;
   };
-  application.deactivateAnalysisPairing = (primaryId) => {
+  application.deactivateAnalysisPairing = async () => {
     const comparison = activeComparison();
-    if (comparison?.primaryLayerId !== primaryId || !comparison.isActive()) return;
+    const session = application.comparisonSession;
+    if (!comparison?.isActive() || !session) return;
     comparison.deactivate();
     application.activeComparisonId = null;
     application.mapController.setPopupModelProvider(null);
+    if (application.activeLayer !== session.initiatorLayerId) {
+      await application.mapController.setLayer(session.initiatorLayerId);
+      application.activeLayer = session.initiatorLayerId;
+    }
+    Object.entries(session.rememberedOptions).forEach(([name, value]) => {
+      application.mapController.setLayerOption(session.initiatorLayerId, name, value);
+    });
+    application.mapController.restoreCamera(session.camera);
+    application.comparisonSession = null;
     renderLegend();
     updateLayerContext();
     updateLayerControls();
-    if (selectedSectorId) panel.open(data.scores[selectedSectorId], elements.analysisPairRemove, primaryId);
-    else if (elements.municipality.value && application.layers.get(primaryId)?.supportsMunicipalitySummary) {
-      panel.open(municipalityRecord(elements.municipality.value), elements.municipality, primaryId);
-    } else if (application.layers.get(primaryId)?.supportsRegionSummary) {
-      panel.open(regionRecord(), elements.analysisPairRemove, primaryId);
+    updateSecondaryControls();
+    if (selectedSectorId) panel.open(data.scores[selectedSectorId], elements.analysisPairRemove, session.initiatorLayerId);
+    else if (elements.municipality.value && application.layers.get(session.initiatorLayerId)?.supportsMunicipalitySummary) {
+      panel.open(municipalityRecord(elements.municipality.value), elements.municipality, session.initiatorLayerId);
+    } else if (application.layers.get(session.initiatorLayerId)?.supportsRegionSummary) {
+      panel.open(regionRecord(), elements.analysisPairRemove, session.initiatorLayerId);
     } else panel.close({ restoreFocus: false });
   };
   application.surfaceLayout = createMapSurfaceLayout({
@@ -994,12 +1053,24 @@ async function start() {
       elements.analysisPairRetry.removeAttribute("aria-busy");
     }
   });
-  elements.analysisPairRemove.addEventListener("click", removeAnalysisPairing);
+  elements.analysisPairRemove.addEventListener("click", () => removeAnalysisPairing());
   elements.analysisPickCancel.addEventListener("click", () => cancelAnalysisPickMode());
   elements.legendDisclosure.addEventListener("toggle", () => {
     if (!application.surfaceLayout?.isApplying()) application.surfaceLayout?.requestLegend(elements.legendDisclosure.open);
   });
   elements.legend.addEventListener("click", (event) => {
+    const greenUrbanButton = event.target.closest("[data-green-urban-selector]");
+    if (greenUrbanButton && activeComparison()?.isActive()) {
+      const method = greenUrbanButton.dataset.greenUrbanSelector === "green"
+        ? "toggleGreenClass" : "toggleFabricClass";
+      const result = activeComparison()[method]?.(greenUrbanButton.dataset.greenUrbanValue);
+      if (result?.minimum) {
+        const feedback = elements.legend.querySelector("[data-green-urban-feedback]");
+        if (feedback) feedback.textContent = t("greenUrbanComparison.minimumSelection");
+        elements.announcement.textContent = t("greenUrbanComparison.minimumSelection");
+      }
+      return;
+    }
     const densityButton = event.target.closest("[data-density-class]");
     if (densityButton && activeLayer()?.toggleDensityClass) {
       const result = activeLayer().toggleDensityClass(densityButton.dataset.densityClass);
@@ -1070,9 +1141,10 @@ async function start() {
       }
       button.setAttribute("aria-busy", "true");
       const changedLayer = application.activeLayer !== layerId;
-      if (activeComparison()?.isActive() && layerId !== activeComparison().primaryLayerId) {
+      if (activeComparison()?.isActive() && layerId !== application.comparisonSession?.canonicalLayerId) {
         activeComparison().deactivate();
         application.activeComparisonId = null;
+        application.comparisonSession = null;
         application.mapController.setPopupModelProvider(null);
       }
       let activated;
@@ -1095,19 +1167,6 @@ async function start() {
         suppressPanelFallback = false;
       }
       if (changedLayer) clearSectorSelection();
-      if (application.analysisPairings[layerId]) {
-        const targetId = application.analysisPairings[layerId];
-        const comparison = [...application.comparisons.values()].find((item) => (
-          item.primaryLayerId === layerId && item.secondaryLayerId === targetId
-        ));
-        if (comparison && !comparison.isActive()) {
-          application.activeComparisonId = comparison.id;
-          await comparison.activate(application.mapController.map);
-          await comparison.setMunicipality(elements.municipality.value);
-          application.mapController.setPopupModelProvider(comparison.getPopupModel?.bind(comparison));
-          comparison.setHighlightedSector?.(selectedSectorId);
-        }
-      }
       if (application.analysisPickMode) cancelAnalysisPickMode({ restoreFocus: false });
       elements.layerHelp.textContent = "";
       updateLayerControls();

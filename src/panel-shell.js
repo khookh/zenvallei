@@ -226,13 +226,37 @@ export function createDetailPanel({
     const scatterPoint = event.target.closest("[data-scatter-sector]");
     if (scatterPoint && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      const points = [...scatterPoint.closest("[data-heat-income-chart]").querySelectorAll("[data-scatter-sector]")];
+      const points = [...scatterPoint.closest("[data-sector-comparison-chart]").querySelectorAll("[data-scatter-sector]")];
       const currentIndex = points.indexOf(scatterPoint);
       const nextIndex = event.key === "Home" ? 0
         : event.key === "End" ? points.length - 1
           : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + points.length) % points.length;
       points.forEach((point, index) => point.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
       points[nextIndex]?.focus();
+      return;
+    }
+    const populationBar = event.target.closest("[data-population-score-bar]");
+    if (populationBar && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const bars = [...populationBar.closest("[data-heat-population-bar-chart]").querySelectorAll("[data-population-score-bar]")];
+      const currentIndex = bars.indexOf(populationBar);
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? bars.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + bars.length) % bars.length;
+      bars.forEach((bar, index) => bar.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
+      bars[nextIndex]?.focus();
+      return;
+    }
+    const densityBox = event.target.closest("[data-green-density-box]");
+    if (densityBox && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const boxes = [...densityBox.closest("[data-green-density-chart]").querySelectorAll("[data-green-density-box]")];
+      const currentIndex = boxes.indexOf(densityBox);
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? boxes.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + boxes.length) % boxes.length;
+      boxes.forEach((box, index) => box.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
+      boxes[nextIndex]?.focus();
       return;
     }
     const histogramBin = event.target.closest("[data-histogram-bin]");
@@ -269,7 +293,7 @@ export function createDetailPanel({
   const updateScatterPoint = (event) => {
     const point = event.target.closest?.("[data-scatter-sector]");
     if (!point) return;
-    const chart = point.closest("[data-heat-income-chart]");
+    const chart = point.closest("[data-sector-comparison-chart]");
     chart?.querySelectorAll("[data-scatter-sector].is-highlighted").forEach((item) => item.classList.remove("is-highlighted"));
     point.classList.add("is-highlighted");
     const output = chart?.querySelector("[data-scatter-output]");
@@ -278,6 +302,23 @@ export function createDetailPanel({
   };
   content.addEventListener("focusin", updateScatterPoint);
   content.addEventListener("pointerover", updateScatterPoint);
+  const updatePopulationBar = (event) => {
+    const bar = event.target.closest?.("[data-population-score-bar]");
+    if (!bar) return;
+    const chart = bar.closest("[data-heat-population-bar-chart]");
+    const output = chart?.querySelector("[data-population-bar-output]");
+    if (output) output.textContent = bar.dataset.barLabel;
+  };
+  content.addEventListener("focusin", updatePopulationBar);
+  content.addEventListener("pointerover", updatePopulationBar);
+  const updateGreenDensityBox = (event) => {
+    const box = event.target.closest?.("[data-green-density-box]");
+    if (!box) return;
+    const output = box.closest("[data-green-density-chart]")?.querySelector("[data-green-density-output]");
+    if (output) output.textContent = box.dataset.greenDensityLabel;
+  };
+  content.addEventListener("focusin", updateGreenDensityBox);
+  content.addEventListener("pointerover", updateGreenDensityBox);
   content.addEventListener("pointerout", (event) => {
     if (!event.target.closest?.("[data-scatter-sector]") || event.relatedTarget?.closest?.("[data-scatter-sector]")) return;
     onSectorHover?.("");

@@ -492,7 +492,7 @@ def update_index():
             } if manifest.get("density") else None,
         }
     comparisons = {}
-    for comparison_id in ("landsat-urban-atlas", "landsat-jaarbak"):
+    for comparison_id in ("landsat-urban-atlas", "landsat-jaarbak", "groenkaart-urban-atlas"):
         comparison_path = CACHE_ROOT / comparison_id / "manifest.json"
         if not comparison_path.exists():
             continue

@@ -254,37 +254,27 @@ test("serves provider-neutral security headers", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true");
 });
 
-test("keeps complete map attribution collapsed until requested", async ({ page }) => {
-  const attribution = page.locator(".maplibregl-ctrl-attrib");
-  const attributionButton = page.locator(".maplibregl-ctrl-attrib-button");
-  const attributionDetails = page.locator(".maplibregl-ctrl-attrib-inner");
+test("opens complete bilingual map and data sources without covering the map", async ({ page }) => {
+  const sourceButton = page.locator(".map-source-control");
+  const dialog = page.locator(".map-source-dialog");
+  await expect(sourceButton).toHaveCSS("width", "44px");
+  await expect(sourceButton).toHaveCSS("height", "44px");
+  await expect(dialog).not.toBeVisible();
 
-  await expect(attribution).not.toHaveAttribute("open", "");
-  await expect(attribution).not.toHaveClass(/maplibregl-compact-show/);
-  await expect(attributionButton).toHaveAttribute("aria-expanded", "false");
-  await expect(attributionButton).toHaveCSS("width", "44px");
-  await expect(attributionButton).toHaveCSS("height", "44px");
-  await expect(attributionButton).toHaveCSS("background-repeat", "no-repeat");
-  await expect(attributionButton).toHaveCSS("background-position", "50% 50%");
-  await expect(attributionButton).toHaveCSS("background-size", "24px 24px");
-  await expect(attributionDetails).toBeHidden();
-
-  // Expanded map controls intentionally occupy most of a narrow screen. The
-  // app's disclosure leaves the map controls, including attribution, reachable.
-  const controlsToggle = page.locator("#map-controls-toggle");
-  if (await controlsToggle.isVisible()) await controlsToggle.click();
-
-  await attributionButton.click();
-  await expect(attribution).toHaveClass(/maplibregl-compact-show/);
-  await expect(attributionButton).toHaveAttribute("aria-expanded", "true");
-  await expect(attributionDetails).toBeVisible();
-  await expect(attributionDetails).toContainText("DOI");
-  await expect(attributionDetails).toContainText("Urban Atlas DOI");
-
-  await attributionButton.click();
-  await expect(attribution).not.toHaveClass(/maplibregl-compact-show/);
-  await expect(attributionButton).toHaveAttribute("aria-expanded", "false");
-  await expect(attributionDetails).toBeHidden();
+  await sourceButton.click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Kaart- en databronnen");
+  await expect(dialog).toContainText("OpenStreetMap");
+  await expect(dialog).toContainText("Urban Atlas DOI");
+  await expect(dialog.locator('a[target="_blank"]')).not.toHaveCount(0);
+  await expect(dialog.locator('a[target="_blank"]' ).first()).toHaveAttribute("rel", "noopener noreferrer");
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(sourceButton).toBeFocused();
+  await page.locator("#language-toggle").click();
+  await sourceButton.click();
+  await expect(dialog).toContainText("Map and data sources");
+  await page.keyboard.press("Escape");
 });
 
 test("discloses map controls without changing exploration state", async ({ page }) => {
@@ -326,7 +316,7 @@ test("discloses map controls without changing exploration state", async ({ page 
   await expect(controls).toHaveClass(/is-collapsed/);
   await expect(controlsBody).toBeHidden();
   await expect(page.locator("#map-controls-title")).toBeVisible();
-  await expect(page.locator("#about-button")).toBeHidden();
+  await expect(page.locator("#about-button")).toBeVisible();
   await expect(controlsToggle).toHaveAttribute("aria-expanded", "false");
   await expect(controlsToggle).toHaveAttribute("aria-label", "Kaartbediening uitklappen");
   await expect(page.locator("#map-controls-toggle-icon")).toHaveText("+");
@@ -529,7 +519,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-disabled", "true");
   await page.locator('[data-layer="income"]').click();
   await expect(page.locator("#analysis-pair-label")).toContainText("Mediaan belastbaar inkomen");
-  await expect(page.locator("#analysis-pair-note")).toContainText("nog geen extra laag");
+  await expect(page.locator("#analysis-pair-note")).toContainText("vergelijkingsgrafiek");
   expect(await page.evaluate(() => ({
     center: window.__heatMap.map.getCenter().toArray(),
     zoom: window.__heatMap.map.getZoom(),
@@ -537,8 +527,9 @@ test("loads all sectors and opens a complete score breakdown from search", async
   }))).toEqual(comparisonMapState);
   expect(await page.evaluate(() => window.__heatMap.map.getLayer("statbel-income-fill")
     && window.__heatMap.map.getLayoutProperty("statbel-income-fill", "visibility"))).not.toBe("visible");
+  await showControls(page);
   await page.locator("#analysis-pair-change").click();
-  await expect(page.locator('[data-layer="income"]')).toBeFocused();
+  await expect(page.locator(".layer-button.is-comparison-target").first()).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.locator("#analysis-pair-change")).toBeFocused();
   await expect(page.locator("#layer-switch")).not.toHaveClass(/is-comparison-mode/);
@@ -775,7 +766,9 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await expect(page.locator("#legend-content")).toContainText("Kunstmatige oppervlakken");
   await expect(page.locator("#legend-content")).toContainText("Kruidachtige vegetatie");
   await expect(page.locator("#legend-content")).toContainText("Groen stedelijk gebied (publieke toegang)");
-  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Urban Atlas DOI");
+  await page.locator(".map-source-control").click();
+  await expect(page.locator(".map-source-dialog")).toContainText("Urban Atlas DOI");
+  await page.keyboard.press("Escape");
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-opacity"))).toBe(0.68);
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-color"))).toContain("#ccf24d");
 
