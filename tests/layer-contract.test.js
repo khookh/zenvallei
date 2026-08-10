@@ -9,7 +9,6 @@ function validLayer(id) {
     categoryId: "heat",
     isAvailable: () => true,
     getLabel: () => id,
-    getDatasetStatus: () => "ready",
     getContext: () => ({ meta: "meta", text: "text" }),
     getLegendModel: () => ({ title: id, layout: "groups", groups: [] }),
     getPopupModel: () => ({ title: id, lines: [] }),
@@ -39,6 +38,22 @@ function incomeManifest() {
   };
 }
 
+function populationManifest() {
+  const stats = Object.fromEntries(Array.from({ length: 154 }, (_, index) => [`S${index}`, {
+    sourceStatus: "available", population: 100, areaHa: 10, densityPerHa: 10,
+  }]));
+  const dataset = { sectorStats: stats, municipalityStats: {}, regionStats: {}, source: {} };
+  return {
+    schemaVersion: 1,
+    datasetId: "population-density",
+    kind: "dataset-switch",
+    availableDatasets: ["statbel-2025", "flanders-2019"],
+    defaultDataset: "statbel-2025",
+    bands: Array.from({ length: 8 }, (_, index) => ({ id: `b${index}`, color: "#123456" })),
+    datasets: { "statbel-2025": dataset, "flanders-2019": dataset },
+  };
+}
+
 describe("layer module contract", () => {
   it("accepts simple modules and rejects missing methods", () => {
     expect(defineLayer(validLayer("example")).id).toBe("example");
@@ -51,7 +66,7 @@ describe("layer module contract", () => {
       .toThrow("Duplicate layer id 'same'");
   });
 
-  it("registers the three always-built core modules without optional catalogue modules", () => {
+  it("registers the four always-built core modules without optional catalogue modules", () => {
     const registry = buildLayerRegistry({
       scores: {
         A: { sectorId: "A", status: "scored", scores: { final: 6, heat: 7, vulnerability: 8 } },
@@ -64,14 +79,16 @@ describe("layer module contract", () => {
         ]),
       },
       urbanAtlas: null,
+      population: populationManifest(),
       income: incomeManifest(),
     });
-    expect([...registry.keys()]).toEqual(["heat", "urban-atlas", "income"]);
+    expect([...registry.keys()]).toEqual(["heat", "urban-atlas", "population", "income"]);
     expect(registry.get("heat").isAvailable()).toBe(true);
     expect(registry.get("urban-atlas").isAvailable()).toBe(false);
     expect(LAYER_CATEGORIES.map(({ id }) => id)).toEqual(["heat", "land-green", "demography"]);
     expect(registry.get("heat").categoryId).toBe("heat");
     expect(registry.get("urban-atlas").categoryId).toBe("land-green");
+    expect(registry.get("population").categoryId).toBe("demography");
     expect(registry.get("income").categoryId).toBe("demography");
   });
 
@@ -85,6 +102,7 @@ describe("layer module contract", () => {
         ]),
       },
       urbanAtlas: null,
+      population: populationManifest(),
       income: incomeManifest(),
       notebookTest: {
         available: true,
@@ -102,7 +120,7 @@ describe("layer module contract", () => {
     };
     expect([...buildLayerRegistry(data).keys()]).not.toContain("notebook-test");
     const playground = buildLayerRegistry(data, { playground: true });
-    expect([...playground.keys()]).toEqual(["heat", "urban-atlas", "income", "notebook-test"]);
+    expect([...playground.keys()]).toEqual(["heat", "urban-atlas", "population", "income", "notebook-test"]);
     expect(playground.get("notebook-test").isAvailable()).toBe(true);
     expect(playground.get("notebook-test").supportsMunicipalitySummary).toBe(true);
   });
@@ -117,6 +135,7 @@ describe("layer module contract", () => {
         ]),
       },
       urbanAtlas: null,
+      population: populationManifest(),
       income: incomeManifest(),
     };
     const missing = buildLayerRegistry({ ...base, notebookTest: { available: false, missing: true } }, { playground: true })

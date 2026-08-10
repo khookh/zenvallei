@@ -18,6 +18,8 @@ export function createDetailPanel({
   onOpen,
   onPresentationRequest,
   onClose,
+  isPersistentView = () => false,
+  onSectorHover,
 }) {
   if (typeof getPanelModel !== "function" || typeof getAboutModel !== "function") {
     throw new TypeError("The detail panel requires layer-owned panel and about model providers.");
@@ -28,6 +30,10 @@ export function createDetailPanel({
   let activeHeatMetric = normalizeHeatMetric(heatMetric);
   let presentation = "closed";
   let openSectionIds = new Set();
+  let suspendedPersistentView = null;
+  let suspendedPresentation = "expanded";
+
+  const persistentCurrentView = () => Boolean(currentView && isPersistentView(currentView));
 
   const updatePeekSummary = () => {
     const title = content.querySelector("h2")?.textContent?.trim() ?? "";
@@ -55,6 +61,10 @@ export function createDetailPanel({
     toggleButton.title = minimiseLabel;
     peekButton.setAttribute("aria-label", expandLabel);
     peekButton.title = expandLabel;
+    const closeLabel = persistentCurrentView() ? minimiseLabel : t("panel.close");
+    closeButton.setAttribute("aria-label", closeLabel);
+    closeButton.title = closeLabel;
+    closeButton.querySelector("path")?.setAttribute("d", persistentCurrentView() ? "M6 12h12" : "m6 6 12 12M18 6 6 18");
     if (visible) updatePeekSummary();
   };
 
@@ -103,9 +113,23 @@ export function createDetailPanel({
     updatePeekSummary();
   };
 
-  const close = ({ restoreFocus = true } = {}) => {
+  const close = ({ restoreFocus = true, force = false } = {}) => {
+    if (!force && currentView?.type === "about" && suspendedPersistentView) {
+      currentView = suspendedPersistentView;
+      suspendedPersistentView = null;
+      renderCurrentView({ preserveState: false, focusPanel: true });
+      applyPresentation(suspendedPresentation);
+      onPresentationRequest?.(suspendedPresentation, closeButton);
+      return;
+    }
+    if (!force && persistentCurrentView()) {
+      applyPresentation("peek");
+      onPresentationRequest?.("peek", closeButton);
+      return;
+    }
     const closedView = currentView;
     currentView = null;
+    suspendedPersistentView = null;
     applyPresentation("closed");
     onClose?.(closedView, returnFocusElement);
     if (restoreFocus && returnFocusElement instanceof HTMLElement) {
@@ -123,8 +147,17 @@ export function createDetailPanel({
     onOpen?.();
   };
 
-  const open = (record, triggerElement = null, layerId = "heat") => show({ type: "record", record, layerId }, triggerElement);
-  const openAbout = (triggerElement = null) => show({ type: "about" }, triggerElement);
+  const open = (record, triggerElement = null, layerId = "heat") => {
+    suspendedPersistentView = null;
+    show({ type: "record", record, layerId }, triggerElement);
+  };
+  const openAbout = (triggerElement = null) => {
+    if (persistentCurrentView()) {
+      suspendedPersistentView = currentView;
+      suspendedPresentation = presentation === "closed" ? "expanded" : presentation;
+    }
+    show({ type: "about" }, triggerElement);
+  };
   const setPanelLanguage = () => {
     if (currentView && presentation !== "closed") {
       renderCurrentView({ preserveState: true });
@@ -161,7 +194,14 @@ export function createDetailPanel({
         dialog.dataset.returnFocusKey = "comparison-chart-expand";
         expand.dataset.focusKey = "comparison-chart-expand";
         dialog.showModal();
+        const resetChartScroll = () => {
+          dialog.scrollTop = 0;
+          const body = dialog.querySelector(".comparison-chart-dialog-content");
+          if (body) body.scrollTop = 0;
+        };
+        resetChartScroll();
         dialog.querySelector("[data-close-comparison-chart]")?.focus();
+        requestAnimationFrame(() => requestAnimationFrame(resetChartScroll));
       }
       return;
     }
@@ -183,6 +223,18 @@ export function createDetailPanel({
     else openSectionIds.delete(section.dataset.section);
   }, true);
   content.addEventListener("keydown", (event) => {
+    const scatterPoint = event.target.closest("[data-scatter-sector]");
+    if (scatterPoint && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const points = [...scatterPoint.closest("[data-heat-income-chart]").querySelectorAll("[data-scatter-sector]")];
+      const currentIndex = points.indexOf(scatterPoint);
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? points.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + points.length) % points.length;
+      points.forEach((point, index) => point.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
+      points[nextIndex]?.focus();
+      return;
+    }
     const histogramBin = event.target.closest("[data-histogram-bin]");
     if (histogramBin && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
       event.preventDefault();
@@ -214,6 +266,26 @@ export function createDetailPanel({
   };
   content.addEventListener("focusin", updateHistogramOutput);
   content.addEventListener("pointerover", updateHistogramOutput);
+  const updateScatterPoint = (event) => {
+    const point = event.target.closest?.("[data-scatter-sector]");
+    if (!point) return;
+    const chart = point.closest("[data-heat-income-chart]");
+    chart?.querySelectorAll("[data-scatter-sector].is-highlighted").forEach((item) => item.classList.remove("is-highlighted"));
+    point.classList.add("is-highlighted");
+    const output = chart?.querySelector("[data-scatter-output]");
+    if (output) output.textContent = point.dataset.scatterLabel;
+    onSectorHover?.(point.dataset.scatterSector);
+  };
+  content.addEventListener("focusin", updateScatterPoint);
+  content.addEventListener("pointerover", updateScatterPoint);
+  content.addEventListener("pointerout", (event) => {
+    if (!event.target.closest?.("[data-scatter-sector]") || event.relatedTarget?.closest?.("[data-scatter-sector]")) return;
+    onSectorHover?.("");
+  });
+  content.addEventListener("focusout", (event) => {
+    if (!event.target.closest?.("[data-scatter-sector]") || event.relatedTarget?.closest?.("[data-scatter-sector]")) return;
+    onSectorHover?.("");
+  });
   return {
     open,
     openAbout,

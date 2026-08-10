@@ -375,6 +375,12 @@ def validate_prepared_manifest(manifest):
                 tolerance = max(0.01, stats["completeAreaHa"] * 0.005)
                 if abs(total - stats["completeAreaHa"]) > tolerance:
                     raise ValueError(f"{observation['id']} {area_id}: clear, cloud and missing areas do not reconcile.")
+        region = observation.get("regionStats")
+        if not region:
+            raise ValueError(f"{observation['id']}: complete-Zennevallei statistics are missing.")
+        region_total = region["clearAreaHa"] + region["cloudAreaHa"] + region["otherNoDataAreaHa"]
+        if abs(region_total - region["completeAreaHa"]) > max(0.01, region["completeAreaHa"] * 0.005):
+            raise ValueError(f"{observation['id']}: Zennevallei clear, cloud and missing areas do not reconcile.")
     return manifest
 
 
@@ -507,6 +513,9 @@ def prepare_landsat_temperature():
         candidate, temperature, status, uncertainty, analysis_path = analysis_cache[selection["candidate"]["date"]]
         sector_stats = _area_statistics(temperature, status, uncertainty, grid, sectors, "sectorId")
         municipality_stats = _area_statistics(temperature, status, uncertainty, grid, municipalities, "municipality")
+        region_stats = _one_area_stats(
+            temperature, status, uncertainty, grid, projected_union, union_area,
+        )
         visual = output_root / f"{observation_id}-visual.tif"
         if not visual.exists():
             _visual_derivative(analysis_path, visual)
@@ -536,6 +545,7 @@ def prepare_landsat_temperature():
             "collectionCategory": "T1", "correction": "L2SP",
             "pmtilesVariants": variants, "pmtilesSha256": hashes,
             "sectorStats": sector_stats, "municipalityStats": municipality_stats,
+            "regionStats": region_stats,
         }
         observations[observation_id] = observation
         timeline_items.append({

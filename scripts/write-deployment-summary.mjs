@@ -50,7 +50,7 @@ export function buildDeploymentSummary(environment = process.env) {
   } else if (liveSucceeded && environment.LIVE_APPLICATION_OUTCOME === "failure") {
     lines.push("The requested commit is live, but the application smoke test failed. Inspect the named browser assertion before sharing the release.");
   } else if (liveSucceeded) {
-    lines.push("No action is required. The live seven-layer product contract and both Landsat comparisons passed their browser smoke test.");
+    lines.push("No action is required. The live eight-layer product contract and both Landsat comparisons passed their browser smoke test.");
   } else if (environment.PYTHON_OUTCOME === "failure") {
     lines.push("Reproduce the failure with `python -m pytest playground/ndvi/tests -q`.");
   } else if (environment.APPLICATION_OUTCOME === "failure") {

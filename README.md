@@ -1,6 +1,6 @@
 # Greenwave
 
-Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. The map combines official heat-vulnerability scores, Landsat surface temperature, Copernicus Urban Atlas, Flemish soil and land-cover products, agricultural parcels and Statbel fiscal income over an OpenStreetMap background.
+Greenwave is a bilingual static map for the 154 Statbel sectors in the Zennevallei Primary Care Zone. The map combines official heat-vulnerability scores, Landsat surface temperature, Copernicus Urban Atlas, Flemish soil and land-cover products, agricultural parcels, Statbel population density and fiscal income over an OpenStreetMap background.
 
 The interface starts in English. `NL` switches the complete interface to Dutch for the current page. The application has no backend, accounts, cookies, browser storage, analytics or live score calculation.
 
@@ -37,6 +37,7 @@ Heat scores and Urban Atlas are committed as browser-ready derivatives, so a clo
 pnpm data:prepare -- --scores "C:\path\scores.xlsx" --sectors "C:\path\statbel-sectors.zip"
 pnpm urban-atlas:prepare -- --source "C:\path\official-urban-atlas-product"
 pnpm income:prepare       # download and validate Statbel income 2019-2023
+pnpm population:prepare   # prepare the 2025 grid and separate 2019 model
 pnpm brand:prepare
 ```
 
@@ -73,6 +74,7 @@ Open `playground/ndvi` in VS Code and select that interpreter as the notebook ke
 - [Architecture](docs/architecture.md)
 - [Data inventory](docs/data-inventory.md)
 - [Data pipeline](docs/data-pipeline.md)
+- [Demography data](docs/demography-data.md)
 - [Add a layer](docs/add-a-layer.md)
 - [Local official layers](docs/local-official-layers.md)
 - [Landsat surface temperature](docs/landsat-surface-temperature.md)

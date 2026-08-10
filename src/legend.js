@@ -5,6 +5,10 @@ function legendItem(item, { score = false } = {}) {
   if (score) container.className = "legend-item legend-score";
   const swatch = document.createElement(score ? "span" : "i");
   swatch.style.setProperty("--swatch", item.color);
+  if (item.symbol) {
+    swatch.classList.add("legend-symbol");
+    swatch.textContent = item.symbol;
+  }
   const label = document.createElement(score ? "b" : "span");
   label.textContent = item.label;
   container.append(swatch, label);

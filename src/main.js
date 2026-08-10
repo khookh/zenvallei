@@ -21,7 +21,6 @@ const elements = {
   mapControlsToggle: document.querySelector("#map-controls-toggle"),
   mapControlsToggleIcon: document.querySelector("#map-controls-toggle-icon"),
   activeLayerTitle: document.querySelector("#active-layer-title"),
-  datasetStatus: document.querySelector("#dataset-status span:last-child"),
   languageToggle: document.querySelector("#language-toggle"),
   municipality: document.querySelector("#municipality-select"),
   sectorSearch: document.querySelector("#sector-search"),
@@ -124,6 +123,7 @@ function updateMapControlsDisclosure({ refreshMap = true } = {}) {
   elements.mapControlsToggle.title = label;
   elements.mapControlsToggleIcon.textContent = collapsed ? "+" : "\u2212";
   elements.mapControlsBody.hidden = collapsed;
+  elements.aboutButton.hidden = collapsed;
   elements.mapControls.classList.toggle("is-collapsed", collapsed);
 
   if (refreshMap) {
@@ -138,24 +138,6 @@ function updateLanguageButton() {
   elements.languageToggle.lang = targetLanguage;
   elements.languageToggle.setAttribute("aria-label", label);
   elements.languageToggle.title = label;
-}
-
-function updateDatasetStatus() {
-  if (application.datasetState === "error") {
-    elements.datasetStatus.textContent = t("dataset.unavailable");
-    return;
-  }
-  if (application.datasetState === "ready" && application.basemapUnavailable) {
-    elements.datasetStatus.textContent = t("dataset.basemapUnavailable");
-    return;
-  }
-  if (application.datasetState === "ready") {
-    elements.datasetStatus.textContent = activeLayer().getDatasetStatus({
-      sectorCount: application.data.provenance?.output?.sectorCount ?? 154,
-    });
-    return;
-  }
-  elements.datasetStatus.textContent = t("loading.data");
 }
 
 function updateAnnouncement() {
@@ -199,7 +181,6 @@ function showFatalError(error) {
   elements.mapLoading.hidden = true;
   elements.errorBanner.hidden = false;
   elements.errorMessage.textContent = errorMessageFor(error);
-  updateDatasetStatus();
   console.error(error);
 }
 
@@ -326,7 +307,7 @@ function updateAnalysisPairing() {
     elements.analysisPairNote.textContent = comparisonFailed
       ? t("analysisPairing.loadFailed")
       : selectedComparison?.isActive()
-        ? t("analysisPairing.activeNote")
+        ? selectedComparison.getActiveNote?.() ?? t("analysisPairing.activeNote")
         : t("analysisPairing.previewNote");
   }
   if (picking) {
@@ -480,8 +461,9 @@ function updateLayerContext() {
   elements.activeLayerTitle.textContent = comparison?.getLabel() ?? layer.getLabel();
   elements.layerContextMeta.textContent = context.meta;
   elements.layerContextCopy.textContent = context.text;
-  elements.layerContextNote.textContent = context.note ?? "";
-  elements.layerContextNote.hidden = !context.note;
+  const notes = [context.note, application.basemapUnavailable ? t("dataset.basemapUnavailable") : ""].filter(Boolean);
+  elements.layerContextNote.textContent = notes.join(" ");
+  elements.layerContextNote.hidden = notes.length === 0;
   const sources = (context.sources ?? []).flatMap((source) => {
     const url = safeExternalUrl(source.url);
     return url ? [{ ...source, url }] : [];
@@ -538,7 +520,6 @@ function applyLanguage(language) {
   applyDocumentTranslations();
   updateLanguageButton();
   updateMapControlsDisclosure({ refreshMap: false });
-  updateDatasetStatus();
   if (application.layers) {
     updateLayerControls();
     updateSecondaryControls();
@@ -634,6 +615,7 @@ async function start() {
     methodology: data.methodology,
     urbanAtlas: data.urbanAtlas,
     income: data.income,
+    population: data.population,
     officialLayers: data.officialLayers,
     comparisons: data.comparisons,
   };
@@ -645,13 +627,19 @@ async function start() {
     peekButton: elements.panelPeek,
     peekLabel: elements.panelPeekLabel,
     peekValue: elements.panelPeekValue,
-    getPanelModel: (layerId, record) => (
-      layerId === "landsat-temperature" && activeComparison()?.isActive()
-        ? activeComparison().getPanelModel(record, sharedPanelData)
-        : application.layers.get(layerId).getPanelModel(record, sharedPanelData)
-    ),
+    getPanelModel: (layerId, record) => {
+      const comparison = activeComparison();
+      return comparison?.isActive() && comparison.primaryLayerId === layerId
+        ? comparison.getPanelModel(record, sharedPanelData)
+        : application.layers.get(layerId).getPanelModel(record, sharedPanelData);
+    },
     getAboutModel: () => ({ ...sharedPanelData, provenance: data.provenance }),
     onLayerOptionChange: (name, value) => activateLayerOption(name, value),
+    isPersistentView: (view) => view?.type === "record"
+      && activeComparison()?.isActive()
+      && activeComparison().primaryLayerId === view.layerId
+      && activeComparison().isPanelPersistent,
+    onSectorHover: (sectorId) => application.mapController?.setExternalHover(sectorId),
     onOpen: () => application.surfaceLayout?.requestPanel("expanded"),
     onPresentationRequest: (presentation) => application.surfaceLayout?.requestPanel(presentation),
     onClose: (closedView, returnFocusElement) => {
@@ -681,15 +669,56 @@ async function start() {
   });
   application.panel = panel;
 
+  const clearSectorSelection = () => {
+    selectedSectorId = "";
+    elements.sectorSearch.value = "";
+    application.mapController?.setSelected("");
+    activeComparison()?.setHighlightedSector?.("");
+  };
+
+  const openCurrentScopeSummary = (trigger = elements.municipality) => {
+    const comparison = activeComparison();
+    if (comparison?.isActive()) {
+      const record = comparison.id === "heat-income"
+        ? regionRecord()
+        : elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord();
+      panel.open(record, trigger, application.activeLayer);
+      application.surfaceLayout?.requestPanel("expanded");
+      return true;
+    }
+    if (elements.municipality.value && supportsMunicipalitySummary()) {
+      panel.open(municipalityRecord(elements.municipality.value), trigger, application.activeLayer);
+      application.surfaceLayout?.requestPanel("expanded");
+      return true;
+    }
+    if (!elements.municipality.value && supportsRegionSummary()) {
+      panel.open(regionRecord(), trigger, application.activeLayer);
+      application.surfaceLayout?.requestPanel("expanded");
+      return true;
+    }
+    panel.close({ restoreFocus: false, force: true });
+    return false;
+  };
+
+  const commitAreaScope = (trigger = elements.municipality) => {
+    const municipality = elements.municipality.value;
+    clearSectorSelection();
+    populateSectorOptions(data.scores, municipality);
+    application.mapController.setMunicipality(municipality);
+    activeComparison()?.setMunicipality(municipality);
+    openCurrentScopeSummary(trigger);
+  };
+
   function activateHeatMetric(metric) {
     if (application.activeLayer !== "heat" || metric === application.activeHeatMetric) return false;
     if (!application.mapController?.setLayerOption("heat", "metric", metric)) return false;
     application.activeHeatMetric = metric;
     updateSecondaryControls();
     updateLayerContext();
-    updateDatasetStatus();
     renderLegend();
-    panel.refresh();
+    const comparison = activeComparison();
+    if (comparison?.isActive() && comparison.refreshMetric) comparison.refreshMetric();
+    else panel.refresh();
     application.announcement = { type: "heatMetric", metric };
     updateAnnouncement();
     return true;
@@ -701,8 +730,8 @@ async function start() {
     if (!layer || !application.mapController.setLayerOption(layer.id, name, value)) return false;
     updateSecondaryControls();
     updateLayerContext();
-    updateDatasetStatus();
     renderLegend();
+    activeComparison()?.refreshMetric?.();
     panel.refresh();
     return true;
   }
@@ -715,7 +744,6 @@ async function start() {
     updateLayerControls();
     updateSecondaryControls();
     updateLayerContext();
-    updateDatasetStatus();
     renderLegend();
     panel.refresh();
     activeComparison()?.refreshObservation();
@@ -729,6 +757,7 @@ async function start() {
     if (!record) return;
     selectedSectorId = sectorId;
     application.mapController.setSelected(sectorId, { focus });
+    activeComparison()?.setHighlightedSector?.(sectorId);
     elements.sectorSearch.value = sectorSearchLabel(record);
     panel.open(record, trigger ?? (source === "search" ? elements.sectorSearch : document.activeElement), application.activeLayer);
     application.announcement = {
@@ -747,7 +776,8 @@ async function start() {
     onSectorSelect: selectSector,
     onBasemapError: () => {
       application.basemapUnavailable = true;
-      updateDatasetStatus();
+      updateLayerContext();
+      elements.announcement.textContent = t("dataset.basemapUnavailable");
     },
     onLayerError: (layerId, error) => {
       console.error(error);
@@ -773,8 +803,21 @@ async function start() {
     });
     application.comparisons.set(comparison.id, comparison);
   }
+  if (import.meta.env.MODE === "local-data") {
+    const heatLayer = application.layers.get("heat");
+    const incomeLayer = application.layers.get("income");
+    const { createHeatIncomeComparison } = await import("./comparisons/heat-income.js");
+    const comparison = createHeatIncomeComparison({
+      scores: data.scores,
+      income: data.income,
+      heatLayer,
+      incomeLayer,
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
   validateProductContract(application.layers, application.comparisons, {
     playground: import.meta.env.MODE === "playground",
+    localData: import.meta.env.MODE === "local-data",
   });
   application.comparisons.forEach((comparison) => comparison.subscribe(() => {
     if (!comparison.isActive()) return;
@@ -800,14 +843,16 @@ async function start() {
       return false;
     }
     await next.setMunicipality(elements.municipality.value);
+    application.mapController.setPopupModelProvider(next.getPopupModel?.bind(next));
     renderLegend();
     updateLayerContext();
     updateLayerControls();
     updateAnalysisPairing();
-    if (selectedSectorId) panel.refresh();
-    else panel.open(
-      elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(),
-      elements.analysisPairChange, "landsat-temperature",
+    next.setHighlightedSector?.(selectedSectorId);
+    panel.open(
+      selectedSectorId ? data.scores[selectedSectorId] : regionRecord(),
+      elements.analysisPairChange,
+      primaryId,
     );
     return true;
   };
@@ -816,12 +861,15 @@ async function start() {
     if (comparison?.primaryLayerId !== primaryId || !comparison.isActive()) return;
     comparison.deactivate();
     application.activeComparisonId = null;
+    application.mapController.setPopupModelProvider(null);
     renderLegend();
     updateLayerContext();
     updateLayerControls();
-    if (selectedSectorId) panel.refresh();
-    else if (elements.municipality.value) {
-      panel.open(municipalityRecord(elements.municipality.value), elements.municipality, "landsat-temperature");
+    if (selectedSectorId) panel.open(data.scores[selectedSectorId], elements.analysisPairRemove, primaryId);
+    else if (elements.municipality.value && application.layers.get(primaryId)?.supportsMunicipalitySummary) {
+      panel.open(municipalityRecord(elements.municipality.value), elements.municipality, primaryId);
+    } else if (application.layers.get(primaryId)?.supportsRegionSummary) {
+      panel.open(regionRecord(), elements.analysisPairRemove, primaryId);
     } else panel.close({ restoreFocus: false });
   };
   application.surfaceLayout = createMapSurfaceLayout({
@@ -852,24 +900,15 @@ async function start() {
   performance.mark("heat-map-ready");
   performance.measure("heat-map-initialization", "heat-map-start", "heat-map-ready");
 
-  elements.municipality.addEventListener("change", () => {
-    const municipality = elements.municipality.value;
-    populateSectorOptions(data.scores, municipality);
-    elements.sectorSearch.value = "";
-    if (selectedSectorId && (!municipality || data.scores[selectedSectorId]?.municipality !== municipality)) {
-      panel.close({ restoreFocus: false });
-    }
-    application.mapController.setMunicipality(municipality);
-    activeComparison()?.setMunicipality(municipality);
-    if (!selectedSectorId && activeComparison()?.isActive()) {
-      panel.open(municipality ? municipalityRecord(municipality) : regionRecord(), elements.municipality, application.activeLayer);
-    } else if (!selectedSectorId && municipality && supportsMunicipalitySummary()) {
-      panel.open(municipalityRecord(municipality), elements.municipality, application.activeLayer);
-    } else if (!selectedSectorId && !municipality && supportsRegionSummary()) {
-      panel.open(regionRecord(), elements.municipality, application.activeLayer);
-    } else if (!municipality && panel.isMunicipalitySummary?.()) {
-      panel.close({ restoreFocus: false });
-    }
+  elements.municipality.addEventListener("change", () => commitAreaScope(elements.municipality));
+  // Native selects do not emit `change` when their current value is chosen
+  // again. A deliberate click or keyboard activation still commits the scope
+  // so users can leave sector detail without choosing a different area first.
+  elements.municipality.addEventListener("click", () => {
+    if (selectedSectorId) commitAreaScope(elements.municipality);
+  });
+  elements.municipality.addEventListener("keydown", (event) => {
+    if (selectedSectorId && ["Enter", " "].includes(event.key)) commitAreaScope(elements.municipality);
   });
 
   const search = () => {
@@ -897,10 +936,7 @@ async function start() {
   elements.sectorSearch.addEventListener("input", () => elements.sectorSearch.setCustomValidity(""));
 
   elements.resetView.addEventListener("click", () => {
-    application.mapController.resetView();
-    if (!selectedSectorId && !elements.municipality.value && supportsRegionSummary()) {
-      panel.open(regionRecord(), elements.resetView, application.activeLayer);
-    }
+    commitAreaScope(elements.resetView);
   });
   elements.aboutButton.addEventListener("click", () => panel.openAbout(elements.aboutButton));
   elements.secondarySwitch.addEventListener("click", (event) => {
@@ -1034,9 +1070,10 @@ async function start() {
       }
       button.setAttribute("aria-busy", "true");
       const changedLayer = application.activeLayer !== layerId;
-      if (activeComparison()?.isActive() && layerId !== "landsat-temperature") {
+      if (activeComparison()?.isActive() && layerId !== activeComparison().primaryLayerId) {
         activeComparison().deactivate();
         application.activeComparisonId = null;
+        application.mapController.setPopupModelProvider(null);
       }
       let activated;
       try {
@@ -1056,15 +1093,19 @@ async function start() {
         suppressPanelFallback = true;
         panel.close({ restoreFocus: false });
         suppressPanelFallback = false;
-        elements.sectorSearch.value = "";
       }
-      if (layerId === "landsat-temperature" && application.analysisPairings["landsat-temperature"]) {
-        const targetId = application.analysisPairings["landsat-temperature"];
-        const comparison = [...application.comparisons.values()].find((item) => item.secondaryLayerId === targetId);
+      if (changedLayer) clearSectorSelection();
+      if (application.analysisPairings[layerId]) {
+        const targetId = application.analysisPairings[layerId];
+        const comparison = [...application.comparisons.values()].find((item) => (
+          item.primaryLayerId === layerId && item.secondaryLayerId === targetId
+        ));
         if (comparison && !comparison.isActive()) {
           application.activeComparisonId = comparison.id;
           await comparison.activate(application.mapController.map);
           await comparison.setMunicipality(elements.municipality.value);
+          application.mapController.setPopupModelProvider(comparison.getPopupModel?.bind(comparison));
+          comparison.setHighlightedSector?.(selectedSectorId);
         }
       }
       if (application.analysisPickMode) cancelAnalysisPickMode({ restoreFocus: false });
@@ -1072,11 +1113,9 @@ async function start() {
       updateLayerControls();
       updateSecondaryControls();
       updateLayerContext();
-      updateDatasetStatus();
       renderLegend();
       if (changedLayer) {
-        // A new top-level layer starts without results from the previous
-        // dataset. Overview or an area selection opens its own summary.
+        openCurrentScopeSummary(button);
       } else if (selectedSectorId) {
         panel.setActiveLayer(layerId);
       } else if (activeComparison()?.isActive()) {
@@ -1101,7 +1140,6 @@ async function start() {
 
   elements.mapLoading.hidden = true;
   application.datasetState = "ready";
-  updateDatasetStatus();
 }
 
 function moveSegmentFocus(event, buttons, currentButton) {

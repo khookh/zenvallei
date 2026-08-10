@@ -11,7 +11,6 @@
  * @property {boolean} [supportsRegionSummary] Whether the panel has a meaningful complete-region aggregate.
  * @property {() => boolean} isAvailable Whether the prepared browser asset can be used.
  * @property {() => string} getLabel Current translated layer label.
- * @property {(context: object) => string} getDatasetStatus Current translated status text.
  * @property {(context: object) => {meta: string, text: string, note?: string, sources?: Array<{label:string,url:string}>}} getContext First-glance explanation.
  * @property {() => LegendModel} getLegendModel Plain data consumed by the legend UI.
  * @property {(feature: object, record: object) => PopupModel} getPopupModel Plain popup content.
@@ -37,7 +36,7 @@
  * @property {() => Promise<void>} [waitUntilReady] Resolve when the currently requested temporal map source is ready.
  */
 
-/** @typedef {{title: string, note?: string, footnote?: string, layout: "scale"|"groups", groups: Array<{title?: string, items: Array<{label: string, color: string, value?: string}>}>}} LegendModel */
+/** @typedef {{title: string, note?: string, footnote?: string, layout: "scale"|"groups", groups: Array<{title?: string, items: Array<{label: string, color: string, value?: string, symbol?: string}>}>}} LegendModel */
 /** @typedef {{title: string, subtitle?: string, lines: string[]}} PopupModel */
 /** @typedef {{template: string, [key: string]: unknown}} SectorPanelModel */
 /** @typedef {{id: string, optionName: string, prompt?: string, ariaLabel: string, options: Array<{id: string, label: string, active: boolean, disabled?: boolean, disabledReason?: string}>}} SecondaryControlModel */
@@ -47,7 +46,6 @@
 const REQUIRED_METHODS = Object.freeze([
   "isAvailable",
   "getLabel",
-  "getDatasetStatus",
   "getContext",
   "getLegendModel",
   "getPopupModel",

@@ -3,16 +3,35 @@
 from datetime import datetime, timezone
 
 import numpy as np
+from rasterio.transform import from_origin
+from shapely.geometry import box
 
 from greenwave_local_layers.landsat import (
     EXCLUDED_OBSERVATION_DATES,
     HEATWAVES,
+    _one_area_stats,
     classify_quality,
     group_items_by_date,
     is_observation_excluded,
     select_clearest_candidate,
     scale_surface_temperature,
 )
+
+
+def test_complete_region_statistics_use_the_analytical_raster_directly():
+    temperature = np.array([[20.0, 30.0], [np.nan, np.nan]], dtype=np.float32)
+    status = np.array([[1, 1], [2, 0]], dtype=np.uint8)
+    uncertainty = np.array([[0.5, 0.7], [np.nan, np.nan]], dtype=np.float32)
+    grid = {
+        "width": 2, "height": 2, "crs": "EPSG:32631",
+        "transform": from_origin(0, 60, 30, 30),
+    }
+    stats = _one_area_stats(temperature, status, uncertainty, grid, box(0, 0, 60, 60), 0.36)
+    assert stats["clearAreaHa"] == 0.18
+    assert stats["cloudAreaHa"] == 0.09
+    assert stats["otherNoDataAreaHa"] == 0.09
+    assert stats["meanC"] == 25.0
+    assert stats["medianC"] == 20.0
 
 
 def test_official_kmi_periods_are_pinned():

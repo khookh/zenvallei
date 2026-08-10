@@ -54,7 +54,6 @@ export function createIncomeLayer({ income: input }) {
     supportsMunicipalitySummary: false,
     isAvailable: () => true,
     getLabel: () => t("layers.income"),
-    getDatasetStatus: () => t("dataset.readyIncome", { year: activeYear }),
     getContext: () => ({
       meta: t("income.contextMeta", { year: activeYear }),
       text: t("income.contextText"),

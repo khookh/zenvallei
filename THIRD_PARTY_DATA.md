@@ -12,11 +12,17 @@ The 2026 heat, vulnerability, final and indicator scores come from the [Heat vul
 
 [Fiscal statistics by statistical sector](https://statbel.fgov.be/en/open-data/fiscal-statistics-income-statistical-sector) supply median and average net taxable income per declaration and published interquartile indicators for 2019-2023. `income.json` preserves the source values and missing states under Statbel's CC BY 4.0 terms. The application does not reconstruct an income distribution or calculate municipality medians from sector medians.
 
+[The variable population grid 2025](https://statbel.fgov.be/en/themes/datalab/variable-cell-grid) supplies privacy-protected cells from 125 m to 1 km. The compatible 2025 statistical-sector table supplies exact selected-area totals. `population.json` keeps both roles separate and records Statbel's confidentiality-related displacement rules.
+
+## Department of Environment & Spatial Development, Government of Flanders
+
+[Population density per hectare, 2019](https://www.vlaanderen.be/datavindplaats/catalogus/inwonersdichtheid-per-ha-vlaanderen-toestand-2019) supplies the historical 100 m model. The displayed raster preserves its values; result panels use the matching Statbel 2019 sector population rather than reconstructing totals from model cells.
+
 ## Copernicus Urban Atlas
 
 Urban Atlas 2021 FUA BE001L3 supplies the public land-cover and land-use polygons. DOI: <https://doi.org/10.2909/05ae1ee1-e550-4e66-b74d-4926322d981a>. Derived assets identify modifications and display the required European Union Copernicus acknowledgement. See the [CLMS data policy](https://land.copernicus.eu/en/data-policy).
 
-## Local official sources
+## Official raster sources
 
 - [JaarBAK](https://www.vlaanderen.be/datavindplaats/catalogus/jaarlijkse-bodemafdekkingskaart-jaarbak-1-m-resolutie-2023), Department of Environment & Spatial Development, Government of Flanders, via MercatorNet.
 - [Groenkaart Vlaanderen](https://www.vlaanderen.be/datavindplaats/catalogus/groenkaart-vlaanderen-2021), Agentschap voor Natuur en Bos / Digitaal Vlaanderen. The local attribution uses `Bron: ANB`.
@@ -25,7 +31,7 @@ Urban Atlas 2021 FUA BE001L3 supplies the public land-cover and land-use polygon
 - [Landbouwgebruikspercelen 2025](https://www.vlaanderen.be/datavindplaats/catalogus/landbouwgebruikspercelen-2025), Agency for Agriculture and Fisheries, Government of Flanders.
 - [Royal Meteorological Institute of Belgium heatwave periods and definition](https://www.meteo.be/nl/klimaat/klimaatverandering-in-belgie/klimaattrends-in-ukkel/luchttemperatuur/zomer-indices/hittegolven/hittegolven-in-ukkel) (RMI; KMI in Dutch).
 
-Their rasters, analytical derivatives and PMTiles are ignored local research inputs and are not distributed by GitHub Pages.
+Raw source rasters and analytical caches remain ignored. The validated clipped browser derivatives required by the active layers are distributed through GitHub Pages with their source attribution.
 
 ## Sentinel-2 research playground
 

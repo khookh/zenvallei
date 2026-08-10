@@ -22,6 +22,19 @@ pnpm income:prepare -- --source "C:\data\TF_PSNL_INC_TAX_SECTOR.zip"
 
 The command joins by sector identifier, keeps 2019-2023 source indicators and records unavailable medians as `null`. It never derives municipality medians or a synthetic income distribution.
 
+Prepare the two population-density views:
+
+```powershell
+pnpm population:prepare
+# or reuse all four verified official downloads
+pnpm population:prepare -- --grid "C:\data\population-grid-2025.zip" `
+  --sectors-2025 "C:\data\sectors-2025-old.xlsx" `
+  --sectors-2019 "C:\data\sectors-2019.xlsx" `
+  --flanders-2019 "C:\data\population-density-2019.zip"
+```
+
+This keeps the methods separate. The 2025 GeoJSON is a privacy-protected density display; exact selected-area totals come from the compatible Statbel sector table. The 2019 map preserves the official Government of Flanders 100 m model, while its panels use matching Statbel 2019 totals. Source downloads remain in `.cache/population`.
+
 The command requires 154 exact identifier joins and preserves every geometry vertex during EPSG:3812 to WGS84 conversion. Outputs are `sectors.geojson`, `scores.json`, `methodology.json` and `provenance.json`.
 
 Prepare Urban Atlas from a verified official source:

@@ -86,6 +86,7 @@ describe("local temporal raster contract", () => {
       id: "landsat-2023-06-13", kind: "heatwave", acquiredAt: "2023-06-13T10:47:00Z",
       heatwaveIds: ["2023-06"], pmtilesVariants: { all: "landsat-temperature/test.pmtiles" },
       sectorStats, municipalityStats: Object.fromEntries(municipalities.map((name) => [name, sectorStats.S0])),
+      regionStats: sectorStats.S0,
     };
     const payload = {
       schemaVersion: 2, datasetId: "landsat-temperature",
@@ -105,6 +106,7 @@ describe("local temporal raster contract", () => {
     expect(layer.getTemporalControl().items[0]).toMatchObject({ kind: "heatwave", value: observation.id });
     expect(layer.getTemporalControl().items[0].ariaLabel).toContain("Heatwave observation");
     expect(layer.getOption("observation")).toBe(observation.id);
+    expect(layer.supportsRegionSummary).toBe(true);
     expect(layer.getLegendModel().title).toMatch(/12:47|12\.47/);
     expect(layer.getLegendModel().title).toMatch(/CEST|GMT\+2/);
   });

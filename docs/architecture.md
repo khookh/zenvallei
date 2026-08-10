@@ -49,11 +49,11 @@ Every JSON manifest has a `schemaVersion`. Missing versions are temporarily inte
 
 Each module registered in `src/layers/registry.js` provides:
 
-- identity, translated label, status and first-glance context;
+- identity, translated label and first-glance context;
 - availability and optional secondary controls;
 - an optional temporal control for discrete years or semantic observation timelines;
 
-The normal registry contains heat vulnerability, Landsat temperature, Urban Atlas, JaarBAK, Groenkaart, Landgebruik and Statbel income. Local-data mode resolves the same four prepared raster modules from the ignored working catalogue. Retired experiments remain outside the registry and are not shipped.
+The normal registry contains heat vulnerability, Landsat temperature, Urban Atlas, JaarBAK, Groenkaart, Landgebruik, Statbel population density and Statbel income. Local-data mode resolves the same four prepared raster modules from the ignored working catalogue. Retired experiments remain outside the registry and are not shipped.
 - lazy `mount`, visibility and municipality-filter functions;
 - plain legend, popup and panel models;
 - attribution entries.

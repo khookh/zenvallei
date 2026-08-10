@@ -210,7 +210,6 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
     isAvailable: () => Boolean(descriptor?.available !== false && !loadError),
     getUnavailableReasonKey: () => loadError ? "landgebruik.loadError" : "landgebruik.unavailable",
     getLabel: () => t("layers.landgebruik"),
-    getDatasetStatus: () => t("dataset.readyLandgebruik", { year: activeYear }),
     getContext: () => ({
       meta: t("landgebruik.contextMeta", { year: activeYear }),
       text: t(activeMode === "agriculture" ? "landgebruik.agricultureContext" : "landgebruik.contextText"),

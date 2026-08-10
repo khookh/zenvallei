@@ -17,6 +17,7 @@
     "lan:check": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-lan.ps1 -Check",
     "data:prepare": "node scripts/prepare-data.mjs",
     "income:prepare": "node scripts/prepare-income.mjs",
+    "population:prepare": "node scripts/prepare-population.mjs",
     "urban-atlas:prepare": "node scripts/prepare-urban-atlas.mjs",
     "local-data:setup": "py -3.11 -m venv processing/local-layers/.venv && processing\\local-layers\\.venv\\Scripts\\python.exe -m pip install -e \"processing/local-layers[test]\"",
     "local-data:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers",

@@ -49,4 +49,12 @@ describe("active documentation", () => {
     expect(landsat).toContain("Urban Atlas 2021");
     expect(landsat).toContain("JaarBAK soil sealing");
   });
+
+  it("documents population sources without presenting partial language indicators as residents", async () => {
+    const guide = await fs.readFile(path.join(projectRoot, "docs", "demography-data.md"), "utf8");
+    expect(guide).toContain("Current grid · 2025");
+    expect(guide).toContain("100 m model · 2019");
+    expect(guide).toContain("last language census was in 1947");
+    expect(guide).toContain("cannot represent the Dutch, French or other-language distribution of all residents");
+  });
 });

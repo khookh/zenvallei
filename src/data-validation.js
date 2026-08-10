@@ -6,6 +6,7 @@ const SUPPORTED_SCHEMA_VERSIONS = Object.freeze({
   provenance: [1],
   urbanAtlas: [1],
   income: [1],
+  population: [1],
 });
 
 export function schemaVersionOf(payload) {
@@ -40,12 +41,13 @@ function assertFeatureCollection(geojson) {
 }
 
 /** Validate contracts at the browser boundary before MapLibre receives data. */
-export function validateApplicationData({ geojson, scorePayload, methodology, provenance, urbanAtlas, income }) {
+export function validateApplicationData({ geojson, scorePayload, methodology, provenance, urbanAtlas, income, population }) {
   assertSupportedSchema("scores", scorePayload);
   assertSupportedSchema("methodology", methodology);
   assertSupportedSchema("provenance", provenance);
   if (urbanAtlas && !urbanAtlas.loadError) assertSupportedSchema("urbanAtlas", urbanAtlas);
   assertSupportedSchema("income", income);
+  assertSupportedSchema("population", population);
 
   const sectorIds = assertFeatureCollection(geojson);
   const scores = scorePayload?.sectors;
@@ -81,6 +83,27 @@ export function validateApplicationData({ geojson, scorePayload, methodology, pr
       if (!["available", "not-published", "sector-unmatched"].includes(record?.sourceStatus)
         || (record.medianNetTaxableIncome !== null && !Number.isFinite(record.medianNetTaxableIncome))) {
         throw new Error(`income.json ${year} contains an invalid record for '${sectorId}'.`);
+      }
+    });
+  });
+  if (population?.datasetId !== "population-density"
+    || population.kind !== "dataset-switch"
+    || population.defaultDataset !== "statbel-2025"
+    || JSON.stringify(population.availableDatasets) !== JSON.stringify(["statbel-2025", "flanders-2019"])) {
+    throw new Error("population.json does not contain the supported two-dataset contract.");
+  }
+  population.availableDatasets.forEach((datasetId) => {
+    const dataset = population.datasets?.[datasetId];
+    const stats = dataset?.sectorStats;
+    const ids = Object.keys(stats ?? {});
+    if (ids.length !== sectorIds.size || ids.some((sectorId) => !sectorIds.has(sectorId))) {
+      throw new Error(`population.json ${datasetId} statistics do not match the sector geometry.`);
+    }
+    ids.forEach((sectorId) => {
+      const record = stats[sectorId];
+      if (!Number.isFinite(record?.areaHa)
+        || (record.population !== null && (!Number.isFinite(record.population) || !Number.isFinite(record.densityPerHa)))) {
+        throw new Error(`population.json ${datasetId} contains an invalid record for '${sectorId}'.`);
       }
     });
   });

@@ -95,6 +95,7 @@ export function createMapController({
   const featureById = new Map(geojson.features.map((feature) => [feature.properties.sectorId, feature]));
   let activeMunicipality = "";
   let activeLayerId = initialLayerId;
+  let popupModelProvider = null;
   let selectedSectorId = "";
   let viewportPaddingOverride = null;
   let basemapErrorReported = false;
@@ -286,7 +287,7 @@ export function createMapController({
           map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: true });
           if (!inspectPoint(event.lngLat)) {
             const record = scores[feature.properties.sectorId];
-            const model = currentLayer().getPopupModel(feature, record);
+            const model = popupModelProvider?.(feature, record) ?? currentLayer().getPopupModel(feature, record);
             popup.setLngLat(event.lngLat).setDOMContent(renderPopup(model)).addTo(map);
           }
         });
@@ -421,6 +422,26 @@ export function createMapController({
           && Math.max(southwest.y, northeast.y) <= canvas.clientHeight - padding.bottom;
         if (!fullyVisible) fit(bounds, { maxZoom: 15.5 });
       }
+    },
+    setExternalHover(sectorId = "") {
+      if (hoveredId && hoveredId !== sectorId) {
+        map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
+      }
+      hoveredId = sectorId || null;
+      if (hoveredId) map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: true });
+    },
+    setPopupModelProvider(provider = null) {
+      popupModelProvider = typeof provider === "function" ? provider : null;
+      popup.remove();
+    },
+    async ensureLayer(layerId) {
+      const layer = layers.get(layerId);
+      if (!layer || !await layer.mount(map, {
+        sectorSourceId: SECTOR_SOURCE_ID,
+        beforeLayerId: COMMON_LAYER_IDS.hit,
+      })) return false;
+      layer.applyFilter(map, activeFilter(), { municipality: activeMunicipality });
+      return true;
     },
     resetView() {
       fit(collectionBounds(geojson, activeMunicipality), { maxZoom: activeMunicipality ? 13.5 : 12 });

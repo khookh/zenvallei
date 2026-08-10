@@ -39,7 +39,8 @@ export function validateLandsatManifest(manifest) {
     const observation = manifest.observations[item.value];
     if (!observation?.pmtilesVariants?.all
       || Object.keys(observation.sectorStats ?? {}).length !== 154
-      || Object.keys(observation.municipalityStats ?? {}).length !== 7) {
+      || Object.keys(observation.municipalityStats ?? {}).length !== 7
+      || !observation.regionStats) {
       throw new TypeError(`Landsat observation '${item.value}' is incomplete.`);
     }
   }
@@ -115,9 +116,9 @@ function observationFor(manifest, descriptor, id) {
 
 function scopedStats(observation, record) {
   if (!observation) return null;
-  return record.scope === "municipality"
-    ? observation.municipalityStats?.[record.municipality]
-    : observation.sectorStats?.[record.sectorId];
+  if (record.scope === "region") return observation.regionStats;
+  if (record.scope === "municipality") return observation.municipalityStats?.[record.municipality];
+  return observation.sectorStats?.[record.sectorId];
 }
 
 function kindLabel(kind) {
@@ -174,10 +175,10 @@ export function createLandsatTemperatureLayer({ descriptor: inputDescriptor, loa
     id: DATASET_ID,
     categoryId: "heat",
     supportsMunicipalitySummary: true,
+    supportsRegionSummary: true,
     isAvailable: () => Boolean(descriptor.available !== false && !loadError),
     getUnavailableReasonKey: () => loadError ? "landsat.loadError" : "landsat.unavailable",
     getLabel: () => t("layers.landsatTemperature"),
-    getDatasetStatus: () => t("dataset.readyLandsat", { date: localDateTime(current()?.acquiredAt) }),
     getContext: () => ({
       meta: t("landsat.contextMeta", {
         date: localDateTime(current()?.acquiredAt),

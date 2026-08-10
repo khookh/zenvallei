@@ -3,6 +3,7 @@ import { createHeatLayer } from "./heat-layer.js";
 import { createUrbanAtlasLayer } from "./urban-atlas-layer.js";
 import { createNotebookTestLayer } from "./notebook-test-layer.js";
 import { createIncomeLayer } from "./income-layer.js";
+import { createPopulationLayer } from "./population-layer.js";
 import { validateLayerCategories } from "./categories.js";
 
 /**
@@ -17,6 +18,7 @@ export function buildLayerRegistry(data, options = {}) {
       initialMetric: options.initialHeatMetric,
     }),
     createUrbanAtlasLayer({ urbanAtlas: data.urbanAtlas }),
+    createPopulationLayer({ population: data.population }),
     createIncomeLayer({ income: data.income }),
   ];
   if (options.playground) layers.push(createNotebookTestLayer({ notebookTest: data.notebookTest }));

@@ -29,6 +29,16 @@ function validPayload() {
         sectorStats: { A: incomeRecord },
       }])),
     },
+    population: {
+      schemaVersion: 1,
+      datasetId: "population-density",
+      kind: "dataset-switch",
+      availableDatasets: ["statbel-2025", "flanders-2019"],
+      defaultDataset: "statbel-2025",
+      datasets: Object.fromEntries(["statbel-2025", "flanders-2019"].map((datasetId) => [datasetId, {
+        sectorStats: { A: { sourceStatus: "available", population: 100, areaHa: 10, densityPerHa: 10 } },
+      }])),
+    },
   };
 }
 

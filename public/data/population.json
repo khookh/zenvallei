@@ -1,0 +1,2106 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "population-density",
+  "kind": "dataset-switch",
+  "availableDatasets": [
+    "statbel-2025",
+    "flanders-2019"
+  ],
+  "defaultDataset": "statbel-2025",
+  "unit": "inhabitants-per-hectare",
+  "noDataColor": "#EAE2DE",
+  "bands": [
+    {
+      "id": "zero",
+      "minimum": 0,
+      "maximum": 0,
+      "color": "#f2f3f5"
+    },
+    {
+      "id": "under-5",
+      "minimum": 5e-324,
+      "maximum": 5,
+      "color": "#edf8fb"
+    },
+    {
+      "id": "5-15",
+      "minimum": 5,
+      "maximum": 15,
+      "color": "#d7b5d8"
+    },
+    {
+      "id": "15-30",
+      "minimum": 15,
+      "maximum": 30,
+      "color": "#c994c7"
+    },
+    {
+      "id": "30-60",
+      "minimum": 30,
+      "maximum": 60,
+      "color": "#9e9ac8"
+    },
+    {
+      "id": "60-100",
+      "minimum": 60,
+      "maximum": 100,
+      "color": "#756bb1"
+    },
+    {
+      "id": "100-200",
+      "minimum": 100,
+      "maximum": 200,
+      "color": "#54278f"
+    },
+    {
+      "id": "200-plus",
+      "minimum": 200,
+      "maximum": null,
+      "color": "#2d004b"
+    }
+  ],
+  "datasets": {
+    "statbel-2025": {
+      "kind": "variable-vector-grid",
+      "referenceDate": "2025-01-01",
+      "resolutionM": [
+        125,
+        250,
+        500,
+        1000
+      ],
+      "mapUrl": "data/population/population-grid-2025.geojson",
+      "cellCount": 1503,
+      "sectorStats": {
+        "23003A001": {
+          "sourceStatus": "available",
+          "population": 1212,
+          "areaHa": 51.4202310175811,
+          "densityPerHa": 23.57048920269543
+        },
+        "23003A012": {
+          "sourceStatus": "available",
+          "population": 2157,
+          "areaHa": 95.8856395543493,
+          "densityPerHa": 22.49554792589544
+        },
+        "23003A022": {
+          "sourceStatus": "available",
+          "population": 543,
+          "areaHa": 24.9641093333999,
+          "densityPerHa": 21.75122664094053
+        },
+        "23003A081": {
+          "sourceStatus": "available",
+          "population": 173,
+          "areaHa": 134.524870841968,
+          "densityPerHa": 1.286007553229546
+        },
+        "23003A09-": {
+          "sourceStatus": "available",
+          "population": 248,
+          "areaHa": 44.8654216111916,
+          "densityPerHa": 5.527642248616178
+        },
+        "23003A11-": {
+          "sourceStatus": "available",
+          "population": 786,
+          "areaHa": 53.8716127561999,
+          "densityPerHa": 14.59024446803
+        },
+        "23003A212": {
+          "sourceStatus": "available",
+          "population": 203,
+          "areaHa": 24.3991407389127,
+          "densityPerHa": 8.319965123863879
+        },
+        "23003A291": {
+          "sourceStatus": "available",
+          "population": 17,
+          "areaHa": 95.5424695103658,
+          "densityPerHa": 0.1779313439051897
+        },
+        "23003A31-": {
+          "sourceStatus": "available",
+          "population": 893,
+          "areaHa": 101.645703413048,
+          "densityPerHa": 8.785418074890984
+        },
+        "23003B00-": {
+          "sourceStatus": "available",
+          "population": 873,
+          "areaHa": 35.7220182892482,
+          "densityPerHa": 24.438708723878577
+        },
+        "23003B01-": {
+          "sourceStatus": "available",
+          "population": 1000,
+          "areaHa": 46.387164602951,
+          "densityPerHa": 21.557687531873487
+        },
+        "23003B02-": {
+          "sourceStatus": "available",
+          "population": 1229,
+          "areaHa": 75.5531671840505,
+          "densityPerHa": 16.266690673682913
+        },
+        "23003B032": {
+          "sourceStatus": "available",
+          "population": 832,
+          "areaHa": 63.9477036348233,
+          "densityPerHa": 13.010631386408798
+        },
+        "23003B043": {
+          "sourceStatus": "available",
+          "population": 433,
+          "areaHa": 20.2775382539423,
+          "densityPerHa": 21.35367689003459
+        },
+        "23003B081": {
+          "sourceStatus": "available",
+          "population": 412,
+          "areaHa": 235.8854944136,
+          "densityPerHa": 1.7466101551696183
+        },
+        "23003B09-": {
+          "sourceStatus": "available",
+          "population": 895,
+          "areaHa": 116.272634717751,
+          "densityPerHa": 7.697425986540949
+        },
+        "23003B114": {
+          "sourceStatus": "available",
+          "population": 554,
+          "areaHa": 30.0815096288196,
+          "densityPerHa": 18.416628913771007
+        },
+        "23003C00-": {
+          "sourceStatus": "available",
+          "population": 1037,
+          "areaHa": 33.3549787682479,
+          "densityPerHa": 31.089811425308618
+        },
+        "23003C010": {
+          "sourceStatus": "available",
+          "population": 434,
+          "areaHa": 28.2232677711224,
+          "densityPerHa": 15.377383069867689
+        },
+        "23003C022": {
+          "sourceStatus": "available",
+          "population": 1033,
+          "areaHa": 49.2657081061132,
+          "densityPerHa": 20.96793164476649
+        },
+        "23003C033": {
+          "sourceStatus": "available",
+          "population": 422,
+          "areaHa": 28.424608485347,
+          "densityPerHa": 14.846290678640049
+        },
+        "23003C081": {
+          "sourceStatus": "available",
+          "population": 1886,
+          "areaHa": 387.020374953763,
+          "densityPerHa": 4.873128450214847
+        },
+        "23003C090": {
+          "sourceStatus": "available",
+          "population": 835,
+          "areaHa": 436.572812578412,
+          "densityPerHa": 1.9126248267006485
+        },
+        "23003D00-": {
+          "sourceStatus": "available",
+          "population": 2015,
+          "areaHa": 86.4311691800571,
+          "densityPerHa": 23.313348866104842
+        },
+        "23003D01-": {
+          "sourceStatus": "available",
+          "population": 587,
+          "areaHa": 20.1883435824185,
+          "densityPerHa": 29.076184363694054
+        },
+        "23003D030": {
+          "sourceStatus": "available",
+          "population": 375,
+          "areaHa": 40.4150974296657,
+          "densityPerHa": 9.278710775165434
+        },
+        "23003D042": {
+          "sourceStatus": "available",
+          "population": 267,
+          "areaHa": 14.4259314457824,
+          "densityPerHa": 18.50833694888109
+        },
+        "23003D091": {
+          "sourceStatus": "available",
+          "population": 76,
+          "areaHa": 72.2036395360696,
+          "densityPerHa": 1.0525785194253803
+        },
+        "23003D0MS": {
+          "sourceStatus": "available",
+          "population": 1,
+          "areaHa": 18.7386678371652,
+          "densityPerHa": 0.05336558653420695
+        },
+        "23003D0NS": {
+          "sourceStatus": "available",
+          "population": 18,
+          "areaHa": 39.2100724637667,
+          "densityPerHa": 0.4590657162552675
+        },
+        "23003E00-": {
+          "sourceStatus": "available",
+          "population": 2580,
+          "areaHa": 56.5843225669194,
+          "densityPerHa": 45.59566825155087
+        },
+        "23003E01-": {
+          "sourceStatus": "available",
+          "population": 881,
+          "areaHa": 35.1184049506283,
+          "densityPerHa": 25.086560771725427
+        },
+        "23003E032": {
+          "sourceStatus": "available",
+          "population": 394,
+          "areaHa": 30.0082648843449,
+          "densityPerHa": 13.129716147152081
+        },
+        "23003E07-": {
+          "sourceStatus": "available",
+          "population": 15,
+          "areaHa": 59.0084241774716,
+          "densityPerHa": 0.2542009926393991
+        },
+        "23003E083": {
+          "sourceStatus": "available",
+          "population": 366,
+          "areaHa": 118.046302909055,
+          "densityPerHa": 3.100478295215844
+        },
+        "23003E0MS": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 19.2201294775181,
+          "densityPerHa": 0
+        },
+        "23003E0NS": {
+          "sourceStatus": "available",
+          "population": 15,
+          "areaHa": 19.4031218629684,
+          "densityPerHa": 0.7730714730307432
+        },
+        "23003E0PS": {
+          "sourceStatus": "available",
+          "population": 123,
+          "areaHa": 129.209147373957,
+          "densityPerHa": 0.9519449860930783
+        },
+        "23003E11-": {
+          "sourceStatus": "available",
+          "population": 770,
+          "areaHa": 67.8159162604522,
+          "densityPerHa": 11.354266704039746
+        },
+        "23027A00-": {
+          "sourceStatus": "available",
+          "population": 2930,
+          "areaHa": 35.2848967734808,
+          "densityPerHa": 83.03836110984773
+        },
+        "23027A011": {
+          "sourceStatus": "available",
+          "population": 1869,
+          "areaHa": 30.9522459182997,
+          "densityPerHa": 60.3833403538256
+        },
+        "23027A02-": {
+          "sourceStatus": "available",
+          "population": 1166,
+          "areaHa": 33.8415125978865,
+          "densityPerHa": 34.45472470024345
+        },
+        "23027A03-": {
+          "sourceStatus": "available",
+          "population": 2052,
+          "areaHa": 99.8453790555308,
+          "densityPerHa": 20.551777352247253
+        },
+        "23027A042": {
+          "sourceStatus": "available",
+          "population": 1573,
+          "areaHa": 60.6788117556159,
+          "densityPerHa": 25.92338172895116
+        },
+        "23027A052": {
+          "sourceStatus": "available",
+          "population": 1248,
+          "areaHa": 36.8802793965454,
+          "densityPerHa": 33.839223032483346
+        },
+        "23027A083": {
+          "sourceStatus": "available",
+          "population": 399,
+          "areaHa": 95.6761091904726,
+          "densityPerHa": 4.170320086968297
+        },
+        "23027A091": {
+          "sourceStatus": "available",
+          "population": 719,
+          "areaHa": 83.6258492883619,
+          "densityPerHa": 8.597820005638642
+        },
+        "23027A100": {
+          "sourceStatus": "available",
+          "population": 3997,
+          "areaHa": 51.3662454037686,
+          "densityPerHa": 77.81374652909226
+        },
+        "23027A11-": {
+          "sourceStatus": "available",
+          "population": 551,
+          "areaHa": 7.40722823616847,
+          "densityPerHa": 74.38679927662325
+        },
+        "23027A12-": {
+          "sourceStatus": "available",
+          "population": 560,
+          "areaHa": 9.75838156738153,
+          "densityPerHa": 57.386565193542125
+        },
+        "23027A131": {
+          "sourceStatus": "available",
+          "population": 1925,
+          "areaHa": 62.2598819673436,
+          "densityPerHa": 30.918786531103546
+        },
+        "23027A142": {
+          "sourceStatus": "available",
+          "population": 1600,
+          "areaHa": 39.9347807257173,
+          "densityPerHa": 40.06532578679286
+        },
+        "23027A152": {
+          "sourceStatus": "available",
+          "population": 2000,
+          "areaHa": 44.9134146562167,
+          "densityPerHa": 44.530125694265585
+        },
+        "23027A183": {
+          "sourceStatus": "available",
+          "population": 10,
+          "areaHa": 35.9361918536317,
+          "densityPerHa": 0.2782709987950324
+        },
+        "23027A1AA": {
+          "sourceStatus": "available",
+          "population": 328,
+          "areaHa": 14.3138337886337,
+          "densityPerHa": 22.91489511778861
+        },
+        "23027A1PA": {
+          "sourceStatus": "available",
+          "population": 21,
+          "areaHa": 41.6992941574436,
+          "densityPerHa": 0.5036056466737905
+        },
+        "23027A20-": {
+          "sourceStatus": "available",
+          "population": 1182,
+          "areaHa": 37.7645928898507,
+          "densityPerHa": 31.299159068060938
+        },
+        "23027A212": {
+          "sourceStatus": "available",
+          "population": 1314,
+          "areaHa": 83.6035896303314,
+          "densityPerHa": 15.717028488969097
+        },
+        "23027A291": {
+          "sourceStatus": "available",
+          "population": 329,
+          "areaHa": 276.776396300519,
+          "densityPerHa": 1.188685178351616
+        },
+        "23027A39-": {
+          "sourceStatus": "available",
+          "population": 286,
+          "areaHa": 670.47053414859,
+          "densityPerHa": 0.42656609863277983
+        },
+        "23027A402": {
+          "sourceStatus": "available",
+          "population": 389,
+          "areaHa": 21.2495410500008,
+          "densityPerHa": 18.306277725465762
+        },
+        "23027A483": {
+          "sourceStatus": "available",
+          "population": 459,
+          "areaHa": 348.334708703396,
+          "densityPerHa": 1.3176981464423476
+        },
+        "23027A491": {
+          "sourceStatus": "available",
+          "population": 253,
+          "areaHa": 494.152848818587,
+          "densityPerHa": 0.5119873346978946
+        },
+        "23027A511": {
+          "sourceStatus": "available",
+          "population": 523,
+          "areaHa": 21.3008440429104,
+          "densityPerHa": 24.553017661948992
+        },
+        "23027A572": {
+          "sourceStatus": "available",
+          "population": 74,
+          "areaHa": 58.6819484536098,
+          "densityPerHa": 1.2610351556151833
+        },
+        "23027A593": {
+          "sourceStatus": "available",
+          "population": 220,
+          "areaHa": 162.504568025063,
+          "densityPerHa": 1.3538080970503519
+        },
+        "23027B00-": {
+          "sourceStatus": "available",
+          "population": 855,
+          "areaHa": 25.4479748596101,
+          "densityPerHa": 33.59795837259405
+        },
+        "23027B01-": {
+          "sourceStatus": "available",
+          "population": 2389,
+          "areaHa": 68.5583106163112,
+          "densityPerHa": 34.84624954325545
+        },
+        "23027B02-": {
+          "sourceStatus": "available",
+          "population": 721,
+          "areaHa": 11.3998832497404,
+          "densityPerHa": 63.246261755919186
+        },
+        "23027B03-": {
+          "sourceStatus": "available",
+          "population": 882,
+          "areaHa": 29.8024581079593,
+          "densityPerHa": 29.594874248458236
+        },
+        "23027B052": {
+          "sourceStatus": "available",
+          "population": 810,
+          "areaHa": 34.8752199358805,
+          "densityPerHa": 23.22565998119059
+        },
+        "23027B07-": {
+          "sourceStatus": "available",
+          "population": 363,
+          "areaHa": 48.3620175688245,
+          "densityPerHa": 7.505890329811217
+        },
+        "23027B091": {
+          "sourceStatus": "available",
+          "population": 380,
+          "areaHa": 141.213631660519,
+          "densityPerHa": 2.6909583411432205
+        },
+        "23027B19-": {
+          "sourceStatus": "available",
+          "population": 428,
+          "areaHa": 78.3074259852328,
+          "densityPerHa": 5.465637449004034
+        },
+        "23027C00-": {
+          "sourceStatus": "available",
+          "population": 1184,
+          "areaHa": 43.5065145796449,
+          "densityPerHa": 27.2143151764667
+        },
+        "23027C01-": {
+          "sourceStatus": "available",
+          "population": 2411,
+          "areaHa": 64.5660030261168,
+          "densityPerHa": 37.34163316606041
+        },
+        "23027C022": {
+          "sourceStatus": "available",
+          "population": 1151,
+          "areaHa": 36.9762471302323,
+          "densityPerHa": 31.128091391917547
+        },
+        "23027C033": {
+          "sourceStatus": "available",
+          "population": 782,
+          "areaHa": 24.8872099821138,
+          "densityPerHa": 31.421762445931705
+        },
+        "23027C08-": {
+          "sourceStatus": "available",
+          "population": 2188,
+          "areaHa": 516.846052624313,
+          "densityPerHa": 4.233368889808319
+        },
+        "23027C091": {
+          "sourceStatus": "available",
+          "population": 356,
+          "areaHa": 414.238886131551,
+          "densityPerHa": 0.8594074866427294
+        },
+        "23064A000": {
+          "sourceStatus": "available",
+          "population": 608,
+          "areaHa": 47.8902778481747,
+          "densityPerHa": 12.695687461399297
+        },
+        "23064A090": {
+          "sourceStatus": "available",
+          "population": 653,
+          "areaHa": 792.230728282384,
+          "densityPerHa": 0.8242548246212985
+        },
+        "23064A19-": {
+          "sourceStatus": "available",
+          "population": 100,
+          "areaHa": 164.921057114292,
+          "densityPerHa": 0.606350709544015
+        },
+        "23064A29-": {
+          "sourceStatus": "available",
+          "population": 99,
+          "areaHa": 116.171296718877,
+          "densityPerHa": 0.8521898506441756
+        },
+        "23064A39-": {
+          "sourceStatus": "available",
+          "population": 168,
+          "areaHa": 196.974635930359,
+          "densityPerHa": 0.8529016906491297
+        },
+        "23064B002": {
+          "sourceStatus": "available",
+          "population": 86,
+          "areaHa": 8.08154737264272,
+          "densityPerHa": 10.641526434791833
+        },
+        "23064B091": {
+          "sourceStatus": "available",
+          "population": 349,
+          "areaHa": 293.065433397947,
+          "densityPerHa": 1.1908603343407638
+        },
+        "23064C002": {
+          "sourceStatus": "available",
+          "population": 213,
+          "areaHa": 15.2571864576039,
+          "densityPerHa": 13.960634261885469
+        },
+        "23064C091": {
+          "sourceStatus": "available",
+          "population": 300,
+          "areaHa": 288.038925524531,
+          "densityPerHa": 1.0415258960353617
+        },
+        "23064D002": {
+          "sourceStatus": "available",
+          "population": 187,
+          "areaHa": 12.077743418481,
+          "densityPerHa": 15.483024727438588
+        },
+        "23064D091": {
+          "sourceStatus": "available",
+          "population": 576,
+          "areaHa": 387.293582386588,
+          "densityPerHa": 1.487243853746715
+        },
+        "23064E002": {
+          "sourceStatus": "available",
+          "population": 203,
+          "areaHa": 10.5674242390882,
+          "densityPerHa": 19.209979216043628
+        },
+        "23064E091": {
+          "sourceStatus": "available",
+          "population": 258,
+          "areaHa": 491.062707949249,
+          "densityPerHa": 0.5253911482658629
+        },
+        "23064F002": {
+          "sourceStatus": "available",
+          "population": 170,
+          "areaHa": 9.51815794261948,
+          "densityPerHa": 17.860598765522745
+        },
+        "23064F091": {
+          "sourceStatus": "available",
+          "population": 592,
+          "areaHa": 759.674098213529,
+          "densityPerHa": 0.7792815384809932
+        },
+        "23077A001": {
+          "sourceStatus": "available",
+          "population": 1333,
+          "areaHa": 57.0111821813368,
+          "densityPerHa": 23.38137798581506
+        },
+        "23077A012": {
+          "sourceStatus": "available",
+          "population": 1079,
+          "areaHa": 65.4463969774387,
+          "densityPerHa": 16.486774671063454
+        },
+        "23077A022": {
+          "sourceStatus": "available",
+          "population": 881,
+          "areaHa": 35.362623439281,
+          "densityPerHa": 24.913309995586477
+        },
+        "23077A09-": {
+          "sourceStatus": "available",
+          "population": 3580,
+          "areaHa": 1375.3843206929,
+          "densityPerHa": 2.6029088351075895
+        },
+        "23077A11-": {
+          "sourceStatus": "available",
+          "population": 1215,
+          "areaHa": 149.587434293871,
+          "densityPerHa": 8.122339992897263
+        },
+        "23077A20-": {
+          "sourceStatus": "available",
+          "population": 3807,
+          "areaHa": 71.2031361119809,
+          "densityPerHa": 53.46674609967665
+        },
+        "23077A21-": {
+          "sourceStatus": "available",
+          "population": 1835,
+          "areaHa": 89.5195650270766,
+          "densityPerHa": 20.49831229011195
+        },
+        "23077A22-": {
+          "sourceStatus": "available",
+          "population": 2174,
+          "areaHa": 33.3098774006023,
+          "densityPerHa": 65.26592619523392
+        },
+        "23077A291": {
+          "sourceStatus": "available",
+          "population": 751,
+          "areaHa": 194.186948383184,
+          "densityPerHa": 3.8674071880365073
+        },
+        "23077A30-": {
+          "sourceStatus": "available",
+          "population": 5012,
+          "areaHa": 162.456136330665,
+          "densityPerHa": 30.85140465115162
+        },
+        "23077A31-": {
+          "sourceStatus": "available",
+          "population": 3098,
+          "areaHa": 95.4265365020167,
+          "densityPerHa": 32.46476413753661
+        },
+        "23077B002": {
+          "sourceStatus": "available",
+          "population": 199,
+          "areaHa": 16.0772392243799,
+          "densityPerHa": 12.37774702625758
+        },
+        "23077B091": {
+          "sourceStatus": "available",
+          "population": 209,
+          "areaHa": 236.265405347212,
+          "densityPerHa": 0.8845984019237044
+        },
+        "23077C002": {
+          "sourceStatus": "available",
+          "population": 80,
+          "areaHa": 7.15664276461323,
+          "densityPerHa": 11.178425783045702
+        },
+        "23077C091": {
+          "sourceStatus": "available",
+          "population": 291,
+          "areaHa": 106.431391497544,
+          "densityPerHa": 2.734155740195458
+        },
+        "23077D00-": {
+          "sourceStatus": "available",
+          "population": 467,
+          "areaHa": 9.63347886543414,
+          "densityPerHa": 48.47677630514574
+        },
+        "23077D012": {
+          "sourceStatus": "available",
+          "population": 830,
+          "areaHa": 40.9985758814938,
+          "densityPerHa": 20.244605627256696
+        },
+        "23077D023": {
+          "sourceStatus": "available",
+          "population": 543,
+          "areaHa": 35.3507609759182,
+          "densityPerHa": 15.360348264352918
+        },
+        "23077D091": {
+          "sourceStatus": "available",
+          "population": 1754,
+          "areaHa": 927.896449153823,
+          "densityPerHa": 1.8902971356335354
+        },
+        "23077E00-": {
+          "sourceStatus": "available",
+          "population": 4489,
+          "areaHa": 61.6467489828378,
+          "densityPerHa": 72.81811407848481
+        },
+        "23077E01-": {
+          "sourceStatus": "available",
+          "population": 1630,
+          "areaHa": 41.636313914756,
+          "densityPerHa": 39.14851836637547
+        },
+        "23077E02-": {
+          "sourceStatus": "available",
+          "population": 1461,
+          "areaHa": 83.5086218852348,
+          "densityPerHa": 17.495199501769292
+        },
+        "23077E09-": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 171.252004783034,
+          "densityPerHa": 0
+        },
+        "23098A00-": {
+          "sourceStatus": "available",
+          "population": 1058,
+          "areaHa": 35.7490275531309,
+          "densityPerHa": 29.595210622934562
+        },
+        "23098A01-": {
+          "sourceStatus": "available",
+          "population": 912,
+          "areaHa": 14.2828886923758,
+          "densityPerHa": 63.85262950952109
+        },
+        "23098A02-": {
+          "sourceStatus": "available",
+          "population": 1268,
+          "areaHa": 27.6336447799664,
+          "densityPerHa": 45.88609320617972
+        },
+        "23098A04-": {
+          "sourceStatus": "available",
+          "population": 2600,
+          "areaHa": 70.132055422197,
+          "densityPerHa": 37.07291885783077
+        },
+        "23098A0MS": {
+          "sourceStatus": "available",
+          "population": 121,
+          "areaHa": 67.9119693374103,
+          "densityPerHa": 1.7817183212406915
+        },
+        "23098A0NS": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 20.748229496817,
+          "densityPerHa": 0
+        },
+        "23098A0WS": {
+          "sourceStatus": "available",
+          "population": 79,
+          "areaHa": 13.1403681984202,
+          "densityPerHa": 6.012008096508115
+        },
+        "23100A00-": {
+          "sourceStatus": "available",
+          "population": 828,
+          "areaHa": 21.3473776388249,
+          "densityPerHa": 38.78696550034792
+        },
+        "23100A011": {
+          "sourceStatus": "available",
+          "population": 1207,
+          "areaHa": 46.6499249725709,
+          "densityPerHa": 25.873567871967396
+        },
+        "23100A022": {
+          "sourceStatus": "available",
+          "population": 661,
+          "areaHa": 82.8470084181714,
+          "densityPerHa": 7.978562082333662
+        },
+        "23100A10-": {
+          "sourceStatus": "available",
+          "population": 364,
+          "areaHa": 8.04001240781412,
+          "densityPerHa": 45.27356197189783
+        },
+        "23100A112": {
+          "sourceStatus": "available",
+          "population": 840,
+          "areaHa": 50.5776576601974,
+          "densityPerHa": 16.60812380129352
+        },
+        "23100A191": {
+          "sourceStatus": "available",
+          "population": 253,
+          "areaHa": 197.114226925414,
+          "densityPerHa": 1.2835197334372654
+        },
+        "23100A21-": {
+          "sourceStatus": "available",
+          "population": 490,
+          "areaHa": 12.3314976295564,
+          "densityPerHa": 39.73564401663245
+        },
+        "23101A00-": {
+          "sourceStatus": "available",
+          "population": 742,
+          "areaHa": 19.9655794482379,
+          "densityPerHa": 37.16396020078879
+        },
+        "23101A01-": {
+          "sourceStatus": "available",
+          "population": 1215,
+          "areaHa": 49.3681173796853,
+          "densityPerHa": 24.611025586727468
+        },
+        "23101A02-": {
+          "sourceStatus": "available",
+          "population": 2138,
+          "areaHa": 75.1612797300197,
+          "densityPerHa": 28.445497571086122
+        },
+        "23101A030": {
+          "sourceStatus": "available",
+          "population": 2292,
+          "areaHa": 78.0853329307615,
+          "densityPerHa": 29.352503395641836
+        },
+        "23101A04-": {
+          "sourceStatus": "available",
+          "population": 735,
+          "areaHa": 37.0905294060873,
+          "densityPerHa": 19.816379322948457
+        },
+        "23101A052": {
+          "sourceStatus": "available",
+          "population": 408,
+          "areaHa": 41.0623489739672,
+          "densityPerHa": 9.936109603926088
+        },
+        "23101A091": {
+          "sourceStatus": "available",
+          "population": 51,
+          "areaHa": 306.54584323236,
+          "densityPerHa": 0.16636989581144732
+        },
+        "23101A10-": {
+          "sourceStatus": "available",
+          "population": 1058,
+          "areaHa": 60.0835425948632,
+          "densityPerHa": 17.60881523138506
+        },
+        "23101A111": {
+          "sourceStatus": "available",
+          "population": 1734,
+          "areaHa": 131.503607506029,
+          "densityPerHa": 13.185950050233428
+        },
+        "23101A122": {
+          "sourceStatus": "available",
+          "population": 452,
+          "areaHa": 17.0851333778768,
+          "densityPerHa": 26.455748983808682
+        },
+        "23101A183": {
+          "sourceStatus": "available",
+          "population": 168,
+          "areaHa": 103.978967485,
+          "densityPerHa": 1.6157113699386914
+        },
+        "23101A19-": {
+          "sourceStatus": "available",
+          "population": 694,
+          "areaHa": 253.647266299516,
+          "densityPerHa": 2.7360831051910464
+        },
+        "23101A212": {
+          "sourceStatus": "available",
+          "population": 478,
+          "areaHa": 33.4208878962215,
+          "densityPerHa": 14.302432702694345
+        },
+        "23101A291": {
+          "sourceStatus": "available",
+          "population": 222,
+          "areaHa": 126.445771470827,
+          "densityPerHa": 1.7556933491541775
+        },
+        "23101A31-": {
+          "sourceStatus": "available",
+          "population": 831,
+          "areaHa": 37.2951470070042,
+          "densityPerHa": 22.281719384131513
+        },
+        "23101A322": {
+          "sourceStatus": "available",
+          "population": 607,
+          "areaHa": 56.7997627119271,
+          "densityPerHa": 10.686664362992824
+        },
+        "23101A391": {
+          "sourceStatus": "available",
+          "population": 18,
+          "areaHa": 63.3688252977793,
+          "densityPerHa": 0.28405134410201527
+        },
+        "23101A40-": {
+          "sourceStatus": "available",
+          "population": 1985,
+          "areaHa": 154.058813044197,
+          "densityPerHa": 12.884689689453438
+        },
+        "23101A411": {
+          "sourceStatus": "available",
+          "population": 1835,
+          "areaHa": 167.045985634258,
+          "densityPerHa": 10.984999088919597
+        },
+        "23101A422": {
+          "sourceStatus": "available",
+          "population": 1014,
+          "areaHa": 70.7851060261182,
+          "densityPerHa": 14.325047413588043
+        },
+        "23101A483": {
+          "sourceStatus": "available",
+          "population": 17,
+          "areaHa": 48.1058426009162,
+          "densityPerHa": 0.35338742823883573
+        },
+        "23101A49-": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 344.146236862096,
+          "densityPerHa": 0
+        }
+      },
+      "municipalityStats": {
+        "Beersel": {
+          "sourceStatus": "available",
+          "population": 26590,
+          "areaHa": 3040.1351361034485,
+          "densityPerHa": 8.74632172900067,
+          "sectorCount": 39
+        },
+        "Drogenbos": {
+          "sourceStatus": "available",
+          "population": 6038,
+          "areaHa": 249.59818348031757,
+          "densityPerHa": 24.1908811827396,
+          "sectorCount": 7
+        },
+        "Halle": {
+          "sourceStatus": "available",
+          "population": 42877,
+          "areaHa": 4498.201743853407,
+          "densityPerHa": 9.53203134087739,
+          "sectorCount": 41
+        },
+        "Linkebeek": {
+          "sourceStatus": "available",
+          "population": 4643,
+          "areaHa": 418.90770565254905,
+          "densityPerHa": 11.083586998638317,
+          "sectorCount": 7
+        },
+        "Pepingen": {
+          "sourceStatus": "available",
+          "population": 4562,
+          "areaHa": 3592.824802796366,
+          "densityPerHa": 1.2697529800087402,
+          "sectorCount": 15
+        },
+        "Sint-Genesius-Rode": {
+          "sourceStatus": "available",
+          "population": 18694,
+          "areaHa": 2275.049926915748,
+          "densityPerHa": 8.216962528529288,
+          "sectorCount": 22
+        },
+        "Sint-Pieters-Leeuw": {
+          "sourceStatus": "available",
+          "population": 36718,
+          "areaHa": 4066.7477906166337,
+          "densityPerHa": 9.028836281591122,
+          "sectorCount": 23
+        }
+      },
+      "regionStats": {
+        "sourceStatus": "available",
+        "population": 140122,
+        "areaHa": 18141.465289418473,
+        "densityPerHa": 7.723852388138138,
+        "sectorCount": 154
+      },
+      "source": {
+        "name": "Population grid with cells of varying size 2025",
+        "producer": "Statbel, the Belgian statistical office",
+        "pageUrl": "https://statbel.fgov.be/en/themes/datalab/variable-cell-grid",
+        "gridDownloadUrl": "https://statbel.fgov.be/sites/default/files/files/opendata/SH_VARYING_CELL_SIZE_GRID/POP_GRID_2025_3035_geojson.zip",
+        "sectorDownloadUrl": "https://statbel.fgov.be/sites/default/files/files/opendata/bevolking/sectoren/OPENDATA_SECTOREN_2025_OLD.xlsx",
+        "gridSha256": "9d7241c7cdc42cc4b6b50382e9bf11817973c60e6e46f05f3ed16520934e9061",
+        "sectorSha256": "59a59d70e5a1ae21ec9077932937422d73ca9eee6eed980d760705be5bc11850",
+        "confidentiality": "Cell subdivision and geographical displacement follow Statbel confidentiality rules.",
+        "aggregationWarning": "Grid cells are a density display and may cross administrative boundaries; selected-area totals use the separate official sector table."
+      }
+    },
+    "flanders-2019": {
+      "kind": "modelled-raster",
+      "referenceDate": "2019-01-01",
+      "resolutionM": 100,
+      "imageVariants": {
+        "all": "data/population/population-density-2019.png",
+        "Beersel": "data/population/population-density-2019-beersel.png",
+        "Drogenbos": "data/population/population-density-2019-drogenbos.png",
+        "Halle": "data/population/population-density-2019-halle.png",
+        "Linkebeek": "data/population/population-density-2019-linkebeek.png",
+        "Pepingen": "data/population/population-density-2019-pepingen.png",
+        "Sint-Genesius-Rode": "data/population/population-density-2019-sint-genesius-rode.png",
+        "Sint-Pieters-Leeuw": "data/population/population-density-2019-sint-pieters-leeuw.png"
+      },
+      "analyticalUrl": "data/population/population-density-2019.tif",
+      "width": 249,
+      "height": 154,
+      "corners": [
+        [
+          4.0706871838027965,
+          50.82744876618369
+        ],
+        [
+          4.42410712650401,
+          50.82781252901771
+        ],
+        [
+          4.423942631259818,
+          50.68937089665953
+        ],
+        [
+          4.0715600238408625,
+          50.68900818383253
+        ]
+      ],
+      "sectorStats": {
+        "23003A001": {
+          "sourceStatus": "available",
+          "population": 1177,
+          "areaHa": 51.4205951078743,
+          "densityPerHa": 22.88966118596632
+        },
+        "23003A012": {
+          "sourceStatus": "available",
+          "population": 2123,
+          "areaHa": 95.8288960388538,
+          "densityPerHa": 22.15406926047891
+        },
+        "23003A022": {
+          "sourceStatus": "available",
+          "population": 446,
+          "areaHa": 24.9643617575632,
+          "densityPerHa": 17.86546775484376
+        },
+        "23003A081": {
+          "sourceStatus": "available",
+          "population": 187,
+          "areaHa": 134.50589057961,
+          "densityPerHa": 1.3902736838824195
+        },
+        "23003A09-": {
+          "sourceStatus": "available",
+          "population": 231,
+          "areaHa": 44.8658343566832,
+          "densityPerHa": 5.148683922014041
+        },
+        "23003A11-": {
+          "sourceStatus": "available",
+          "population": 729,
+          "areaHa": 53.4847309844748,
+          "densityPerHa": 13.630058272362056
+        },
+        "23003A212": {
+          "sourceStatus": "available",
+          "population": 164,
+          "areaHa": 24.3993329873849,
+          "densityPerHa": 6.721495218118968
+        },
+        "23003A291": {
+          "sourceStatus": "available",
+          "population": 18,
+          "areaHa": 95.639443290895,
+          "densityPerHa": 0.18820686717353177
+        },
+        "23003A31-": {
+          "sourceStatus": "available",
+          "population": 891,
+          "areaHa": 102.064367044973,
+          "densityPerHa": 8.729785191411567
+        },
+        "23003B00-": {
+          "sourceStatus": "available",
+          "population": 863,
+          "areaHa": 35.6404128204898,
+          "densityPerHa": 24.21408540767121
+        },
+        "23003B01-": {
+          "sourceStatus": "available",
+          "population": 915,
+          "areaHa": 46.3876980054206,
+          "densityPerHa": 19.72505727473431
+        },
+        "23003B02-": {
+          "sourceStatus": "available",
+          "population": 1183,
+          "areaHa": 75.3277500509303,
+          "densityPerHa": 15.704703767206038
+        },
+        "23003B032": {
+          "sourceStatus": "available",
+          "population": 791,
+          "areaHa": 63.9450845158608,
+          "densityPerHa": 12.369989124086654
+        },
+        "23003B043": {
+          "sourceStatus": "available",
+          "population": 366,
+          "areaHa": 20.2777897348373,
+          "densityPerHa": 18.04930442548238
+        },
+        "23003B081": {
+          "sourceStatus": "available",
+          "population": 372,
+          "areaHa": 235.814640893391,
+          "densityPerHa": 1.5775101944080596
+        },
+        "23003B09-": {
+          "sourceStatus": "available",
+          "population": 940,
+          "areaHa": 116.161116333782,
+          "densityPerHa": 8.092208732730894
+        },
+        "23003B114": {
+          "sourceStatus": "available",
+          "population": 513,
+          "areaHa": 30.1270518517416,
+          "densityPerHa": 17.02788585237371
+        },
+        "23003C00-": {
+          "sourceStatus": "available",
+          "population": 944,
+          "areaHa": 33.3550756016493,
+          "densityPerHa": 28.30153980983099
+        },
+        "23003C010": {
+          "sourceStatus": "available",
+          "population": 388,
+          "areaHa": 28.2235001203436,
+          "densityPerHa": 13.747409015380349
+        },
+        "23003C022": {
+          "sourceStatus": "available",
+          "population": 1025,
+          "areaHa": 49.2657776903934,
+          "densityPerHa": 20.80551750226142
+        },
+        "23003C033": {
+          "sourceStatus": "available",
+          "population": 399,
+          "areaHa": 28.4165226486534,
+          "densityPerHa": 14.041126880065592
+        },
+        "23003C081": {
+          "sourceStatus": "available",
+          "population": 1863,
+          "areaHa": 387.162827142937,
+          "densityPerHa": 4.811928907917075
+        },
+        "23003C090": {
+          "sourceStatus": "available",
+          "population": 851,
+          "areaHa": 436.576625696682,
+          "densityPerHa": 1.949256899958828
+        },
+        "23003D00-": {
+          "sourceStatus": "available",
+          "population": 1909,
+          "areaHa": 86.3658756413031,
+          "densityPerHa": 22.10363741263397
+        },
+        "23003D01-": {
+          "sourceStatus": "available",
+          "population": 551,
+          "areaHa": 20.1885462953485,
+          "densityPerHa": 27.29270309705023
+        },
+        "23003D030": {
+          "sourceStatus": "available",
+          "population": 383,
+          "areaHa": 40.4155196841942,
+          "densityPerHa": 9.47655759452685
+        },
+        "23003D042": {
+          "sourceStatus": "available",
+          "population": 228,
+          "areaHa": 14.3321610867451,
+          "densityPerHa": 15.908277797049228
+        },
+        "23003D091": {
+          "sourceStatus": "available",
+          "population": 64,
+          "areaHa": 72.204523169671,
+          "densityPerHa": 0.8863710636189444
+        },
+        "23003D0MS": {
+          "sourceStatus": "available",
+          "population": 9,
+          "areaHa": 18.6820254728057,
+          "densityPerHa": 0.48174647942219956
+        },
+        "23003D0NS": {
+          "sourceStatus": "available",
+          "population": 28,
+          "areaHa": 39.210366153572,
+          "densityPerHa": 0.7140968765844908
+        },
+        "23003E00-": {
+          "sourceStatus": "available",
+          "population": 2304,
+          "areaHa": 56.5846162076396,
+          "densityPerHa": 40.71778081069555
+        },
+        "23003E01-": {
+          "sourceStatus": "available",
+          "population": 777,
+          "areaHa": 35.1184693747177,
+          "densityPerHa": 22.125110058451856
+        },
+        "23003E032": {
+          "sourceStatus": "available",
+          "population": 377,
+          "areaHa": 29.5121023902092,
+          "densityPerHa": 12.7744203044332
+        },
+        "23003E07-": {
+          "sourceStatus": "available",
+          "population": 19,
+          "areaHa": 59.0727312128898,
+          "densityPerHa": 0.3216374054473066
+        },
+        "23003E083": {
+          "sourceStatus": "available",
+          "population": 309,
+          "areaHa": 118.28339755958,
+          "densityPerHa": 2.61237000606408
+        },
+        "23003E0MS": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 19.2145669205632,
+          "densityPerHa": 0
+        },
+        "23003E0NS": {
+          "sourceStatus": "available",
+          "population": 6,
+          "areaHa": 19.4032397410482,
+          "densityPerHa": 0.3092267105944581
+        },
+        "23003E0PS": {
+          "sourceStatus": "available",
+          "population": 114,
+          "areaHa": 129.559185037348,
+          "densityPerHa": 0.879906738894176
+        },
+        "23003E11-": {
+          "sourceStatus": "available",
+          "population": 792,
+          "areaHa": 67.8165353820811,
+          "densityPerHa": 11.678567705322013
+        },
+        "23027A00-": {
+          "sourceStatus": "available",
+          "population": 2353,
+          "areaHa": 35.2855244913106,
+          "densityPerHa": 66.68456920852766
+        },
+        "23027A011": {
+          "sourceStatus": "available",
+          "population": 1741,
+          "areaHa": 30.9527499957317,
+          "densityPerHa": 56.24702167788255
+        },
+        "23027A02-": {
+          "sourceStatus": "available",
+          "population": 1102,
+          "areaHa": 33.8420525713721,
+          "densityPerHa": 32.56303670340053
+        },
+        "23027A03-": {
+          "sourceStatus": "available",
+          "population": 1620,
+          "areaHa": 99.8470893290993,
+          "densityPerHa": 16.2248094650053
+        },
+        "23027A042": {
+          "sourceStatus": "available",
+          "population": 1694,
+          "areaHa": 60.6799013346995,
+          "densityPerHa": 27.916986724421296
+        },
+        "23027A052": {
+          "sourceStatus": "available",
+          "population": 1084,
+          "areaHa": 36.8808056676184,
+          "densityPerHa": 29.39198264184775
+        },
+        "23027A083": {
+          "sourceStatus": "available",
+          "population": 417,
+          "areaHa": 95.6773908025249,
+          "densityPerHa": 4.358396445620834
+        },
+        "23027A091": {
+          "sourceStatus": "available",
+          "population": 608,
+          "areaHa": 83.6272643791788,
+          "densityPerHa": 7.270356199184456
+        },
+        "23027A100": {
+          "sourceStatus": "available",
+          "population": 3702,
+          "areaHa": 51.3669736531703,
+          "densityPerHa": 72.06965364547065
+        },
+        "23027A11-": {
+          "sourceStatus": "available",
+          "population": 554,
+          "areaHa": 7.40730687996659,
+          "densityPerHa": 74.79101500416016
+        },
+        "23027A12-": {
+          "sourceStatus": "available",
+          "population": 576,
+          "areaHa": 9.75848496599554,
+          "densityPerHa": 59.025555914379346
+        },
+        "23027A131": {
+          "sourceStatus": "available",
+          "population": 1680,
+          "areaHa": 62.2605793557279,
+          "densityPerHa": 26.983365997949743
+        },
+        "23027A142": {
+          "sourceStatus": "available",
+          "population": 1291,
+          "areaHa": 39.9355902229809,
+          "densityPerHa": 32.32705445923509
+        },
+        "23027A152": {
+          "sourceStatus": "available",
+          "population": 1863,
+          "areaHa": 44.913878177547,
+          "densityPerHa": 41.47938400321299
+        },
+        "23027A183": {
+          "sourceStatus": "available",
+          "population": 6,
+          "areaHa": 35.9365435192723,
+          "densityPerHa": 0.1669609654245762
+        },
+        "23027A1AA": {
+          "sourceStatus": "available",
+          "population": 340,
+          "areaHa": 14.3139816658334,
+          "densityPerHa": 23.75299954530187
+        },
+        "23027A1PA": {
+          "sourceStatus": "available",
+          "population": 24,
+          "areaHa": 41.6997453794258,
+          "densityPerHa": 0.575543082616551
+        },
+        "23027A20-": {
+          "sourceStatus": "available",
+          "population": 1064,
+          "areaHa": 37.7648741828649,
+          "densityPerHa": 28.174329268195205
+        },
+        "23027A212": {
+          "sourceStatus": "available",
+          "population": 1266,
+          "areaHa": 83.604183315596,
+          "densityPerHa": 15.142782930143557
+        },
+        "23027A291": {
+          "sourceStatus": "available",
+          "population": 370,
+          "areaHa": 276.778882914065,
+          "densityPerHa": 1.3368071873997647
+        },
+        "23027A39-": {
+          "sourceStatus": "available",
+          "population": 291,
+          "areaHa": 670.493032247286,
+          "densityPerHa": 0.4340089844403866
+        },
+        "23027A402": {
+          "sourceStatus": "available",
+          "population": 353,
+          "areaHa": 21.2493070840217,
+          "densityPerHa": 16.612306396825353
+        },
+        "23027A483": {
+          "sourceStatus": "available",
+          "population": 454,
+          "areaHa": 348.341022378893,
+          "densityPerHa": 1.3033205130407552
+        },
+        "23027A491": {
+          "sourceStatus": "available",
+          "population": 258,
+          "areaHa": 494.117803345819,
+          "densityPerHa": 0.522142691991677
+        },
+        "23027A511": {
+          "sourceStatus": "available",
+          "population": 500,
+          "areaHa": 21.3011531238171,
+          "densityPerHa": 23.47290764465438
+        },
+        "23027A572": {
+          "sourceStatus": "available",
+          "population": 76,
+          "areaHa": 58.6827020840397,
+          "densityPerHa": 1.2951005543534813
+        },
+        "23027A593": {
+          "sourceStatus": "available",
+          "population": 189,
+          "areaHa": 162.507594146394,
+          "densityPerHa": 1.163022571300517
+        },
+        "23027B00-": {
+          "sourceStatus": "available",
+          "population": 788,
+          "areaHa": 25.4485915939453,
+          "densityPerHa": 30.964385478506404
+        },
+        "23027B01-": {
+          "sourceStatus": "available",
+          "population": 2264,
+          "areaHa": 68.567219927331,
+          "densityPerHa": 33.018693223955054
+        },
+        "23027B02-": {
+          "sourceStatus": "available",
+          "population": 768,
+          "areaHa": 11.4000951039594,
+          "densityPerHa": 67.3678590394622
+        },
+        "23027B03-": {
+          "sourceStatus": "available",
+          "population": 898,
+          "areaHa": 29.8031617829225,
+          "densityPerHa": 30.13103128254542
+        },
+        "23027B052": {
+          "sourceStatus": "available",
+          "population": 750,
+          "areaHa": 34.9347819517883,
+          "densityPerHa": 21.46857538813428
+        },
+        "23027B07-": {
+          "sourceStatus": "available",
+          "population": 152,
+          "areaHa": 48.3629119260189,
+          "densityPerHa": 3.142904220335523
+        },
+        "23027B091": {
+          "sourceStatus": "available",
+          "population": 364,
+          "areaHa": 141.215588438666,
+          "densityPerHa": 2.5776191143238814
+        },
+        "23027B19-": {
+          "sourceStatus": "available",
+          "population": 385,
+          "areaHa": 78.4017690265431,
+          "densityPerHa": 4.910603482297158
+        },
+        "23027C00-": {
+          "sourceStatus": "available",
+          "population": 1112,
+          "areaHa": 43.5066782343903,
+          "densityPerHa": 25.55929446070668
+        },
+        "23027C01-": {
+          "sourceStatus": "available",
+          "population": 2326,
+          "areaHa": 64.5669472416842,
+          "densityPerHa": 36.024624043218545
+        },
+        "23027C022": {
+          "sourceStatus": "available",
+          "population": 994,
+          "areaHa": 36.976964270165,
+          "densityPerHa": 26.881601008063623
+        },
+        "23027C033": {
+          "sourceStatus": "available",
+          "population": 753,
+          "areaHa": 24.8876195175217,
+          "densityPerHa": 30.256007388326687
+        },
+        "23027C08-": {
+          "sourceStatus": "available",
+          "population": 2126,
+          "areaHa": 516.847093474392,
+          "densityPerHa": 4.113402255410644
+        },
+        "23027C091": {
+          "sourceStatus": "available",
+          "population": 378,
+          "areaHa": 414.241751772293,
+          "densityPerHa": 0.9125106254566658
+        },
+        "23064A000": {
+          "sourceStatus": "available",
+          "population": 603,
+          "areaHa": 47.8905563122525,
+          "densityPerHa": 12.591208923704363
+        },
+        "23064A090": {
+          "sourceStatus": "available",
+          "population": 649,
+          "areaHa": 792.234105282638,
+          "densityPerHa": 0.819202298502994
+        },
+        "23064A19-": {
+          "sourceStatus": "available",
+          "population": 117,
+          "areaHa": 164.920042522374,
+          "densityPerHa": 0.7094346945983058
+        },
+        "23064A29-": {
+          "sourceStatus": "available",
+          "population": 98,
+          "areaHa": 116.172053447848,
+          "densityPerHa": 0.8435763773771477
+        },
+        "23064A39-": {
+          "sourceStatus": "available",
+          "population": 157,
+          "areaHa": 196.947119020023,
+          "densityPerHa": 0.7971682996999733
+        },
+        "23064B002": {
+          "sourceStatus": "available",
+          "population": 81,
+          "areaHa": 8.08154595890915,
+          "densityPerHa": 10.022834790750037
+        },
+        "23064B091": {
+          "sourceStatus": "available",
+          "population": 347,
+          "areaHa": 293.025034576263,
+          "densityPerHa": 1.1841991606682651
+        },
+        "23064C002": {
+          "sourceStatus": "available",
+          "population": 207,
+          "areaHa": 15.2573144870803,
+          "densityPerHa": 13.567263110115805
+        },
+        "23064C091": {
+          "sourceStatus": "available",
+          "population": 285,
+          "areaHa": 288.041929578125,
+          "densityPerHa": 0.9894392820427904
+        },
+        "23064D002": {
+          "sourceStatus": "available",
+          "population": 154,
+          "areaHa": 12.0779044728981,
+          "densityPerHa": 12.750556219877737
+        },
+        "23064D091": {
+          "sourceStatus": "available",
+          "population": 561,
+          "areaHa": 387.325571752031,
+          "densityPerHa": 1.4483939117739346
+        },
+        "23064E002": {
+          "sourceStatus": "available",
+          "population": 171,
+          "areaHa": 10.5674509292201,
+          "densityPerHa": 16.181764282166405
+        },
+        "23064E091": {
+          "sourceStatus": "available",
+          "population": 285,
+          "areaHa": 491.369241623093,
+          "densityPerHa": 0.5800118848680613
+        },
+        "23064F002": {
+          "sourceStatus": "available",
+          "population": 167,
+          "areaHa": 9.51812685409512,
+          "densityPerHa": 17.545469036079215
+        },
+        "23064F091": {
+          "sourceStatus": "available",
+          "population": 596,
+          "areaHa": 759.800111473597,
+          "densityPerHa": 0.7844168367441875
+        },
+        "23077A001": {
+          "sourceStatus": "available",
+          "population": 1220,
+          "areaHa": 57.0117858771384,
+          "densityPerHa": 21.399084088141453
+        },
+        "23077A012": {
+          "sourceStatus": "available",
+          "population": 1122,
+          "areaHa": 65.4471257059382,
+          "densityPerHa": 17.143610019503082
+        },
+        "23077A022": {
+          "sourceStatus": "available",
+          "population": 825,
+          "areaHa": 34.8911660062111,
+          "densityPerHa": 23.644953563693996
+        },
+        "23077A09-": {
+          "sourceStatus": "available",
+          "population": 3543,
+          "areaHa": 1375.36047036092,
+          "densityPerHa": 2.576051934276002
+        },
+        "23077A11-": {
+          "sourceStatus": "available",
+          "population": 1161,
+          "areaHa": 149.571859811205,
+          "densityPerHa": 7.762155270820702
+        },
+        "23077A20-": {
+          "sourceStatus": "available",
+          "population": 3297,
+          "areaHa": 71.1911439894713,
+          "densityPerHa": 46.311940154910346
+        },
+        "23077A21-": {
+          "sourceStatus": "available",
+          "population": 1714,
+          "areaHa": 89.5298023710474,
+          "densityPerHa": 19.144463124094667
+        },
+        "23077A22-": {
+          "sourceStatus": "available",
+          "population": 2011,
+          "areaHa": 33.30968950815,
+          "densityPerHa": 60.3728233344223
+        },
+        "23077A291": {
+          "sourceStatus": "available",
+          "population": 737,
+          "areaHa": 194.666125413058,
+          "densityPerHa": 3.7859694306658387
+        },
+        "23077A30-": {
+          "sourceStatus": "available",
+          "population": 4524,
+          "areaHa": 162.476518667268,
+          "densityPerHa": 27.844023475568168
+        },
+        "23077A31-": {
+          "sourceStatus": "available",
+          "population": 2835,
+          "areaHa": 95.3705703801721,
+          "densityPerHa": 29.72615125084129
+        },
+        "23077B002": {
+          "sourceStatus": "available",
+          "population": 201,
+          "areaHa": 16.0771452105992,
+          "densityPerHa": 12.50221960223924
+        },
+        "23077B091": {
+          "sourceStatus": "available",
+          "population": 201,
+          "areaHa": 236.300099531004,
+          "densityPerHa": 0.8506132684621556
+        },
+        "23077C002": {
+          "sourceStatus": "available",
+          "population": 65,
+          "areaHa": 7.15663672983647,
+          "densityPerHa": 9.082478607445715
+        },
+        "23077C091": {
+          "sourceStatus": "available",
+          "population": 337,
+          "areaHa": 106.47660916022,
+          "densityPerHa": 3.165014388210855
+        },
+        "23077D00-": {
+          "sourceStatus": "available",
+          "population": 405,
+          "areaHa": 9.633524152409,
+          "densityPerHa": 42.040689740599646
+        },
+        "23077D012": {
+          "sourceStatus": "available",
+          "population": 790,
+          "areaHa": 40.9987650633506,
+          "densityPerHa": 19.268873069208436
+        },
+        "23077D023": {
+          "sourceStatus": "available",
+          "population": 460,
+          "areaHa": 35.3508253410289,
+          "densityPerHa": 13.012426034254833
+        },
+        "23077D091": {
+          "sourceStatus": "available",
+          "population": 1722,
+          "areaHa": 927.405513167963,
+          "densityPerHa": 1.8567929298994015
+        },
+        "23077E00-": {
+          "sourceStatus": "available",
+          "population": 4415,
+          "areaHa": 61.679810939269,
+          "densityPerHa": 71.57933743258528
+        },
+        "23077E01-": {
+          "sourceStatus": "available",
+          "population": 1478,
+          "areaHa": 41.6289413073562,
+          "densityPerHa": 35.50414575973914
+        },
+        "23077E02-": {
+          "sourceStatus": "available",
+          "population": 1148,
+          "areaHa": 83.5333486277425,
+          "densityPerHa": 13.743014243520156
+        },
+        "23077E09-": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 170.938505418167,
+          "densityPerHa": 0
+        },
+        "23098A00-": {
+          "sourceStatus": "available",
+          "population": 939,
+          "areaHa": 35.7706863415756,
+          "densityPerHa": 26.250544678775647
+        },
+        "23098A01-": {
+          "sourceStatus": "available",
+          "population": 846,
+          "areaHa": 14.2997152701512,
+          "densityPerHa": 59.16201714630747
+        },
+        "23098A02-": {
+          "sourceStatus": "available",
+          "population": 1178,
+          "areaHa": 27.688359833151,
+          "densityPerHa": 42.544954164803656
+        },
+        "23098A04-": {
+          "sourceStatus": "available",
+          "population": 2540,
+          "areaHa": 69.9241889874401,
+          "densityPerHa": 36.32505484555908
+        },
+        "23098A0MS": {
+          "sourceStatus": "available",
+          "population": 110,
+          "areaHa": 67.8651142272598,
+          "densityPerHa": 1.6208622243181259
+        },
+        "23098A0NS": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 20.698741259084,
+          "densityPerHa": 0
+        },
+        "23098A0WS": {
+          "sourceStatus": "available",
+          "population": 74,
+          "areaHa": 13.1313194654465,
+          "densityPerHa": 5.635381897053237
+        },
+        "23100A00-": {
+          "sourceStatus": "available",
+          "population": 834,
+          "areaHa": 21.3475240648593,
+          "densityPerHa": 39.06776249395912
+        },
+        "23100A011": {
+          "sourceStatus": "available",
+          "population": 1134,
+          "areaHa": 46.6804941755632,
+          "densityPerHa": 24.29280195139062
+        },
+        "23100A022": {
+          "sourceStatus": "available",
+          "population": 681,
+          "areaHa": 83.0462510740725,
+          "densityPerHa": 8.200249754713033
+        },
+        "23100A10-": {
+          "sourceStatus": "available",
+          "population": 380,
+          "areaHa": 8.04010761234368,
+          "densityPerHa": 47.263048994095556
+        },
+        "23100A112": {
+          "sourceStatus": "available",
+          "population": 902,
+          "areaHa": 50.5782092361115,
+          "densityPerHa": 17.833767023843066
+        },
+        "23100A191": {
+          "sourceStatus": "available",
+          "population": 268,
+          "areaHa": 197.513616100145,
+          "densityPerHa": 1.3568684797108692
+        },
+        "23100A21-": {
+          "sourceStatus": "available",
+          "population": 472,
+          "areaHa": 12.37561942238,
+          "densityPerHa": 38.1395050938976
+        },
+        "23101A00-": {
+          "sourceStatus": "available",
+          "population": 621,
+          "areaHa": 20.0959111047114,
+          "densityPerHa": 30.901808669645696
+        },
+        "23101A01-": {
+          "sourceStatus": "available",
+          "population": 1156,
+          "areaHa": 49.5295847186868,
+          "densityPerHa": 23.339585957882218
+        },
+        "23101A02-": {
+          "sourceStatus": "available",
+          "population": 2144,
+          "areaHa": 75.1627362504388,
+          "densityPerHa": 28.52477313833134
+        },
+        "23101A030": {
+          "sourceStatus": "available",
+          "population": 2249,
+          "areaHa": 78.0867661539069,
+          "densityPerHa": 28.801295158865745
+        },
+        "23101A04-": {
+          "sourceStatus": "available",
+          "population": 740,
+          "areaHa": 37.0699004044314,
+          "densityPerHa": 19.96228724454677
+        },
+        "23101A052": {
+          "sourceStatus": "available",
+          "population": 404,
+          "areaHa": 41.1511053038946,
+          "densityPerHa": 9.817476274732403
+        },
+        "23101A091": {
+          "sourceStatus": "available",
+          "population": 48,
+          "areaHa": 306.509855768988,
+          "densityPerHa": 0.15660181588476194
+        },
+        "23101A10-": {
+          "sourceStatus": "available",
+          "population": 1081,
+          "areaHa": 60.0844915455051,
+          "densityPerHa": 17.99133141005783
+        },
+        "23101A111": {
+          "sourceStatus": "available",
+          "population": 1634,
+          "areaHa": 131.504910244653,
+          "densityPerHa": 12.42539154591331
+        },
+        "23101A122": {
+          "sourceStatus": "available",
+          "population": 469,
+          "areaHa": 17.0853545861382,
+          "densityPerHa": 27.450410679829382
+        },
+        "23101A183": {
+          "sourceStatus": "available",
+          "population": 170,
+          "areaHa": 103.980317779364,
+          "densityPerHa": 1.6349247976018237
+        },
+        "23101A19-": {
+          "sourceStatus": "available",
+          "population": 733,
+          "areaHa": 254.420029729355,
+          "densityPerHa": 2.8810624728711223
+        },
+        "23101A212": {
+          "sourceStatus": "available",
+          "population": 468,
+          "areaHa": 33.4212621423573,
+          "densityPerHa": 14.003061823535027
+        },
+        "23101A291": {
+          "sourceStatus": "available",
+          "population": 234,
+          "areaHa": 126.462329176626,
+          "densityPerHa": 1.850353393959552
+        },
+        "23101A31-": {
+          "sourceStatus": "available",
+          "population": 757,
+          "areaHa": 37.3030983694826,
+          "densityPerHa": 20.293220485387252
+        },
+        "23101A322": {
+          "sourceStatus": "available",
+          "population": 635,
+          "areaHa": 56.8172903211488,
+          "densityPerHa": 11.17617535807823
+        },
+        "23101A391": {
+          "sourceStatus": "available",
+          "population": 17,
+          "areaHa": 63.6170017350883,
+          "densityPerHa": 0.2672241623519261
+        },
+        "23101A40-": {
+          "sourceStatus": "available",
+          "population": 1926,
+          "areaHa": 154.060681250165,
+          "densityPerHa": 12.501567462710003
+        },
+        "23101A411": {
+          "sourceStatus": "available",
+          "population": 1849,
+          "areaHa": 167.049286194849,
+          "densityPerHa": 11.06858964870581
+        },
+        "23101A422": {
+          "sourceStatus": "available",
+          "population": 1032,
+          "areaHa": 70.78677829716,
+          "densityPerHa": 14.578993772928982
+        },
+        "23101A483": {
+          "sourceStatus": "available",
+          "population": 19,
+          "areaHa": 48.0059371441166,
+          "densityPerHa": 0.39578437856469506
+        },
+        "23101A49-": {
+          "sourceStatus": "available",
+          "population": 0,
+          "areaHa": 342.981670276346,
+          "densityPerHa": 0
+        }
+      },
+      "municipalityStats": {
+        "Beersel": {
+          "sourceStatus": "available",
+          "population": 25249,
+          "areaHa": 3039.819186585142,
+          "densityPerHa": 8.306086135459953,
+          "sectorCount": 39
+        },
+        "Drogenbos": {
+          "sourceStatus": "available",
+          "population": 5687,
+          "areaHa": 249.3781253841082,
+          "densityPerHa": 22.804726722684748,
+          "sectorCount": 7
+        },
+        "Halle": {
+          "sourceStatus": "available",
+          "population": 39534,
+          "areaHa": 4498.387591475872,
+          "densityPerHa": 8.788482360860623,
+          "sectorCount": 41
+        },
+        "Linkebeek": {
+          "sourceStatus": "available",
+          "population": 4671,
+          "areaHa": 419.5818216854752,
+          "densityPerHa": 11.132512798663264,
+          "sectorCount": 7
+        },
+        "Pepingen": {
+          "sourceStatus": "available",
+          "population": 4478,
+          "areaHa": 3593.2281082904474,
+          "densityPerHa": 1.2462331544351914,
+          "sectorCount": 15
+        },
+        "Sint-Genesius-Rode": {
+          "sourceStatus": "available",
+          "population": 18386,
+          "areaHa": 2275.186298497413,
+          "densityPerHa": 8.081096485216419,
+          "sectorCount": 22
+        },
+        "Sint-Pieters-Leeuw": {
+          "sourceStatus": "available",
+          "population": 34211,
+          "areaHa": 4066.0059827395257,
+          "densityPerHa": 8.413907934525438,
+          "sectorCount": 23
+        }
+      },
+      "regionStats": {
+        "sourceStatus": "available",
+        "population": 132216,
+        "areaHa": 18141.58711465799,
+        "densityPerHa": 7.288006234756192,
+        "sectorCount": 154
+      },
+      "source": {
+        "name": "Inwonersdichtheid per ha - Vlaanderen - toestand 2019",
+        "producer": "Department of Environment & Spatial Development, Government of Flanders",
+        "pageUrl": "https://www.vlaanderen.be/datavindplaats/catalogus/inwonersdichtheid-per-ha-vlaanderen-toestand-2019",
+        "downloadUrl": "https://datasets.omgeving.vlaanderen.be/be.vlaanderen.omgeving.distribution.geo.60ed653e-caac-41f8-a87b-9452d154a926.ni_inw_ha_vlaa_2019.zip",
+        "rasterSha256": "a243e3474ac1fafa9fcf142662a1874d63f2b68e2bfd97c6b0be1777bbe6e9b6",
+        "sectorSha256": "4fc3522e37f23122b7f8552e3cb2326d03342ff5fe364f115b18301318fcb608"
+      }
+    }
+  },
+  "geometry": {
+    "authority": "Statbel",
+    "referenceDate": "2024-01-01",
+    "sectorCount": 154,
+    "sourceSha256": "6c37e0d0e811ab8f34ba2fdcc685357c0cc55408f6b5e9dcfa5bb8190b4d9299"
+  },
+  "processedAt": "2026-08-09T18:02:21.827Z"
+}

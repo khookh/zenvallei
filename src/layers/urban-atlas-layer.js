@@ -23,7 +23,6 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
       ? "layers.urbanAtlasLoadError"
       : "layers.urbanAtlasUnavailable",
     getLabel: () => t("layers.urbanAtlas", { year: year() }),
-    getDatasetStatus: () => t("dataset.readyUrbanAtlas", { year: year() }),
     getContext: () => ({
       meta: t("layers.context.urbanAtlasMeta", { year: year() }),
       text: t("layers.context.urbanAtlasText", { year: year() }),

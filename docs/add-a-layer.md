@@ -40,7 +40,6 @@ export function createTreeCanopyLayer({ manifest }) {
     id: "tree-canopy",
     isAvailable: () => Boolean(manifest?.available && manifest.geojsonUrl),
     getLabel: () => t("layers.treeCanopy"),
-    getDatasetStatus: () => t("dataset.readyTreeCanopy"),
     getContext: () => ({
       meta: t("treeCanopy.contextMeta"),
       text: t("treeCanopy.contextText"),

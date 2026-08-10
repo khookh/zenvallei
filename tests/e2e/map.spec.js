@@ -301,6 +301,7 @@ test("discloses map controls without changing exploration state", async ({ page 
 
   await page.locator('[data-heat-metric="vulnerability"]').click();
   await page.locator("#municipality-select").selectOption("Beersel");
+  await showControls(page);
   const search = page.locator("#sector-search");
 
   await search.fill("23003A001");
@@ -309,8 +310,10 @@ test("discloses map controls without changing exploration state", async ({ page 
   await page.locator('[data-layer="urban-atlas"]').click();
   await page.waitForFunction(() => window.__heatMap.getActiveLayer() === "urban-atlas");
   await page.waitForFunction(() => !window.__heatMap.map.isMoving());
-  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
+  await expect(page.locator("#detail-panel")).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
   await expect(search).toHaveValue("");
+  await showControls(page);
   const stateBeforeCollapse = await page.evaluate(() => ({
     activeLayer: window.__heatMap.getActiveLayer(),
     heatMetric: window.__heatMap.getHeatMetric(),
@@ -327,7 +330,7 @@ test("discloses map controls without changing exploration state", async ({ page 
   await expect(controlsToggle).toHaveAttribute("aria-expanded", "false");
   await expect(controlsToggle).toHaveAttribute("aria-label", "Kaartbediening uitklappen");
   await expect(page.locator("#map-controls-toggle-icon")).toHaveText("+");
-  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
   expect(await page.evaluate(() => ({
     activeLayer: window.__heatMap.getActiveLayer(),
     heatMetric: window.__heatMap.getHeatMetric(),
@@ -450,7 +453,8 @@ test("keeps local sectors usable when basemap tiles are unavailable", async ({ p
   await page.route("**/__test-tile.png", (route) => route.abort("failed"));
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
-  await expect(page.locator("#dataset-status")).toContainText("background temporarily unavailable");
+  await expect(page.locator("#layer-context-note")).toContainText("background temporarily unavailable");
+  await expect(page.locator("#selection-announcement")).toContainText("background temporarily unavailable");
   await expect(page.locator("#sector-options option")).toHaveCount(154);
 
   const expectedNetworkErrors = runtimeErrors.get(page);
@@ -476,6 +480,7 @@ test("matches the refined hierarchy in Dutch and English", async ({ page }) => {
 
   await page.locator("#language-toggle").click();
   await page.locator("#municipality-select").selectOption("Beersel");
+  await showControls(page);
   await page.locator("#sector-search").fill("23003A001");
   await page.locator("#sector-search").press("Enter");
   await page.reload();
@@ -489,14 +494,14 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator(".brand-mark")).toBeVisible();
   await expect(page.locator(".brand-mark")).toHaveAttribute("src", /assets\/zennevallei-river-mark\.png$/);
   await expect(page.locator(".eyebrow")).toHaveText("Zennevallei");
-  await expect(page.locator("[data-layer]")).toHaveCount(7);
+  await expect(page.locator("[data-layer]")).toHaveCount(8);
   await expect(page.locator(".layer-category")).toHaveCount(3);
   await expect(page.locator('[data-layer-category="heat"]')).toContainText("Hitte");
   await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik");
   await expect(page.locator('[data-layer-category="demography"]')).toContainText("Demografie");
   await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(2);
   await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(4);
-  await expect(page.locator('[data-layer-category="demography"] [data-layer]')).toHaveCount(1);
+  await expect(page.locator('[data-layer-category="demography"] [data-layer]')).toHaveCount(2);
   await expect(page.locator("[data-heat-metric]")).toHaveCount(3);
   await expect(page.locator("#heat-metric-control")).toBeVisible();
   await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
@@ -504,7 +509,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveText("Urban Atlas 2021");
   await expect(page.locator('[data-layer="land-cover"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="vegetation"]')).toHaveCount(0);
-  await expect(page.locator("#dataset-status")).toContainText("154 Statbel-sectoren · scores 2026");
+  await expect(page.locator("#dataset-status")).toHaveCount(0);
   await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
   await expect(page.locator("#about-button")).toContainText("Uitleg");
   await expect(page.locator("#layer-context-meta")).toHaveText("Officiële broncijfers · 154 Statbel-sectoren · 2026");
@@ -571,6 +576,7 @@ test("maps Statbel median taxable income without creating municipality medians",
   await expect(page.locator("#temporal-output")).toHaveText("2023");
   await expect(page.locator("#legend-title")).toContainText("Mediaan netto belastbaar inkomen");
   await expect(page.locator("#layer-context-sources")).toContainText("Statbel");
+  await showControls(page);
   await page.locator("#sector-search").fill("23003A001");
   await page.locator("#sector-search").press("Enter");
   await expect(page.locator("#detail-panel")).toContainText("Mediaan netto belastbaar inkomen per aangifte");
@@ -588,6 +594,7 @@ test("maps Statbel median taxable income without creating municipality medians",
 
 test("switches between combined, heat and vulnerability scores without losing exploration state", async ({ page }) => {
   await page.locator("#municipality-select").selectOption("Beersel");
+  await showControls(page);
   const search = page.locator("#sector-search");
   await search.fill("23003A001");
   await search.press("Enter");
@@ -618,7 +625,6 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await expect(heatButton).toBeFocused();
   await expect(heatButton).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid · Hitte");
-  await expect(page.locator("#dataset-status")).toContainText("hittescore 2026");
   await expect(page.locator("#legend-title")).toHaveText("Hittescore");
   await expect(page.locator("#layer-context-meta")).toContainText("Officiële hittescore");
   await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000–2019");
@@ -665,11 +671,13 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await showControls(page);
   await page.locator('[data-layer="urban-atlas"]').click();
   await expect(page.locator("#heat-metric-control")).toBeHidden();
+  await showControls(page);
   await page.locator('[data-layer="heat"]').click();
   await expect(page.locator("#heat-metric-control")).toBeVisible();
 
   await expect(page.locator('[data-heat-metric="vulnerability"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.locator(".score-orb strong")).toHaveText("8");
+  await expect(panel).toHaveAttribute("aria-hidden", "true");
+  await expect(search).toHaveValue("");
 
   await page.reload();
   await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
@@ -686,6 +694,7 @@ test("switches the complete interface to English without resetting exploration s
 
   await page.locator("#municipality-select").selectOption("Beersel");
   await expect(page.locator("#visible-count")).toHaveText("39 sectoren");
+  await showControls(page);
   const search = page.locator("#sector-search");
   await search.fill("23003A001");
   await search.press("Enter");
@@ -756,10 +765,9 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
     && window.__heatMap.map.getLayoutProperty("urban-atlas-fill", "visibility") === "visible");
   const firstRender = await page.evaluate(() => performance.getEntriesByName("urban-atlas-first-render")[0]?.duration);
   expect(firstRender).toBeLessThan(1_500);
-  await expect(atlasButton).toBeFocused();
+  await expect(panel).toBeFocused();
   await expect(atlasButton).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#legend-title")).toHaveText("Urban Atlas-landbedekking 2021");
-  await expect(page.locator("#dataset-status")).toContainText("Copernicus · polygonen 2021");
   await expect(page.locator("#layer-context-meta")).toContainText("geïnterpreteerde polygonen · 2021");
   await expect(page.locator("#layer-context-copy")).toContainText("landbedekking en landgebruik");
   await expect(page.locator("#layer-context-copy")).toContainText("Wij berekenen groenbedekking");
@@ -827,11 +835,8 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await page.locator("#municipality-select").selectOption("Beersel");
   await expect(panel).toHaveAttribute("aria-hidden", "true");
 
-  await page.locator('[data-layer="urban-atlas"]').click();
-  await expect(panel).toHaveAttribute("aria-hidden", "true");
-  await page.locator("#municipality-select").selectOption("Halle");
   await showControls(page);
-  await page.locator("#municipality-select").selectOption("Beersel");
+  await page.locator('[data-layer="urban-atlas"]').click();
   await expect(panel).toHaveAttribute("aria-hidden", "false");
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
   await expect(panel).toContainText("Groenbedekking");
@@ -845,6 +850,13 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await search.press("Enter");
   await expect(panel).toContainText("23003A001");
   await expect(panel).not.toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
+  await page.locator("#municipality-select").dispatchEvent("click");
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
+  await expect(search).toHaveValue("");
+
+  await showControls(page);
+  await search.fill("23003A001");
+  await search.press("Enter");
   await page.locator("#panel-close").click();
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
 
@@ -868,11 +880,8 @@ test("closes stale results on layer changes and opens meaningful Zennevallei sum
   for (const [layerId, expectedText] of summaries) {
     await showControls(page);
     await page.locator(`[data-layer="${layerId}"]`).click();
-    await expect(panel).toHaveAttribute("aria-hidden", "true");
-    await expect(page.locator("#sector-search")).toHaveValue("");
-    await showControls(page);
-    await page.locator("#reset-view").click();
     await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(page.locator("#sector-search")).toHaveValue("");
     await expect(panel).toContainText("HELE ZENNEVALLEI · 154 STATBEL-SECTOREN");
     await expect(panel).toContainText(expectedText);
     if (layerId === "groenkaart") {
@@ -897,6 +906,7 @@ test("loads the published 100 m density modes only when requested", async ({ pag
     "jaarbak-local-raster", "visibility",
   ))).toBe("visible");
   expect(requests).toEqual([]);
+  await showControls(page);
   await page.locator("#map-mode-action").click();
   await expect(page.locator("#map-mode-action")).toHaveText("Toon classificatie");
   await expect(page.locator("#legend-title")).toContainText("Dichtheid bodemafdekking");
@@ -915,6 +925,7 @@ test("loads the published 100 m density modes only when requested", async ({ pag
   await expect.poll(() => page.evaluate(() => window.__heatMap.map.getLayoutProperty(
     "groenkaart-local-raster", "visibility",
   ))).toBe("visible");
+  await showControls(page);
   await page.locator("#map-mode-action").click();
   await expect(page.locator("#legend-title")).toContainText("Dichtheid geselecteerde Groenkaartklassen");
   await expect.poll(() => requests.some((url) => url.includes("groenkaart-2021-density.tif"))).toBe(true);
@@ -951,6 +962,7 @@ test("loads the published 100 m density modes only when requested", async ({ pag
 test("filters the map and exposes no-data sectors honestly", async ({ page }) => {
   await page.locator("#municipality-select").selectOption("Halle");
   await expect(page.locator("#visible-count")).toHaveText("41 sectoren");
+  await showControls(page);
   const search = page.locator("#sector-search");
   await search.fill("23027A183");
   await search.press("Enter");

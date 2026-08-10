@@ -123,6 +123,25 @@ def _surface_stats(jaarbak, year):
     return scopes
 
 
+def display_scope_indexes(sectors, grid):
+    """Build visual masks from dissolved scopes, not individual sectors.
+
+    Sector-majority assignment intentionally excludes 30 m pixels tied across
+    two sectors for statistical summaries. Reusing that index as a display
+    mask created tiny transparent squares along otherwise internal sector
+    borders. Dissolving first removes those artificial internal boundaries.
+    """
+    region_index = _subpixel_majority(((sectors.geometry.union_all(), 1),), grid)
+    municipality_lookup = {name: index + 1 for index, name in enumerate(MUNICIPALITIES)}
+    municipality_shapes = []
+    for name, index in municipality_lookup.items():
+        geometry = sectors.loc[sectors["municipality"] == name].geometry.union_all()
+        if not geometry.is_empty:
+            municipality_shapes.append((geometry, index))
+    municipality_index = _subpixel_majority(municipality_shapes, grid)
+    return region_index, municipality_index, municipality_lookup
+
+
 def prepare_landsat_jaarbak():
     landsat_path = CACHE_ROOT / "landsat-temperature" / "manifest.json"
     jaarbak_path = CACHE_ROOT / "jaarbak" / "manifest.json"
@@ -146,17 +165,14 @@ def prepare_landsat_jaarbak():
     sector_index = _subpixel_majority(
         ((row.geometry, index + 1) for index, row in sectors.iterrows()), grid,
     )
-    municipality_lookup = {name: index + 1 for index, name in enumerate(MUNICIPALITIES)}
-    municipality_index = np.zeros_like(sector_index, dtype=np.uint8)
-    for index, metadata in sector_meta.items():
-        municipality_index[sector_index == index] = municipality_lookup[metadata["municipality"]]
+    region_index, municipality_index, municipality_lookup = display_scope_indexes(sectors, grid)
 
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     web = _web_grid(grid)
-    web_sector = _reproject_byte(sector_index.astype(np.uint8), grid, web)
+    web_region = _reproject_byte(region_index.astype(np.uint8), grid, web)
     web_municipality = _reproject_byte(municipality_index, grid, web)
     scope_path = OUTPUT_ROOT / "scope-index.png"
-    _write_png(scope_path, (web_sector, web_municipality, np.zeros_like(web_sector)))
+    _write_png(scope_path, (web_region, web_municipality, np.zeros_like(web_region)))
 
     class_cache = {}
     observations = {}
@@ -168,8 +184,7 @@ def prepare_landsat_jaarbak():
                 raise FileNotFoundError(f"Missing cached JaarBAK source for {year}: {source}")
             print(f"JaarBAK {year}: aligning the 1 m source to Landsat", flush=True)
             class_cache[year] = _classify_jaarbak(source, grid)[0]
-        soil_class = class_cache[year].copy()
-        soil_class[sector_index == 0] = 0
+        soil_class = class_cache[year]
 
         analysis = CACHE_ROOT / "landsat-temperature" / "analysis" / f"{observation_id}.tif"
         temperature, status, _, observation_grid = _read_analysis(analysis)

@@ -4,7 +4,12 @@ import { comparisonHeatGradient, comparisonLegendItems, thermalColor } from "./t
 
 const SOURCE_ID = "landsat-jaarbak-canvas";
 const RASTER_LAYER_ID = "landsat-jaarbak-temperature";
+const JAARBAK_RASTER_LAYER_ID = "jaarbak-local-raster";
 const BEFORE_LAYER = "heat-sectors-hit-area";
+
+const waitForPaintCycle = () => new Promise((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(resolve));
+});
 
 function resolveAsset(root, value, extension) {
   if (typeof value !== "string" || value.includes("..") || !value.endsWith(extension)) {
@@ -59,6 +64,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
   let savedOpacity;
   let loadError = null;
   let drawGeneration = 0;
+  let renderedScopeKey = "";
   const pixelCache = new Map();
   const distributionCache = new Map();
   const resolvedDistributions = new Map();
@@ -104,7 +110,25 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
     jaarbakLayer.setOption(map, "year", year);
     jaarbakLayer.applyFilter(map, null, { municipality });
     jaarbakLayer.setOpacity(0.20);
+    // A hidden raster source can report itself as loaded before MapLibre has
+    // requested the tiles required by the current viewport. Make JaarBAK
+    // renderable beneath ordinary Landsat, then wait for that visible source.
+    jaarbakLayer.setVisible(map, true);
+    map.triggerRepaint();
+    await waitForPaintCycle();
     await jaarbakLayer.waitUntilReady({ retry });
+    await waitForPaintCycle();
+  };
+
+  const reassertComparisonStack = () => {
+    if (!map?.getLayer(JAARBAK_RASTER_LAYER_ID) || !map.getLayer(RASTER_LAYER_ID)) return;
+    jaarbakLayer.setOpacity(0.20);
+    jaarbakLayer.setVisible(map, true);
+    map.moveLayer(JAARBAK_RASTER_LAYER_ID, RASTER_LAYER_ID);
+    map.moveLayer(RASTER_LAYER_ID, BEFORE_LAYER);
+    map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "visible");
+    map.setPaintProperty(RASTER_LAYER_ID, "raster-opacity", 0.94);
+    map.triggerRepaint();
   };
 
   const draw = async ({ retrySource = false } = {}) => {
@@ -125,8 +149,13 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       const output = outputContext.createImageData(canvas.width, canvas.height);
       const municipalityIndex = municipality ? manifest.municipalityIndexes[municipality] : 0;
       for (let offset = 0, pixel = 0; offset < pixels.data.length; offset += 4, pixel += 1) {
-        const inScope = !municipalityIndex || scopes.data[offset + 1] === municipalityIndex;
-        if (!inScope || !pixels.data[offset + 1]) continue;
+        // The red scope channel is the dissolved Zennevallei union and the
+        // green channel contains dissolved municipalities. Neither inherits
+        // the analytical sector-tie gaps used by distribution statistics.
+        const inScope = municipalityIndex
+          ? scopes.data[offset + 1] === municipalityIndex
+          : scopes.data[offset] === 1;
+        if (!inScope) continue;
         const status = pixels.data[offset + 2];
         if (status === 1) {
           const color = thermalColor(pixels.data[offset]);
@@ -149,11 +178,13 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       source?.play?.();
       map.triggerRepaint();
       requestAnimationFrame(() => source?.pause?.());
-      jaarbakLayer.setOpacity(0.20);
-      jaarbakLayer.setVisible(map, true);
-      map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "visible");
+      reassertComparisonStack();
+      await waitForPaintCycle();
+      if (!active || requestGeneration !== drawGeneration || observationId !== activeObservationId()) return;
+      reassertComparisonStack();
       landsatLayer.setVisible(map, false);
       map.triggerRepaint();
+      renderedScopeKey = `${observationId}|${municipality}`;
       loadError = null;
       notify();
     } catch (error) {
@@ -161,6 +192,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
         jaarbakLayer.setVisible(map, false);
         if (map.getLayer(RASTER_LAYER_ID)) map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "none");
         landsatLayer.setVisible(map, true);
+        renderedScopeKey = "";
         loadError = error;
         notify();
       }
@@ -227,6 +259,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       canvas = null;
       outputContext = null;
       loadError = null;
+      renderedScopeKey = "";
       jaarbakLayer.setVisible(map, false);
       jaarbakLayer.setClassificationOverride?.(false);
       if (savedYear != null) jaarbakLayer.setOption(map, "year", savedYear);
@@ -241,7 +274,10 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       try { await draw(); } catch (error) { console.error(error); }
     },
     async setMunicipality(value) {
-      municipality = value ?? "";
+      const nextMunicipality = value ?? "";
+      if (active && nextMunicipality === municipality
+        && renderedScopeKey === `${activeObservationId()}|${nextMunicipality}` && !loadError) return true;
+      municipality = nextMunicipality;
       if (!active) return true;
       try { await draw(); return true; } catch (error) { console.error(error); return false; }
     },
@@ -268,7 +304,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
         title: t("soilComparison.legendTitle"),
         note: t("soilComparison.legendNote", { year: activeObservation()?.secondaryYear ?? "" }),
         gradient: comparisonHeatGradient(),
-        comparisonSeries: manifest?.series?.map((series) => ({
+        comparisonSeries: manifest?.series?.filter((series) => series.id === "sealed").map((series) => ({
           ...series, label: t(`soilComparison.${series.id}`), selected: true,
         })) ?? [],
         observation: runtime.observation,

@@ -262,7 +262,6 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     isAvailable: () => Boolean(descriptor?.available !== false && !loadError),
     getUnavailableReasonKey: () => loadError ? "officialData.loadError" : "officialData.unavailable",
     getLabel: () => t(config.labelKey, { year: activeYear }),
-    getDatasetStatus: () => t("dataset.readyLocalRaster", { year: activeYear, resolution: descriptor?.source?.resolutionLabel ?? "" }),
     getContext: () => ({
       meta: t(`${config.contextKey}.contextMeta`, { year: activeYear }),
       text: t(`${config.contextKey}.contextText`),

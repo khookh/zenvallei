@@ -126,4 +126,29 @@ describe("generated Zennevallei data contract", () => {
     }
   });
 
+  it("keeps the two population methods separate and reconciles official totals", async () => {
+    const [population, grid] = await Promise.all([
+      readJson("population.json"),
+      readJson("population/population-grid-2025.geojson"),
+    ]);
+    expect(population.availableDatasets).toEqual(["statbel-2025", "flanders-2019"]);
+    expect(population.defaultDataset).toBe("statbel-2025");
+    expect(grid.features).toHaveLength(1503);
+    expect(new Set(grid.features.map(({ properties }) => properties.sideM)))
+      .toEqual(new Set([125, 250, 500, 1000]));
+    expect(grid.features.every(({ properties }) => Number.isFinite(properties.population)
+      && Number.isFinite(properties.densityPerHa)
+      && Math.abs(properties.densityPerHa - properties.population / (properties.areaKm2 * 100)) < 1e-6)).toBe(true);
+    for (const datasetId of population.availableDatasets) {
+      const dataset = population.datasets[datasetId];
+      expect(Object.keys(dataset.sectorStats)).toHaveLength(154);
+      expect(Object.values(dataset.sectorStats).every(({ sourceStatus }) => sourceStatus === "available")).toBe(true);
+      expect(Object.values(dataset.municipalityStats).reduce((sum, record) => sum + record.population, 0))
+        .toBe(dataset.regionStats.population);
+      expect(dataset.regionStats.sectorCount).toBe(154);
+    }
+    expect(population.datasets["statbel-2025"].regionStats.population).toBe(140122);
+    expect(population.datasets["flanders-2019"].regionStats.population).toBe(132216);
+  });
+
 });

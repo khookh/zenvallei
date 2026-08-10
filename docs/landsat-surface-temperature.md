@@ -70,6 +70,8 @@ Choose Landsat surface temperature, select **Compare**, then **Urban Atlas 2021*
 
 Only selected Urban Atlas surfaces are drawn. Their fill uses 18% opacity and their outline 62%; the thermal raster is drawn above them at 96%. Curves show the percentage of each surface's clear pixels per temperature bin and are normalised independently. One clear Landsat pixel is one recording, and 100% means all clear pixels assigned to that curve's surface. The comparison is descriptive, uses the fixed 2021 Urban Atlas classification for every Landsat year and does not treat spatially neighbouring pixels as independent observations.
 
+The expanded chart identifies the KMI heatwave, Brussels-local acquisition time, selected geography and matched surface source. It reports both clear-pixel counts and nominal represented area, using 0.09 ha per 30 m pixel. Values outside the fixed 15-50 degree Celsius display range are reported separately rather than silently discarded.
+
 ### JaarBAK soil sealing
 
 Run `pnpm landsat-soil-sealing:prepare` after JaarBAK and Landsat are prepared. The output is stored under `.cache/local-layers/landsat-jaarbak`. Each Landsat observation is paired with the closest available JaarBAK edition:
@@ -81,7 +83,7 @@ Run `pnpm landsat-soil-sealing:prepare` after JaarBAK and Landsat are prepared. 
 | 13 June and 9 September 2023 | 2023 |
 | 13 August 2025 and 22 June 2026 | 2024 |
 
-Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded. The comparison always shows those two independently normalised curves. The faint 20% JaarBAK base retains its official red and green classes; the thermal raster is drawn above it at 94%.
+Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded from the two distributions. The comparison always shows those two independently normalised curves. The faint 20% JaarBAK base retains its official red and green classes; the thermal raster is drawn above it at 94%. Its display mask uses the dissolved Zennevallei or municipality boundary, so pixels excluded from statistics by an internal sector tie remain thermally visible instead of becoming square gaps along sector borders.
 
 The UI discloses that the JaarBAK method changed in 2023 and that the 2024 edition is provisional. The 2024 mask is the closest available reference for the 2025 and 2026 Landsat observations.
 

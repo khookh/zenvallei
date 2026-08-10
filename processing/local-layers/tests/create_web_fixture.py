@@ -227,6 +227,7 @@ for item in landsat_items:
         "pmtilesVariants": variants("landsat-temperature", item["value"]),
         "sectorStats": {sector_id: landsat_stats for sector_id in sector_ids},
         "municipalityStats": {municipality: landsat_stats for municipality in municipalities},
+        "regionStats": landsat_stats,
     }
 landsat_source = {
     "name": "Fixture Landsat", "resolutionLabel": "30 m",
@@ -352,6 +353,9 @@ for item in landsat_items:
     encoded[..., 0] = 150
     encoded[:, :32, 1] = 1
     encoded[:, 32:, 1] = 2
+    # Simulate an unassigned analytical class at an internal sector tie. The
+    # display must still render the valid temperature from the dissolved scope.
+    encoded[20:22, 20:22, 1] = 0
     encoded[..., 2] = 1
     encoded[..., 3] = 255
     Image.fromarray(encoded, mode="RGBA").save(soil_root / "pixels" / f"{item['value']}.png")

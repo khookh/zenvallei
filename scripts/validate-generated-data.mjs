@@ -16,13 +16,14 @@ function browserAssetPath(assetUrl) {
   return path.join(publicRoot, assetUrl.replace(/^\//, ""));
 }
 
-const [geojson, scorePayload, methodology, provenance, urbanAtlas, income] = await Promise.all([
+const [geojson, scorePayload, methodology, provenance, urbanAtlas, income, population] = await Promise.all([
   readJson("sectors.geojson"),
   readJson("scores.json"),
   readJson("methodology.json"),
   readJson("provenance.json"),
   readJson("urban-atlas.json"),
   readJson("income.json"),
+  readJson("population.json"),
 ]);
 
 const { sectorIds } = validateApplicationData({
@@ -32,6 +33,7 @@ const { sectorIds } = validateApplicationData({
   provenance,
   urbanAtlas,
   income,
+  population,
 });
 
 if (sectorIds.size !== 154) throw new Error(`Expected 154 Zennevallei sectors, received ${sectorIds.size}.`);
@@ -50,6 +52,26 @@ for (const year of income.availableYears) {
     throw new Error(`Statbel income ${year} expected 141 medians and 150 joins; received ${available} and ${matched}.`);
   }
 }
+
+for (const datasetId of population.availableDatasets) {
+  const dataset = population.datasets[datasetId];
+  const records = Object.values(dataset.sectorStats);
+  if (records.length !== 154 || records.some(({ sourceStatus, population: value, areaHa, densityPerHa }) => (
+    sourceStatus !== "available" || !Number.isFinite(value) || !Number.isFinite(areaHa) || !Number.isFinite(densityPerHa)
+  ))) {
+    throw new Error(`${datasetId}: population statistics are incomplete or invalid.`);
+  }
+  const municipalityPopulation = Object.values(dataset.municipalityStats)
+    .reduce((sum, record) => sum + record.population, 0);
+  if (municipalityPopulation !== dataset.regionStats.population) {
+    throw new Error(`${datasetId}: municipality population does not reconcile with Zennevallei.`);
+  }
+}
+
+await fs.access(browserAssetPath(population.datasets["statbel-2025"].mapUrl));
+await fs.access(browserAssetPath(population.datasets["flanders-2019"].analyticalUrl));
+await Promise.all(Object.values(population.datasets["flanders-2019"].imageVariants)
+  .map((asset) => fs.access(browserAssetPath(asset))));
 
 await fs.access(browserAssetPath(urbanAtlas.geojsonUrl));
 
@@ -126,4 +148,4 @@ if (JSON.stringify(publishedLandsatObservations) !== JSON.stringify(expectedLand
   throw new Error(`Published Landsat timeline must contain the six clearest approved heatwave observations: ${publishedLandsatObservations.join(", ")}.`);
 }
 
-console.log(`Validated ${sectorIds.size} sectors, seven application layers and all prepared browser assets.`);
+console.log(`Validated ${sectorIds.size} sectors, eight application layers and all prepared browser assets.`);

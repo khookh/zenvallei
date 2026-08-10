@@ -53,7 +53,6 @@ export function createNotebookTestLayer({ notebookTest }) {
       ? "layers.notebookTestMissing"
       : "layers.notebookTestLoadError",
     getLabel: () => t("layers.notebookTest"),
-    getDatasetStatus: () => t("dataset.readyNotebookTest"),
     getContext: () => ({
       meta: t("layers.context.notebookTestMeta"),
       text: translated(manifest?.description, t("layers.context.notebookTestText")),

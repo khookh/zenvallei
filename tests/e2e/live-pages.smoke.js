@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("live release exposes seven layers and both Landsat comparisons", async ({ page }) => {
+test("live release exposes eight layers and both Landsat comparisons", async ({ page }) => {
   const failedSameOrigin = [];
   const applicationOrigin = new URL(process.env.LIVE_PAGES_URL ?? "https://khookh.github.io/zenvallei/").origin;
   page.on("response", (response) => {
@@ -11,7 +11,9 @@ test("live release exposes seven layers and both Landsat comparisons", async ({ 
   await page.goto(`.?smoke=${Date.now()}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#project-intro")).toBeVisible();
   await page.locator("#project-intro-primary").click();
-  await expect(page.locator("[data-layer]")).toHaveCount(7);
+  await expect(page.locator("[data-layer]")).toHaveCount(8);
+  await expect(page.locator('[data-layer="population"]')).toBeVisible();
+  await expect(page.locator("#dataset-status")).toHaveCount(0);
 
   const landsatButton = page.locator('[data-layer="landsat-temperature"]');
   await landsatButton.click();

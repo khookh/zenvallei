@@ -62,13 +62,14 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       return { layers: {}, comparisons: {} };
     }
   };
-  const [geojson, scorePayload, methodology, provenance, urbanAtlas, income, notebookTest, officialData] = await Promise.all([
+  const [geojson, scorePayload, methodology, provenance, urbanAtlas, income, population, notebookTest, officialData] = await Promise.all([
     loadJson("sectors.geojson"),
     loadJson("scores.json"),
     loadJson("methodology.json"),
     loadJson("provenance.json"),
     loadOptionalJson("urban-atlas.json", { tolerateErrors: true }),
     loadJson("income.json"),
+    loadJson("population.json"),
     loadNotebookTest(),
     loadOfficialLayers(),
   ]);
@@ -77,6 +78,13 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
     return `${prefix}${assetUrl.replace(/^\//, "")}`;
   };
   if (urbanAtlas?.geojsonUrl) urbanAtlas.geojsonUrl = resolveAssetUrl(urbanAtlas.geojsonUrl);
+  Object.values(population?.datasets ?? {}).forEach((dataset) => {
+    if (dataset.mapUrl) dataset.mapUrl = resolveAssetUrl(dataset.mapUrl);
+    if (dataset.analyticalUrl) dataset.analyticalUrl = resolveAssetUrl(dataset.analyticalUrl);
+    Object.entries(dataset.imageVariants ?? {}).forEach(([key, value]) => {
+      dataset.imageVariants[key] = resolveAssetUrl(value);
+    });
+  });
   const resolveNotebookUrl = (assetUrl) => {
     if (!assetUrl || !/^[a-z0-9-]+\.png$/i.test(assetUrl)) return null;
     return `${prefix}__playground__/${assetUrl}`;
@@ -87,10 +95,10 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
       notebookTest.rasterVariants[key] = resolveNotebookUrl(value);
     });
   }
-  validateApplicationData({ geojson, scorePayload, methodology, provenance, urbanAtlas, income });
+  validateApplicationData({ geojson, scorePayload, methodology, provenance, urbanAtlas, income, population });
   addMunicipalityStatistics({ scores: scorePayload.sectors, urbanAtlas });
   return {
-    geojson, scores: scorePayload.sectors, methodology, provenance, urbanAtlas, income, notebookTest,
+    geojson, scores: scorePayload.sectors, methodology, provenance, urbanAtlas, income, population, notebookTest,
     officialLayers: officialData.layers,
     comparisons: officialData.comparisons,
   };

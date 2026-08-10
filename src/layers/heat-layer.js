@@ -27,12 +27,6 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
     getLabel: () => activeMetric === DEFAULT_HEAT_METRIC
       ? t("layers.heat")
       : t("layers.heatWithMetric", { metric: metricLabel() }),
-    getDatasetStatus: ({ sectorCount }) => activeMetric === DEFAULT_HEAT_METRIC
-      ? t("dataset.readyHeat", { count: sectorCount })
-      : t("dataset.readyHeatMetric", {
-        count: sectorCount,
-        metric: t(`heatMetric.scoreName.${activeMetric}`),
-      }),
     getContext: ({ sectorCount }) => {
       const keys = activeMetric === "heat"
         ? ["layers.context.heatScoreMeta", "layers.context.heatScoreText"]

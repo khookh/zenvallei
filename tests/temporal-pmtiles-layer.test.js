@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("maplibre-gl", () => ({ addProtocol: vi.fn() }));
 vi.mock("pmtiles", () => ({ Protocol: class { tile() {} } }));
@@ -40,7 +40,11 @@ const createSubject = () => createTemporalPmtilesMap({
 });
 
 describe("temporal PMTiles readiness", () => {
-  beforeEach(() => vi.useRealTimers());
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 206 }));
+  });
+  afterEach(() => vi.unstubAllGlobals());
 
   it("ignores errors from unrelated raster sources", async () => {
     const map = new FakeMap();
@@ -82,5 +86,15 @@ describe("temporal PMTiles readiness", () => {
     await subject.whenReady();
     expect(map.getLayer("test-raster").layout.visibility).toBe("visible");
     expect(map.getLayer("test-raster").paint["raster-opacity"]).toBe(0.2);
+  });
+
+  it("rejects an archive HTTP failure before trusting MapLibre's initial loaded state", async () => {
+    fetch.mockResolvedValueOnce({ status: 503 });
+    const map = new FakeMap();
+    map.sourceLoaded = true;
+    const subject = createSubject();
+    await subject.mount(map, {});
+    await expect(subject.whenReady()).rejects.toThrow("Raster archive HTTP 503");
+    expect(subject.getReadiness().status).toBe("error");
   });
 });

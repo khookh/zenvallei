@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   LANDSAT_COMPARISON_IDS,
+  LOCAL_COMPARISON_IDS,
   LAYER_ACTIONS,
   PUBLIC_LAYER_IDS,
   validateProductContract,
 } from "../src/product-contract.js";
 
 describe("release product contract", () => {
-  it("pins seven public layers, two comparisons and only relevant action rows", () => {
+  it("pins eight public layers, two comparisons and only relevant action rows", () => {
     expect(PUBLIC_LAYER_IDS).toEqual([
       "heat", "landsat-temperature", "urban-atlas", "jaarbak",
-      "groenkaart", "landgebruik", "income",
+      "groenkaart", "landgebruik", "population", "income",
     ]);
     expect(LANDSAT_COMPARISON_IDS).toEqual(["landsat-urban-atlas", "landsat-jaarbak"]);
+    expect(LOCAL_COMPARISON_IDS).toEqual(["heat-income"]);
     expect(LAYER_ACTIONS).toEqual({
       heat: "comparison-preview",
       "landsat-temperature": "compare",
@@ -33,5 +35,13 @@ describe("release product contract", () => {
     const layers = new Map([...PUBLIC_LAYER_IDS, "notebook-test"].map((id) => [id, {}]));
     const comparisons = new Map(LANDSAT_COMPARISON_IDS.map((id) => [id, {}]));
     expect(validateProductContract(layers, comparisons, { playground: true })).toBe(true);
+  });
+
+  it("requires the functional heat-income comparison only in local-data mode", () => {
+    const layers = new Map(PUBLIC_LAYER_IDS.map((id) => [id, {}]));
+    const comparisons = new Map([...LANDSAT_COMPARISON_IDS, ...LOCAL_COMPARISON_IDS].map((id) => [id, {}]));
+    expect(validateProductContract(layers, comparisons, { localData: true })).toBe(true);
+    comparisons.delete("heat-income");
+    expect(() => validateProductContract(layers, comparisons, { localData: true })).toThrow("heat-income");
   });
 });
