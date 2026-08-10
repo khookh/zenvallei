@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+// Screenshot rendering depends on the operating system's font rasterisation.
+// Linux CI still runs all semantic and interaction assertions; the committed
+// visual-regression baselines are intentionally generated on Windows.
+const RUN_VISUAL_REGRESSION = process.platform === "win32";
+
 const TRANSPARENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+4S7Z1AAAAABJRU5ErkJggg==",
   "base64",
@@ -83,12 +88,14 @@ test("compares heat vulnerability with authoritative sector population", async (
   await expect(inlineBox.locator("[data-scatter-sector]")).toHaveCount(140);
   await expect(inlineBars.locator("[data-population-score-bar]")).toHaveCount(11);
   await expect(page.locator("#detail-panel")).toContainText("139,939 of 140,122 residents are represented");
-  await expect(inlineBox.locator("svg")).toHaveScreenshot("heat-population-comparison.png", {
-    animations: "disabled", maxDiffPixelRatio: .001,
-  });
-  await expect(inlineBars.locator("svg")).toHaveScreenshot("heat-population-bars.png", {
-    animations: "disabled", maxDiffPixelRatio: .001,
-  });
+  if (RUN_VISUAL_REGRESSION) {
+    await expect(inlineBox.locator("svg")).toHaveScreenshot("heat-population-comparison.png", {
+      animations: "disabled", maxDiffPixelRatio: .001,
+    });
+    await expect(inlineBars.locator("svg")).toHaveScreenshot("heat-population-bars.png", {
+      animations: "disabled", maxDiffPixelRatio: .001,
+    });
+  }
 
   expect(await page.evaluate(() => ({
     heat: window.__heatMap.map.getLayoutProperty("heat-sectors-fill", "visibility"),
@@ -125,12 +132,14 @@ test("compares heat vulnerability with authoritative sector population", async (
   await expect(dialog).toContainText("Heat vulnerability and population in Entire Zennevallei");
   await expect(dialog.locator("[data-heat-population-box-chart].is-expanded")).toBeVisible();
   await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded")).toBeVisible();
-  await expect(dialog.locator("[data-heat-population-box-chart].is-expanded svg")).toHaveScreenshot("heat-population-expanded.png", {
-    animations: "disabled", maxDiffPixelRatio: .001,
-  });
-  await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded svg")).toHaveScreenshot("heat-population-bars-expanded.png", {
-    animations: "disabled", maxDiffPixelRatio: .001,
-  });
+  if (RUN_VISUAL_REGRESSION) {
+    await expect(dialog.locator("[data-heat-population-box-chart].is-expanded svg")).toHaveScreenshot("heat-population-expanded.png", {
+      animations: "disabled", maxDiffPixelRatio: .001,
+    });
+    await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded svg")).toHaveScreenshot("heat-population-bars-expanded.png", {
+      animations: "disabled", maxDiffPixelRatio: .001,
+    });
+  }
   await dialog.locator("[data-close-comparison-chart]").click();
 
   const accessibility = await new AxeBuilder({ page })
@@ -373,7 +382,9 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("Land-surface temperature by Urban Atlas surface");
   await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("ha represented area");
   await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("0.5°C bins");
-  await expect(page.locator("[data-comparison-chart-dialog]")).toHaveScreenshot("landsat-urban-atlas-expanded.png", { animations: "disabled" });
+  if (RUN_VISUAL_REGRESSION) {
+    await expect(page.locator("[data-comparison-chart-dialog]")).toHaveScreenshot("landsat-urban-atlas-expanded.png", { animations: "disabled" });
+  }
   await page.locator("[data-close-comparison-chart]").click();
   await expect(page.locator("[data-comparison-chart-dialog]")).not.toBeVisible();
   if (isMobile) await expandControls(page);
@@ -491,9 +502,11 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(inlineHeatIncomeChart.locator("[data-scatter-sector]")).toHaveCount(140);
   await expect(page.locator("#detail-panel")).toContainText("140 vergelijkbare sectoren");
   await expect(page.locator("#legend-content")).toContainText("exacte inkomenswaarden");
-  await expect(page.locator("#detail-panel")).toHaveScreenshot("heat-income-comparison.png", {
-    animations: "disabled", maxDiffPixelRatio: .001,
-  });
+  if (RUN_VISUAL_REGRESSION) {
+    await expect(page.locator("#detail-panel")).toHaveScreenshot("heat-income-comparison.png", {
+      animations: "disabled", maxDiffPixelRatio: .001,
+    });
+  }
   const heatIncomeAccessibility = await new AxeBuilder({ page })
     .include("#detail-panel")
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -502,9 +515,11 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await inlineHeatIncomeChart.locator("[data-expand-comparison-chart]").click();
   await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("Eindscore en belastbaar inkomen in Hele Zennevallei");
   await expect(page.locator("[data-comparison-chart-dialog] .heat-income-boxplots rect")).not.toHaveCount(0);
-  await expect(page.locator("[data-comparison-chart-dialog]")).toHaveScreenshot("heat-income-expanded.png", {
-    animations: "disabled", maxDiffPixelRatio: .001,
-  });
+  if (RUN_VISUAL_REGRESSION) {
+    await expect(page.locator("[data-comparison-chart-dialog]")).toHaveScreenshot("heat-income-expanded.png", {
+      animations: "disabled", maxDiffPixelRatio: .001,
+    });
+  }
   await page.locator("[data-close-comparison-chart]").click();
   expect(await page.evaluate(() => ({
     heat: window.__heatMap.map.getLayoutProperty("heat-sectors-fill", "visibility"),
