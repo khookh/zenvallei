@@ -52,12 +52,15 @@ async function rasterVisibility(page) {
   return page.evaluate(() => {
     const map = window.__heatMap.map;
     const visibility = (id) => map.getLayer(id) ? map.getLayoutProperty(id, "visibility") ?? "visible" : "missing";
+    const prefixedVisibility = (prefix) => {
+      const layer = map.getStyle().layers.find(({ id }) => id.startsWith(`${prefix}-`));
+      return layer ? map.getLayoutProperty(layer.id, "visibility") ?? "visible" : "missing";
+    };
     return {
       landsat: visibility("landsat-temperature-raster"),
       jaarbak: visibility("jaarbak-local-raster"),
       density: visibility("jaarbak-density-raster"),
-      sealed: visibility("landsat-jaarbak-sealed"),
-      comparison: visibility("landsat-jaarbak-temperature"),
+      sealed: prefixedVisibility("landsat-jaarbak-sealed"),
     };
   });
 }
@@ -213,36 +216,34 @@ test("reveals the aligned sealed mask and Landsat comparison atomically", async 
   await expect.poll(() => page.evaluate(() => {
     const map = window.__heatMap.map;
     const ids = map.getStyle().layers.map((layer) => layer.id);
+    const sealedId = ids.find((id) => id.startsWith("landsat-jaarbak-sealed-"));
     return {
-      sealedVisibility: map.getLayoutProperty("landsat-jaarbak-sealed", "visibility"),
-      sealedOpacity: map.getPaintProperty("landsat-jaarbak-sealed", "raster-opacity"),
-      comparisonVisibility: map.getLayoutProperty("landsat-jaarbak-temperature", "visibility"),
-      comparisonOpacity: map.getPaintProperty("landsat-jaarbak-temperature", "raster-opacity"),
+      sealedVisibility: sealedId ? map.getLayoutProperty(sealedId, "visibility") ?? "visible" : "missing",
+      sealedOpacity: sealedId ? map.getPaintProperty(sealedId, "raster-opacity") : null,
+      landsatVisibility: map.getLayoutProperty("landsat-temperature-raster", "visibility"),
+      landsatOpacity: map.getPaintProperty("landsat-temperature-raster", "raster-opacity"),
       stack: [
-        ids.indexOf("landsat-jaarbak-sealed"),
-        ids.indexOf("landsat-jaarbak-temperature"),
+        ids.indexOf(sealedId),
+        ids.indexOf("landsat-temperature-raster"),
         ids.indexOf("heat-sectors-hit-area"),
       ],
     };
   }), { timeout: 20_000 }).toEqual({
     sealedVisibility: "visible",
     sealedOpacity: 0.96,
-    comparisonVisibility: "visible",
-    comparisonOpacity: 0.72,
+    landsatVisibility: "visible",
+    landsatOpacity: 0.72,
     stack: expect.arrayContaining([expect.any(Number)]),
   });
   const stack = await page.evaluate(() => {
     const ids = window.__heatMap.map.getStyle().layers.map((layer) => layer.id);
-    return [ids.indexOf("landsat-jaarbak-sealed"), ids.indexOf("landsat-jaarbak-temperature"), ids.indexOf("heat-sectors-hit-area")];
+    const sealedId = ids.find((id) => id.startsWith("landsat-jaarbak-sealed-"));
+    return [ids.indexOf(sealedId), ids.indexOf("landsat-temperature-raster"), ids.indexOf("heat-sectors-hit-area")];
   });
   expect(stack[0]).toBeGreaterThanOrEqual(0);
   expect(stack[0]).toBeLessThan(stack[1]);
   expect(stack[1]).toBeLessThan(stack[2]);
-  expect(jaarbakResponses).toEqual([]);
-  expect(await page.evaluate(() => {
-    const canvas = document.querySelector("#landsat-jaarbak-sealed-canvas");
-    return [...canvas.getContext("2d").getImageData(10, 10, 1, 1).data];
-  })).toEqual([127, 0, 29, 255]);
+  expect(jaarbakResponses.some((status) => [200, 206].includes(status))).toBe(true);
   await expect(page.locator("#temporal-output")).toContainText("22 Jun 2026");
   await expect(page.locator("#legend-content")).toContainText("Sealed");
   await expect(page.locator("#legend-content")).not.toContainText("Unsealed");
@@ -256,10 +257,10 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
   await page.locator("#project-intro-primary").click();
   const cases = [
-    ["landsat-temperature", "groenkaart", "Land-surface temperature versus pixel green density", "landsat-groenkaart-temperature"],
-    ["groenkaart", "landsat-temperature", "Land-surface temperature versus pixel green density", "landsat-groenkaart-temperature"],
-    ["groenkaart", "income", "Green density versus median taxable income", "groenkaart-income-density"],
-    ["income", "groenkaart", "Green density versus median taxable income", "groenkaart-income-density"],
+    ["landsat-temperature", "groenkaart", "Land-surface temperature versus pixel green density", "landsat-groenkaart-temperature-"],
+    ["groenkaart", "landsat-temperature", "Land-surface temperature versus pixel green density", "landsat-groenkaart-temperature-"],
+    ["groenkaart", "income", "Green density versus median taxable income", "groenkaart-income-density-"],
+    ["income", "groenkaart", "Green density versus median taxable income", "groenkaart-income-density-"],
     ["landsat-temperature", "income", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature"],
     ["income", "landsat-temperature", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature"],
   ];
@@ -269,7 +270,10 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
     await expect(page.locator(".sealed-urban-scatter:not(.is-expanded)")).toBeVisible();
     await expect.poll(() => page.evaluate((id) => {
       const map = window.__heatMap.map;
-      return map.getLayer(id) ? map.getLayoutProperty(id, "visibility") ?? "visible" : "missing";
+      const layer = id.endsWith("-")
+        ? map.getStyle().layers.find((item) => item.id.startsWith(id))
+        : map.getLayer(id);
+      return layer ? map.getLayoutProperty(layer.id, "visibility") ?? "visible" : "missing";
     }, mapLayer)).toBe("visible");
     if (targetLayer === "groenkaart" || fromLayer === "groenkaart") {
       await expandComparisonLegend(page);
@@ -479,22 +483,19 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(page.locator("#legend-content")).not.toContainText("Unsealed");
   await expect(page.locator("#detail-panel")).toContainText("Soil-sealing composition");
   await page.locator("[data-expand-comparison-chart]").click();
-  await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("Land-surface temperature on sealed and unsealed surfaces");
-  await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("JaarBAK");
-  await page.locator("[data-close-comparison-chart]").click();
+  const soilChartsDialog = page.locator("[data-comparison-chart-dialog]");
+  await expect(soilChartsDialog).toBeVisible();
+  await expect(soilChartsDialog).toContainText("Land-surface temperature on sealed and unsealed surfaces");
+  await expect(soilChartsDialog).toContainText("JaarBAK");
+  await soilChartsDialog.locator("[data-close-comparison-chart]").click();
   await expect(page.locator("[data-comparison-series]")).toHaveCount(0);
   expect(localRequests.some((url) => url.includes("/landsat-jaarbak/manifest.json"))).toBe(true);
   await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
-    landsat: "none", jaarbak: "none", density: "none", sealed: "visible", comparison: "visible",
+    landsat: "visible", jaarbak: "none", density: "none", sealed: "visible",
   });
-  expect(await page.evaluate(() => {
-    const canvas = document.querySelector("#landsat-jaarbak-comparison-canvas");
-    return canvas.getContext("2d").getImageData(20, 20, 1, 1).data[3];
-  })).toBe(255);
-  expect(await page.evaluate(() => {
-    const canvas = document.querySelector("#landsat-jaarbak-sealed-canvas");
-    return [...canvas.getContext("2d").getImageData(10, 10, 1, 1).data];
-  })).toEqual([127, 0, 29, 255]);
+  expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty(
+    "landsat-temperature-raster", "raster-opacity",
+  ))).toBe(.72);
   if (isMobile) await expandControls(page);
   await page.locator("#analysis-pair-change").click();
   await page.locator('[data-layer="urban-atlas"]').click();

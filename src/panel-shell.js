@@ -70,6 +70,7 @@ export function createDetailPanel({
   };
 
   const captureRenderState = () => {
+    const expandedChart = content.querySelector("[data-comparison-chart-dialog][open]");
     content.querySelectorAll("details[data-section]").forEach((element) => {
       if (element.open) openSectionIds.add(element.dataset.section);
       else openSectionIds.delete(element.dataset.section);
@@ -78,12 +79,20 @@ export function createDetailPanel({
       openSections: [...openSectionIds],
       hadExpandedSection: openSectionIds.size > 0,
       focusKey: content.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null,
+      expandedChartOpen: Boolean(expandedChart),
+      expandedChartScrollTop: expandedChart?.querySelector(".comparison-chart-dialog-content")?.scrollTop ?? 0,
     };
   };
 
   const renderCurrentView = ({ preserveState = true, focusPanel = false } = {}) => {
     if (!currentView) return;
-    const renderState = preserveState ? captureRenderState() : { openSections: [], hadExpandedSection: false, focusKey: null };
+    const renderState = preserveState ? captureRenderState() : {
+      openSections: [],
+      hadExpandedSection: false,
+      focusKey: null,
+      expandedChartOpen: false,
+      expandedChartScrollTop: 0,
+    };
     if (currentView.type === "about") {
       const model = getAboutModel();
       content.innerHTML = renderAboutPanelModel(model);
@@ -113,6 +122,17 @@ export function createDetailPanel({
     } else if (focusPanel) {
       requestAnimationFrame(() => panel.focus({ preventScroll: true }));
     }
+    // Comparison data can finish loading while its expanded chart is open. Reopen
+    // the newly rendered dialog so an asynchronous panel refresh never dismisses it.
+    if (renderState.expandedChartOpen) {
+      const expandedChart = content.querySelector("[data-comparison-chart-dialog]");
+      if (expandedChart && !expandedChart.open) {
+        expandedChart.showModal();
+        const body = expandedChart.querySelector(".comparison-chart-dialog-content");
+        if (body) body.scrollTop = renderState.expandedChartScrollTop;
+        expandedChart.querySelector("[data-close-comparison-chart]")?.focus({ preventScroll: true });
+      }
+    }
     updatePeekSummary();
   };
 
@@ -141,10 +161,16 @@ export function createDetailPanel({
   };
 
   const show = (view, triggerElement) => {
+    const sameRecordView = currentView?.type === "record"
+      && view.type === "record"
+      && currentView.layerId === view.layerId
+      && currentView.record?.sectorId === view.record?.sectorId
+      && currentView.record?.scope === view.record?.scope
+      && currentView.record?.municipality === view.record?.municipality;
     returnFocusElement = triggerElement instanceof HTMLElement ? triggerElement : document.activeElement;
     currentView = view;
-    openSectionIds = new Set();
-    renderCurrentView({ preserveState: false, focusPanel: true });
+    if (!sameRecordView) openSectionIds = new Set();
+    renderCurrentView({ preserveState: sameRecordView, focusPanel: !sameRecordView });
     applyPresentation("expanded");
     panel.scrollTop = 0;
     onOpen?.();

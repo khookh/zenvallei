@@ -798,17 +798,19 @@ async function start() {
   }
   const groenkaartLayer = application.layers.get("groenkaart");
   const incomeLayer = application.layers.get("income");
-  if (landsatLayer && groenkaartLayer && data.comparisons?.["landsat-groenkaart"]) {
+  if (landsatLayer && groenkaartLayer && application.layers.has("jaarbak") && data.comparisons?.["landsat-groenkaart"]) {
     const { createLandsatGroenkaartComparison } = await import("./comparisons/landsat-groenkaart.js");
     const comparison = createLandsatGroenkaartComparison({
       descriptor: data.comparisons["landsat-groenkaart"], landsatLayer, groenkaartLayer,
+      jaarbakLayer: application.layers.get("jaarbak"),
     });
     application.comparisons.set(comparison.id, comparison);
   }
-  if (groenkaartLayer && incomeLayer && data.comparisons?.["groenkaart-income"]) {
+  if (groenkaartLayer && incomeLayer && application.layers.has("jaarbak") && data.comparisons?.["groenkaart-income"]) {
     const { createGroenkaartIncomeComparison } = await import("./comparisons/groenkaart-income.js");
     const comparison = createGroenkaartIncomeComparison({
       descriptor: data.comparisons["groenkaart-income"], groenkaartLayer, incomeLayer,
+      jaarbakLayer: application.layers.get("jaarbak"),
     });
     application.comparisons.set(comparison.id, comparison);
   }

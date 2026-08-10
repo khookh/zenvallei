@@ -1,7 +1,10 @@
 /** Draw large pixel scatter clouds without placing tens of thousands of SVG nodes in the DOM. */
 export function mountPixelScatterCharts(root, model) {
-  if (!Array.isArray(model?.pixelPoints)) return;
   root.querySelectorAll("canvas[data-pixel-scatter-canvas]").forEach((canvas) => {
+    const points = canvas.dataset.pixelScatterSource === "densityScatter"
+      ? model.densityScatter.pixelPoints
+      : model?.pixelPoints;
+    if (!Array.isArray(points) && !ArrayBuffer.isView(points)) return;
     const context = canvas.getContext("2d");
     const width = canvas.width;
     const height = canvas.height;
@@ -15,11 +18,16 @@ export function mountPixelScatterCharts(root, model) {
     const yMax = Number(canvas.dataset.yMax);
     context.clearRect(0, 0, width, height);
     context.fillStyle = "rgba(26,94,104,0.18)";
-    for (const [xValue, yValue] of model.pixelPoints) {
+    const draw = (xValue, yValue) => {
       const x = left + (xValue - xMin) / Math.max(1e-9, xMax - xMin) * plotWidth;
       const y = top + plotHeight - (yValue - yMin) / Math.max(1e-9, yMax - yMin) * plotHeight;
-      if (x < left || x > left + plotWidth || y < top || y > top + plotHeight) continue;
+      if (x < left || x > left + plotWidth || y < top || y > top + plotHeight) return;
       context.fillRect(x - .7, y - .7, 1.4, 1.4);
+    };
+    if (ArrayBuffer.isView(points)) {
+      for (let index = 0; index < points.length; index += 2) draw(points[index], points[index + 1]);
+    } else {
+      for (const [xValue, yValue] of points) draw(xValue, yValue);
     }
   });
 }

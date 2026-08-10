@@ -33,6 +33,25 @@ _write_cutline(cutline, sectors.geometry.union_all())
 archive = ROOT / "fixture.pmtiles"
 _pmtiles(source, archive, cutline, "9..14")
 
+jaarbak_source = ROOT / "fixture-jaarbak-rgba.tif"
+with rasterio.open(
+    jaarbak_source, "w", driver="GTiff", width=512, height=512, count=4, dtype="uint8",
+    crs="EPSG:3857", transform=from_bounds(minx, miny, maxx, maxy, 512, 512),
+) as dataset:
+    rgba = np.zeros((4, 512, 512), dtype=np.uint8)
+    rgba[:, :, :256] = np.array([0xe8, 0x29, 0x2f, 255], dtype=np.uint8)[:, None, None]
+    rgba[:, :, 256:] = np.array([0x8e, 0xcf, 0x7c, 255], dtype=np.uint8)[:, None, None]
+    dataset.write(rgba)
+jaarbak_archive = ROOT / "fixture-jaarbak.pmtiles"
+# Browser tests only exercise the audited map zooms. Keeping this fixture at
+# zoom 14 makes setup deterministic and fast; production JaarBAK remains 1 m
+# through zoom 17.
+_pmtiles(jaarbak_source, jaarbak_archive, cutline, "9..14")
+
+shared_root = ROOT / "shared"
+shared_root.mkdir(parents=True, exist_ok=True)
+shutil.copy2(archive, shared_root / "urban-fabric-2021.pmtiles")
+
 municipalities = sorted(sectors["municipality"].unique())
 sector_ids = sectors["sectorId"].astype(str).tolist()
 
@@ -43,7 +62,7 @@ def variants(dataset, value):
         filename = f"{dataset}-{value}-{slug(name)}.pmtiles"
         target = ROOT / dataset / filename
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(archive, target)
+        shutil.copy2(jaarbak_archive if dataset == "jaarbak" else archive, target)
         output[name] = f"{dataset}/{filename}"
     return output
 
@@ -333,9 +352,27 @@ comparison_manifest = {
 (comparison_root / "manifest.json").write_text(json.dumps(comparison_manifest), encoding="utf-8")
 
 soil_root = ROOT / "landsat-jaarbak"
-(soil_root / "pixels").mkdir(parents=True, exist_ok=True)
+(soil_root / "density-points").mkdir(parents=True, exist_ok=True)
+(soil_root / "density-values").mkdir(parents=True, exist_ok=True)
 (soil_root / "distributions").mkdir(parents=True, exist_ok=True)
 Image.fromarray(scope_rgba, mode="RGBA").save(soil_root / "scope-index.png")
+analysis_scope = np.zeros((64, 64, 4), dtype=np.uint8)
+fixture_sector_index = rasterize(
+    [(row.geometry, index + 1) for index, row in sectors.iterrows()],
+    out_shape=(64, 64), transform=from_bounds(*sectors.total_bounds, 64, 64),
+    fill=0, dtype="uint8",
+)
+fixture_municipality_index = rasterize(
+    [(sectors.loc[sectors["municipality"] == name].geometry.union_all(), index)
+     for index, name in enumerate(municipalities, start=1)],
+    out_shape=(64, 64), transform=from_bounds(*sectors.total_bounds, 64, 64),
+    fill=0, dtype="uint8",
+)
+analysis_scope[..., 0] = fixture_sector_index
+analysis_scope[..., 1] = fixture_municipality_index
+analysis_scope[..., 2] = (fixture_sector_index > 0).astype(np.uint8)
+analysis_scope[..., 3] = 255
+Image.fromarray(analysis_scope, mode="RGBA").save(soil_root / "analysis-scope-index.png")
 soil_series = [
     {"key": "class:sealed", "type": "class", "id": "sealed", "color": "#8f1d2c"},
     {"key": "class:unsealed", "type": "class", "id": "unsealed", "color": "#176b43"},
@@ -349,39 +386,68 @@ surface_stats = {
     "sealedAreaHa": 40, "sealedPercentage": 40,
     "unsealedAreaHa": 60, "unsealedPercentage": 60,
 }
+
+def fixture_density_scope_stats():
+    output = {}
+    for scope_id in scope_ids:
+        if scope_id == "region:zennevallei":
+            selected = analysis_scope[..., 0] == 1
+        elif scope_id.startswith("municipality:"):
+            selected = analysis_scope[..., 1] == comparison_manifest["municipalityIndexes"][scope_id.split(":", 1)[1]]
+        else:
+            selected = analysis_scope[..., 2] == comparison_manifest["sectorIndexes"][scope_id.split(":", 1)[1]]
+        count = int(np.count_nonzero(selected))
+        output[scope_id] = {
+            "n": count, "slope": .05 if count >= 2 else None,
+            "intercept": 33 if count >= 2 else None,
+            "rSquared": .4 if count >= 2 else None,
+            "analysedAreaHa": round(count * .09, 2),
+        }
+    return output
+
 for item in landsat_items:
-    encoded = np.zeros((64, 64, 4), dtype=np.uint8)
-    encoded[..., 0] = 150
-    encoded[:, :32, 1] = 1
-    encoded[:, 32:, 1] = 2
-    # Simulate an unassigned analytical class at an internal sector tie. The
-    # display must still render the valid temperature from the dissolved scope.
-    encoded[20:22, 20:22, 1] = 0
-    encoded[..., 2] = 1
-    encoded[..., 3] = 255
-    Image.fromarray(encoded, mode="RGBA").save(soil_root / "pixels" / f"{item['value']}.png")
+    temperature_code = int(round((35.5 + 100) * 100))
+    point_values = np.zeros((64, 64, 4), dtype=np.uint8)
+    point_values[..., 0] = temperature_code >> 8
+    point_values[..., 1] = temperature_code & 255
+    point_values[..., 3] = 255
+    Image.fromarray(point_values, mode="RGBA").save(soil_root / "density-points" / f"{item['value']}.png")
+    density_values = np.zeros((64, 64, 4), dtype=np.uint8)
+    density_code = np.tile(np.linspace(0, 10000, 64, dtype=np.uint16), (64, 1))
+    density_values[..., 0] = density_code >> 8
+    density_values[..., 1] = density_code & 255
+    density_values[..., 2] = 255
+    density_values[..., 3] = 255
+    Image.fromarray(density_values, mode="RGBA").save(soil_root / "density-values" / f"{item['value']}.png")
     (soil_root / "distributions" / f"{item['value']}.json").write_text(json.dumps({
-        "schemaVersion": 1, "observationId": item["value"],
+        "schemaVersion": 2, "observationId": item["value"],
         "secondaryYear": soil_years[item["value"]], "secondaryStatus": "provisional",
         "scopes": {scope_id: {"assignedPixelCount": 106, "series": {
             entry["key"]: series_stats for entry in soil_series
         }} for scope_id in scope_ids},
         "surfaceStats": {scope_id: surface_stats for scope_id in scope_ids},
+        "densityAnalysis": fixture_density_scope_stats(),
     }), encoding="utf-8")
 
 soil_manifest = {
-    "schemaVersion": 1, "comparisonId": "landsat-jaarbak",
+    "schemaVersion": 2, "comparisonId": "landsat-jaarbak",
     "primaryLayerId": "landsat-temperature", "secondaryLayerId": "jaarbak",
     "defaultSeries": ["class:sealed", "class:unsealed"], "maximumSeries": 2,
     "temperatureScale": {"minimum": 15, "maximum": 50, "step": 0.5, "unit": "°C"},
     "binEdges": np.arange(15, 50.5, 0.5).tolist(),
     "coordinates": comparison_manifest["coordinates"], "imageSize": [64, 64],
     "scopeIndexUrl": "landsat-jaarbak/scope-index.png",
+    "analysisImageSize": [64, 64], "analysisScopeIndexUrl": "landsat-jaarbak/analysis-scope-index.png",
+    "densityAnalysis": {"radiusMeters": 100, "validCoverageThreshold": 95,
+                        "points": "all-clear-valid-density-landsat-pixels", "sampling": "none"},
     "municipalityIndexes": comparison_manifest["municipalityIndexes"],
     "sectorIndexes": comparison_manifest["sectorIndexes"], "series": soil_series,
+    "sectorIdsByIndex": {index + 1: sector_id for index, sector_id in enumerate(sector_ids)},
+    "sectorMunicipalities": dict(zip(sector_ids, sectors["municipality"].astype(str))),
     "observations": {item["value"]: {
         "secondaryYear": soil_years[item["value"]], "secondaryStatus": "provisional",
-        "pixelDataUrl": f"landsat-jaarbak/pixels/{item['value']}.png",
+        "densityPointDataUrl": f"landsat-jaarbak/density-points/{item['value']}.png",
+        "densityDataUrl": f"landsat-jaarbak/density-values/{item['value']}.png",
         "distributionUrl": f"landsat-jaarbak/distributions/{item['value']}.json",
     } for item in landsat_items},
 }
@@ -432,20 +498,22 @@ for _, row in sectors.iterrows():
     fiscal = income_2023.get(sector_id, {})
     sealed_sector_stats[sector_id] = {
         "sectorId": sector_id, "sectorName": str(row.sectorName), "municipality": str(row.municipality),
-        "validCellCount": 25, "analysedAreaHa": .25,
+        "eligibleDensityCellCount": 25, "analysedAreaHa": .25,
         "meanDensityByGreenClass": {"1": 30, "2": 20, "3": 35, "4": 15},
         "income": fiscal.get("medianNetTaxableIncome") if fiscal.get("sourceStatus") == "available" else None,
     }
 (green_income_root / "statistics.json").write_text(json.dumps({
-    "schemaVersion": 1, "sectorStats": sealed_sector_stats,
+    "schemaVersion": 2, "sectorStats": sealed_sector_stats,
     "regressions": {"+".join(map(str, selected)): {scope_id: None for scope_id in scope_ids}
                     for selected in green_combinations},
 }), encoding="utf-8")
 green_income_manifest = {
-    "schemaVersion": 1, "comparisonId": "groenkaart-income",
+    "schemaVersion": 2, "comparisonId": "groenkaart-income",
     "primaryLayerId": "groenkaart", "secondaryLayerId": "income",
     "greenMapYear": 2021, "urbanAtlasYear": 2021, "jaarbakYear": 2021, "incomeYear": 2023,
     "analysisResolutionMeters": 10, "minimumJaarbakCoverage": .95,
+    "minimumEligibleAreaHa": .10,
+    "statisticWeighting": "exact-sealed-urban-area",
     "urbanFabricCodes": fabric_codes, "excludedUrbanAtlasCodes": ["11300"],
     "defaultGreenClasses": [1, 2], "greenClasses": green_classes,
     "coordinates": comparison_coordinates, "imageSize": [64, 64],
@@ -454,6 +522,7 @@ green_income_manifest = {
     "densityGridUrl": "groenkaart-income/density-grid.png",
     "densityNonGreenUrl": "groenkaart-income/density-non-green.png",
     "scopeIndexUrl": "groenkaart-income/scope-index.png",
+    "urbanFabricMaskUrl": "shared/urban-fabric-2021.pmtiles",
     "statisticsUrl": "groenkaart-income/statistics.json",
 }
 (green_income_root / "manifest.json").write_text(json.dumps(green_income_manifest), encoding="utf-8")
@@ -512,11 +581,12 @@ sealed_landsat_common = {
     "scopeIndexUrl": "landsat-groenkaart/scope-index.png",
 }
 landsat_green_manifest = {
-    **sealed_landsat_common, "comparisonId": "landsat-groenkaart",
+    **sealed_landsat_common, "schemaVersion": 2, "comparisonId": "landsat-groenkaart",
     "primaryLayerId": "landsat-temperature", "secondaryLayerId": "groenkaart",
     "greenMapYear": 2021, "defaultGreenClasses": [1, 2], "greenClasses": green_classes,
     "densityGridUrl": "landsat-groenkaart/green-density-grid.png",
     "densityNonGreenUrl": "landsat-groenkaart/green-density-non-green.png",
+    "urbanFabricMaskUrl": "shared/urban-fabric-2021.pmtiles",
     "observations": landsat_green_observations,
 }
 (landsat_green_root / "manifest.json").write_text(json.dumps(landsat_green_manifest), encoding="utf-8")

@@ -324,6 +324,11 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     getOption: (name) => name === "year" ? activeYear : null,
     ensureManifest,
     getRuntimeData: () => ({ manifest, descriptor, year: activeYear, municipality: activeMunicipality }),
+    async resolveArchive(year = activeYear, municipality = activeMunicipality) {
+      await ensureManifest();
+      const entry = manifest?.years?.[Number(year)];
+      return entry?.pmtilesVariants?.[municipality || "all"] ?? entry?.pmtilesVariants?.all ?? null;
+    },
     getMapModeAction: () => descriptor?.density?.available && !loadError ? ({
       active: Boolean(densityMode?.isActive()),
       label: t(densityMode?.isActive() ? "density.showClassification" : "density.showDensity"),

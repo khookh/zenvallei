@@ -97,15 +97,25 @@ async function publishComparison(comparisonId, descriptor) {
     await copyAsset(manifest.densityNonGreenUrl, ".png");
     await copyAsset(manifest.scopeIndexUrl, ".png");
     await copyAsset(manifest.statisticsUrl, ".json");
+    await copyAsset(manifest.urbanFabricMaskUrl, ".pmtiles");
   } else if (comparisonId === "landsat-groenkaart") {
     await copyAsset(manifest.densityGridUrl, ".png");
     await copyAsset(manifest.densityNonGreenUrl, ".png");
     await copyAsset(manifest.scopeIndexUrl, ".png");
+    await copyAsset(manifest.urbanFabricMaskUrl, ".pmtiles");
+  } else if (comparisonId === "landsat-jaarbak") {
+    await copyAsset(manifest.scopeIndexUrl, ".png");
+    await copyAsset(manifest.analysisScopeIndexUrl, ".png");
   } else if (manifest.scopeIndexUrl) {
     await copyAsset(manifest.scopeIndexUrl, ".png");
   }
   for (const observation of Object.values(manifest.observations ?? {})) {
-    if (comparisonId !== "landsat-income") await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
+    if (comparisonId === "landsat-jaarbak") {
+      await copyAsset(observation.densityPointDataUrl, ".png");
+      await copyAsset(observation.densityDataUrl, ".png");
+    } else if (comparisonId !== "landsat-income") {
+      await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
+    }
     await copyAsset(observation.statisticsUrl ?? observation.distributionUrl, ".json");
   }
   await writeJson(path.join(outputRoot, comparisonId, "manifest.json"), manifest);

@@ -1,51 +1,45 @@
-import { t } from "../i18n.js";
+import { formatNumber, t } from "../i18n.js";
 import { authorityLink } from "../source-authorities.js";
+import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import {
-  comparisonAreaRecord, GREEN_DENSITY_COLORS, greenClassSelector, hideIncomeSymbols, incomeLegend,
+  comparisonAreaRecord, comparisonPixelOffset, GREEN_DENSITY_COLORS, greenClassSelector, hideIncomeSymbols, incomeLegend,
   loadImageData, mountIncomeSymbols, ordinaryLeastSquares, safeAsset,
   SEALED_URBAN_SOURCE_URLS, sectorPointLabel, selectedDensity,
 } from "./sealed-urban-shared.js";
 
-const SOURCE_ID = "groenkaart-income-canvas";
 const RASTER_LAYER_ID = "groenkaart-income-density";
 const SYMBOL_LAYER_ID = "sealed-urban-income-symbols-green";
 const BEFORE_LAYER = "heat-sectors-hit-area";
 const scopeId = (record) => record.scope === "region" ? "region:zennevallei"
   : record.scope === "municipality" ? `municipality:${record.municipality}` : `sector:${record.sectorId}`;
 
-function densityColor(value) {
-  const index = Math.max(0, Math.min(GREEN_DENSITY_COLORS.length - 1, Math.floor(value / 25)));
-  const hex = GREEN_DENSITY_COLORS[index];
-  return [Number.parseInt(hex.slice(1, 3), 16), Number.parseInt(hex.slice(3, 5), 16), Number.parseInt(hex.slice(5, 7), 16)];
-}
-
 export function validateGroenkaartIncomeManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 1 || manifest.comparisonId !== "groenkaart-income"
+  if (!manifest || manifest.schemaVersion !== 2 || manifest.comparisonId !== "groenkaart-income"
     || manifest.primaryLayerId !== "groenkaart" || manifest.secondaryLayerId !== "income"
     || manifest.greenMapYear !== 2021 || manifest.urbanAtlasYear !== 2021
     || manifest.jaarbakYear !== 2021 || manifest.incomeYear !== 2023
     || manifest.analysisResolutionMeters !== 10
     || !manifest.scopeIndexUrl || !manifest.densityNonGreenUrl || !manifest.municipalityIndexes
+    || !manifest.urbanFabricMaskUrl || manifest.statisticWeighting !== "exact-sealed-urban-area"
     || JSON.stringify(manifest.urbanFabricCodes) !== JSON.stringify(["11100", "11210", "11220", "11230", "11240"])) {
     throw new TypeError("Unsupported Green Map-income comparison manifest.");
   }
   return manifest;
 }
 
-export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, incomeLayer }) {
+export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, incomeLayer, jaarbakLayer }) {
   let manifest;
   let statistics;
   let grid;
   let nonGreenGrid;
-  let scope;
   let map;
-  let canvas;
-  let context;
   let active = false;
   let municipality = "";
   let highlightedSectorId = "";
   let previousYear = 2021;
   let selectedGreen = new Set([1, 2]);
+  let generation = 0;
+  const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .91 });
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
 
@@ -58,49 +52,35 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     manifest.densityNonGreenUrl = safeAsset(descriptor.assetRoot, manifest.densityNonGreenUrl, ".png");
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
     manifest.statisticsUrl = safeAsset(descriptor.assetRoot, manifest.statisticsUrl, ".json");
-    const [statsResponse, loadedGrid, loadedNonGreenGrid, loadedScope] = await Promise.all([
+    manifest.urbanFabricMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanFabricMaskUrl, ".pmtiles");
+    const [statsResponse, loadedGrid, loadedNonGreenGrid] = await Promise.all([
       fetch(manifest.statisticsUrl),
       loadImageData(manifest.densityGridUrl, manifest.imageSize),
       loadImageData(manifest.densityNonGreenUrl, manifest.imageSize),
-      loadImageData(manifest.scopeIndexUrl, manifest.imageSize),
     ]);
     if (!statsResponse.ok) throw new Error(`Comparison statistics HTTP ${statsResponse.status}.`);
     statistics = await statsResponse.json();
     grid = loadedGrid;
     nonGreenGrid = loadedNonGreenGrid;
-    scope = loadedScope;
     selectedGreen = new Set(manifest.defaultGreenClasses);
   };
 
-  const render = () => {
-    if (!active || !context || !grid || !scope) return;
-    const output = context.createImageData(canvas.width, canvas.height);
-    const municipalityIndex = municipality ? manifest.municipalityIndexes[municipality] : 0;
-    for (let offset = 0; offset < grid.data.length; offset += 4) {
-      const inScope = municipalityIndex ? scope.data[offset + 1] === municipalityIndex : scope.data[offset] === 1;
-      if (!inScope) continue;
-      let density = 0;
-      selectedGreen.forEach((code) => {
-        density += (code === 4 ? nonGreenGrid.data[offset] : grid.data[offset + code - 1]) / 2.55;
-      });
-      if (density <= 0) continue;
-      const color = densityColor(density);
-      output.data[offset] = color[0];
-      output.data[offset + 1] = color[1];
-      output.data[offset + 2] = color[2];
-      output.data[offset + 3] = 224;
-    }
-    context.putImageData(output, 0, 0);
-    const source = map.getSource(SOURCE_ID);
-    source?.setCoordinates(manifest.coordinates);
-    source?.play?.();
-    map.triggerRepaint();
-    requestAnimationFrame(() => source?.pause?.());
+  const render = async () => {
+    if (!active || !grid) return false;
+    const request = ++generation;
+    const jaarbakUrl = await jaarbakLayer.resolveArchive(2021, municipality);
+    if (!jaarbakUrl) throw new Error("The exact JaarBAK archive is unavailable.");
+    const shown = await exactRaster.show(map, {
+      mode: "density", jaarbakUrl, urbanMaskUrl: manifest.urbanFabricMaskUrl,
+      densityData: grid, nonGreenData: nonGreenGrid, selectedClasses: [...selectedGreen],
+      dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
+    });
+    return active && request === generation && shown;
   };
 
   const points = () => Object.values(statistics?.sectorStats ?? {}).flatMap((record) => {
     const density = selectedDensity(record, selectedGreen);
-    if (record.validCellCount < 10 || !Number.isFinite(record.income) || !Number.isFinite(density)
+    if (record.analysedAreaHa < manifest.minimumEligibleAreaHa || !Number.isFinite(record.income) || !Number.isFinite(density)
       || (municipality && record.municipality !== municipality)) return [];
     return [{ ...record, density }];
   }).sort((left, right) => left.income - right.income || left.sectorId.localeCompare(right.sectorId));
@@ -121,32 +101,17 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
       groenkaartLayer.setOption(map, "year", 2021);
       groenkaartLayer.setVisible(map, false);
       incomeLayer.setVisible(map, false);
-      if (!map.getSource(SOURCE_ID)) {
-        canvas = document.createElement("canvas");
-        canvas.width = manifest.imageSize[0];
-        canvas.height = manifest.imageSize[1];
-        canvas.className = "comparison-render-canvas";
-        canvas.setAttribute("aria-hidden", "true");
-        document.body.append(canvas);
-        context = canvas.getContext("2d", { alpha: true });
-        map.addSource(SOURCE_ID, { type: "canvas", canvas, coordinates: manifest.coordinates, animate: false });
-        map.addLayer({ id: RASTER_LAYER_ID, type: "raster", source: SOURCE_ID,
-          paint: { "raster-opacity": .9, "raster-resampling": "linear", "raster-fade-duration": 0 } }, BEFORE_LAYER);
-      }
       active = true;
+      await render();
       mountIncomeSymbols(map, { id: SYMBOL_LAYER_ID, sectorStats: statistics.sectorStats, municipality });
-      render();
       notify();
       return true;
     },
     deactivate() {
       active = false;
+      generation += 1;
       highlightedSectorId = "";
-      if (map?.getLayer(RASTER_LAYER_ID)) map.removeLayer(RASTER_LAYER_ID);
-      if (map?.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
-      canvas?.remove();
-      canvas = null;
-      context = null;
+      exactRaster.remove();
       hideIncomeSymbols(map, SYMBOL_LAYER_ID);
       incomeLayer.setVisible(map, false);
       groenkaartLayer.setOption(map, "year", previousYear);
@@ -157,7 +122,7 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
       municipality = value;
       if (active) {
         mountIncomeSymbols(map, { id: SYMBOL_LAYER_ID, sectorStats: statistics.sectorStats, municipality });
-        render();
+        render().catch(console.error);
         notify();
       }
       return true;
@@ -169,7 +134,7 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
         if (selectedGreen.size === 1) return { changed: false, minimum: true };
         selectedGreen.delete(value);
       } else selectedGreen.add(value);
-      render();
+      render().catch(console.error);
       notify();
       return { changed: true };
     },
@@ -195,6 +160,24 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
       const point = points().find(({ sectorId }) => sectorId === record.sectorId);
       return { title: record.sectorName, subtitle: t("greenIncome.popupSubtitle"),
         lines: point ? [sectorPointLabel(point, { x: "income", y: "density" })] : [t("sealedUrban.noComparableValue")] };
+    },
+    async inspectPoint(point) {
+      if (!(await exactRaster.contains(point))) return { unavailable: true };
+      const offset = comparisonPixelOffset(manifest, point);
+      if (offset < 0 || grid.data[offset + 3] === 0) return { unavailable: true };
+      let density = 0;
+      selectedGreen.forEach((code) => {
+        density += (code === 4 ? nonGreenGrid.data[offset] : grid.data[offset + code - 1]) / 2.55;
+      });
+      return { density: Math.max(0, Math.min(100, density)) };
+    },
+    getPointPopupModel(result) {
+      return result?.unavailable ? {
+        title: t("greenIncome.popupSubtitle"), lines: [t("sealedUrban.noComparableValue")],
+      } : {
+        title: t("greenIncome.popupSubtitle"),
+        lines: [t("greenIncome.pixelDensity", { value: formatNumber(result.density, 1) })],
+      };
     },
     getPanelModel(record) {
       const current = points();

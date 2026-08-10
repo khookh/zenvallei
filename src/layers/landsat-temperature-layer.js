@@ -272,6 +272,8 @@ export function createLandsatTemperatureLayer({ descriptor: inputDescriptor, loa
       return mapLayer.mount(map, context);
     },
     setVisible(_map, visible) { mapLayer.setVisible(visible); },
+    setOpacity(value) { mapLayer.setOpacity(value); },
+    getOpacity: () => mapLayer.getOpacity(),
     applyFilter(_map, _filter, context = {}) {
       activeMunicipality = context.municipality ?? "";
       mapLayer.refresh();

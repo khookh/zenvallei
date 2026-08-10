@@ -124,20 +124,31 @@ for (const comparisonId of comparisonIds) {
   if (manifest.comparisonId !== comparisonId) throw new Error(`${comparisonId}: published manifest identifier mismatch.`);
   const referencedAssets = [manifest.scopeIndexUrl].filter(Boolean);
   Object.values(manifest.observations ?? {}).forEach((observation) => {
-    referencedAssets.push(
-      observation.pointDataUrl ?? observation.pixelDataUrl,
-      observation.statisticsUrl ?? observation.distributionUrl,
-    );
+    if (comparisonId === "landsat-jaarbak") {
+      referencedAssets.push(observation.densityPointDataUrl, observation.densityDataUrl, observation.distributionUrl);
+    } else {
+      referencedAssets.push(observation.pointDataUrl ?? observation.pixelDataUrl,
+        observation.statisticsUrl ?? observation.distributionUrl);
+    }
   });
   if (comparisonId === "groenkaart-income") {
-    referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.statisticsUrl);
+    referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.statisticsUrl,
+      manifest.urbanFabricMaskUrl);
     if (manifest.analysisResolutionMeters !== 10 || manifest.greenMapYear !== 2021
       || manifest.urbanAtlasYear !== 2021 || manifest.jaarbakYear !== 2021
-      || manifest.incomeYear !== 2023) {
+      || manifest.incomeYear !== 2023 || manifest.schemaVersion !== 2
+      || manifest.statisticWeighting !== "exact-sealed-urban-area") {
       throw new Error(`${comparisonId}: published analytical contract is incompatible.`);
     }
   } else if (comparisonId === "landsat-groenkaart") {
-    referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl);
+    referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.urbanFabricMaskUrl);
+  } else if (comparisonId === "landsat-jaarbak") {
+    referencedAssets.push(manifest.analysisScopeIndexUrl);
+    if (manifest.schemaVersion !== 2 || manifest.densityAnalysis?.radiusMeters !== 100
+      || manifest.densityAnalysis?.validCoverageThreshold !== 95
+      || manifest.densityAnalysis?.sampling !== "none") {
+      throw new Error(`${comparisonId}: published density-analysis contract is incompatible.`);
+    }
   }
   if (["landsat-groenkaart", "landsat-income"].includes(comparisonId)
     && (manifest.analysisResolutionMeters !== 30 || manifest.urbanAtlasYear !== 2021)) {

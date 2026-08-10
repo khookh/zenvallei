@@ -15,16 +15,19 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import rasterio
+from PIL import Image
+from affine import Affine
 from rasterio.transform import array_bounds
 from rasterio.warp import Resampling, reproject, transform_bounds
 from rasterio.windows import Window, from_bounds
 
 from .constants import CACHE_ROOT, MUNICIPALITIES, SECTORS_PATH
-from .landsat import EXPECTED_SELECTED_OBSERVATIONS, TEMPERATURE_MAXIMUM, TEMPERATURE_MINIMUM, _read_analysis
+from .landsat import EXPECTED_SELECTED_OBSERVATIONS, _read_analysis
 from .landsat_urban_atlas import (
     BIN_EDGES, _reproject_byte, _scope_distributions, _subpixel_majority, _web_grid, _write_png,
 )
 from .pipeline import file_hash, update_index
+from .density import _fraction_grid, focal_density
 
 OUTPUT_ROOT = CACHE_ROOT / "landsat-jaarbak"
 YEAR_BY_OBSERVATION = {
@@ -123,6 +126,76 @@ def _surface_stats(jaarbak, year):
     return scopes
 
 
+def ordinary_least_squares(x_values, y_values):
+    """Return a descriptive unweighted OLS fit, or ``None`` when undefined."""
+    x = np.asarray(x_values, dtype=np.float64)
+    y = np.asarray(y_values, dtype=np.float64)
+    valid = np.isfinite(x) & np.isfinite(y)
+    x, y = x[valid], y[valid]
+    if x.size < 2 or np.ptp(x) == 0:
+        return None
+    slope, intercept = np.polyfit(x, y, 1)
+    predicted = intercept + slope * x
+    denominator = np.sum((y - np.mean(y)) ** 2)
+    r_squared = 0.0 if denominator == 0 else 1 - np.sum((y - predicted) ** 2) / denominator
+    return {
+        "n": int(x.size), "slope": round(float(slope), 10),
+        "intercept": round(float(intercept), 8), "rSquared": round(float(r_squared), 8),
+        "analysedAreaHa": round(float(x.size) * 0.09, 4),
+    }
+
+
+def _density_on_landsat(year, grid):
+    """Sample the existing analytical 100 m JaarBAK density at Landsat centres."""
+    halo_path = CACHE_ROOT / "density-source" / "jaarbak" / f"jaarbak-{year}-halo.tif"
+    if not halo_path.exists():
+        raise FileNotFoundError(f"Prepare JaarBAK density first: {halo_path}")
+    fractions, valid = _fraction_grid(halo_path, (1,))
+    densities, coverage = focal_density(fractions, valid)
+    with rasterio.open(halo_path) as source:
+        source_transform = source.transform * Affine.scale(10, 10)
+    destination = np.full((grid["height"], grid["width"]), np.nan, dtype=np.float32)
+    destination_coverage = np.full(destination.shape, np.nan, dtype=np.float32)
+    reproject(
+        source=densities[0], destination=destination,
+        src_transform=source_transform, src_crs="EPSG:31370", src_nodata=np.nan,
+        dst_transform=grid["transform"], dst_crs=grid["crs"], dst_nodata=np.nan,
+        resampling=Resampling.bilinear,
+    )
+    reproject(
+        source=coverage, destination=destination_coverage,
+        src_transform=source_transform, src_crs="EPSG:31370", src_nodata=np.nan,
+        dst_transform=grid["transform"], dst_crs=grid["crs"], dst_nodata=np.nan,
+        resampling=Resampling.bilinear,
+    )
+    eligible = np.isfinite(destination) & np.isfinite(destination_coverage) & (destination_coverage >= 95)
+    destination[~eligible] = np.nan
+    return destination, destination_coverage
+
+
+def _density_scope_analysis(temperature, status, density, sector_index, region_index,
+                            municipality_index, sector_meta, municipality_lookup):
+    clear = (status == 1) & np.isfinite(temperature) & np.isfinite(density)
+    scopes = {}
+
+    def add(key, selected):
+        scopes[key] = ordinary_least_squares(density[selected], temperature[selected])
+
+    add("region:zennevallei", clear & (region_index > 0))
+    for name, index in municipality_lookup.items():
+        add(f"municipality:{name}", clear & (municipality_index == index))
+    for index, metadata in sector_meta.items():
+        add(f"sector:{metadata['sectorId']}", clear & (sector_index == index))
+    return scopes
+
+
+def _write_rgba(path, bands):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".partial.png")
+    Image.fromarray(np.dstack(bands), mode="RGBA").save(temporary, optimize=True)
+    temporary.replace(path)
+
+
 def display_scope_indexes(sectors, grid):
     """Build visual masks from dissolved scopes, not individual sectors.
 
@@ -173,8 +246,14 @@ def prepare_landsat_jaarbak():
     web_municipality = _reproject_byte(municipality_index, grid, web)
     scope_path = OUTPUT_ROOT / "scope-index.png"
     _write_png(scope_path, (web_region, web_municipality, np.zeros_like(web_region)))
+    analytical_scope_path = OUTPUT_ROOT / "analysis-scope-index.png"
+    _write_rgba(analytical_scope_path, (
+        region_index.astype(np.uint8), municipality_index.astype(np.uint8),
+        sector_index.astype(np.uint8), np.full_like(region_index, 255, dtype=np.uint8),
+    ))
 
     class_cache = {}
+    density_cache = {}
     observations = {}
     for observation_id in selected_ids:
         year = YEAR_BY_OBSERVATION[observation_id]
@@ -185,6 +264,10 @@ def prepare_landsat_jaarbak():
             print(f"JaarBAK {year}: aligning the 1 m source to Landsat", flush=True)
             class_cache[year] = _classify_jaarbak(source, grid)[0]
         soil_class = class_cache[year]
+        if year not in density_cache:
+            print(f"JaarBAK {year}: sampling 100 m density on the Landsat grid", flush=True)
+            density_cache[year] = _density_on_landsat(year, grid)[0]
+        sealing_density = density_cache[year]
 
         analysis = CACHE_ROOT / "landsat-temperature" / "analysis" / f"{observation_id}.tif"
         temperature, status, _, observation_grid = _read_analysis(analysis)
@@ -195,37 +278,50 @@ def prepare_landsat_jaarbak():
         )
         distribution_path = OUTPUT_ROOT / "distributions" / f"{observation_id}.json"
         distribution_path.parent.mkdir(parents=True, exist_ok=True)
+        density_analysis = _density_scope_analysis(
+            temperature, status, sealing_density, sector_index, region_index,
+            municipality_index, sector_meta, municipality_lookup,
+        )
         distribution_path.write_text(json.dumps({
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "observationId": observation_id,
             "secondaryYear": year,
             "secondaryStatus": jaarbak["years"][str(year)]["status"],
             "scopes": distributions,
             "surfaceStats": _surface_stats(jaarbak, year),
+            "densityAnalysis": density_analysis,
         }, separators=(",", ":")), encoding="utf-8")
 
-        encoded_temperature = np.zeros(temperature.shape, dtype=np.uint8)
-        clear = (status == 1) & np.isfinite(temperature)
-        encoded_temperature[clear] = np.round(np.clip(
-            (temperature[clear] - TEMPERATURE_MINIMUM) / (TEMPERATURE_MAXIMUM - TEMPERATURE_MINIMUM), 0, 1,
-        ) * 255).astype(np.uint8)
-        data_path = OUTPUT_ROOT / "pixels" / f"{observation_id}.png"
-        _write_png(data_path, (
-            _reproject_byte(encoded_temperature, grid, web),
-            _reproject_byte(soil_class, grid, web),
-            _reproject_byte(status.astype(np.uint8), grid, web),
+        temperature_code = np.rint(np.clip(np.nan_to_num(temperature, nan=-100) + 100, 0, 655.35) * 100).astype(np.uint16)
+        density_code = np.rint(np.clip(np.nan_to_num(sealing_density), 0, 100) * 100).astype(np.uint16)
+        density_valid = np.isfinite(sealing_density)
+        point_path = OUTPUT_ROOT / "density-points" / f"{observation_id}.png"
+        _write_rgba(point_path, (
+            (temperature_code >> 8).astype(np.uint8),
+            (temperature_code & 255).astype(np.uint8),
+            np.zeros_like(status, dtype=np.uint8),
+            np.where((status == 1) & np.isfinite(temperature), 255, 0).astype(np.uint8),
+        ))
+        density_path = OUTPUT_ROOT / "density-values" / f"{observation_id}.png"
+        _write_rgba(density_path, (
+            (density_code >> 8).astype(np.uint8),
+            (density_code & 255).astype(np.uint8),
+            np.where(density_valid, 255, 0).astype(np.uint8),
+            np.full_like(status, 255, dtype=np.uint8),
         ))
         observations[observation_id] = {
             "secondaryYear": year,
             "secondaryStatus": jaarbak["years"][str(year)]["status"],
-            "pixelDataUrl": f"landsat-jaarbak/pixels/{observation_id}.png",
             "distributionUrl": f"landsat-jaarbak/distributions/{observation_id}.json",
-            "pixelDataSha256": file_hash(data_path),
+            "densityPointDataUrl": f"landsat-jaarbak/density-points/{observation_id}.png",
+            "densityDataUrl": f"landsat-jaarbak/density-values/{observation_id}.png",
             "distributionSha256": file_hash(distribution_path),
+            "densityPointDataSha256": file_hash(point_path),
+            "densityDataSha256": file_hash(density_path),
         }
 
     manifest = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "comparisonId": "landsat-jaarbak",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "jaarbak",
@@ -246,8 +342,17 @@ def prepare_landsat_jaarbak():
         "imageSize": [web["width"], web["height"]],
         "scopeIndexUrl": "landsat-jaarbak/scope-index.png",
         "scopeIndexSha256": file_hash(scope_path),
+        "analysisImageSize": [grid["width"], grid["height"]],
+        "analysisScopeIndexUrl": "landsat-jaarbak/analysis-scope-index.png",
+        "analysisScopeIndexSha256": file_hash(analytical_scope_path),
         "municipalityIndexes": municipality_lookup,
         "sectorIndexes": {metadata["sectorId"]: index for index, metadata in sector_meta.items()},
+        "sectorIdsByIndex": {index: metadata["sectorId"] for index, metadata in sector_meta.items()},
+        "sectorMunicipalities": {metadata["sectorId"]: metadata["municipality"] for metadata in sector_meta.values()},
+        "densityAnalysis": {
+            "radiusMeters": 100, "validCoverageThreshold": 95,
+            "points": "all-clear-valid-density-landsat-pixels", "sampling": "none",
+        },
         "series": [{key: value for key, value in item.items() if key != "classIndexes"} for item in SERIES],
         "observations": observations,
         "warnings": {"methodChangeYear": 2023, "provisionalYear": 2024},

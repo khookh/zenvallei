@@ -83,7 +83,11 @@ Run `pnpm landsat-soil-sealing:prepare` after JaarBAK and Landsat are prepared. 
 | 13 June and 9 September 2023 | 2023 |
 | 13 August 2025 and 22 June 2026 | 2024 |
 
-Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded from the two distributions. The comparison always shows those two independently normalised curves. A dedicated aligned mask draws only majority-sealed Landsat cells in deep red; unsealed cells remain transparent. The thermal raster is drawn above that mask with enough transparency to retain the sealing context. Both canvases mount atomically and do not depend on the asynchronous JaarBAK PMTiles source.
+The map reuses the matched official JaarBAK PMTiles directly. It decodes the original bright-red `#e8292f` sealed class, makes unsealed pixels transparent and draws that exact 1 m footprint below the complete Landsat observation. The Landsat raster remains visible at 72% opacity, including temperature pixels whose 30 m analytical class is unsealed. This makes the comparison footprint identical to the standalone Soil sealing layer for the same year and municipality.
+
+The histogram retains a separate analytical question. Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded from the two independently normalised distributions.
+
+A second scatter plot relates every clear, finite Landsat record with valid JaarBAK density to the sealed share within 100 m of its pixel centre. It includes the complete 0-100% range, including 0% sealed surface, and uses the existing circular focal density derived from native 1 m values. At least 95% of the 100 m circle must have valid source coverage. Every eligible pixel is plotted without sampling. The chart reports an ordinary unweighted OLS line, R², pixel count, nominal analysed area and the matched JaarBAK year. It is descriptive: neighbouring pixels are spatially dependent, so no p-value or causal claim is shown.
 
 The UI discloses that the JaarBAK method changed in 2023 and that the 2024 edition is provisional. The 2024 mask is the closest available reference for the 2025 and 2026 Landsat observations.
 
@@ -95,7 +99,9 @@ Run `pnpm sealed-urban:prepare` after Landsat, Green Map, JaarBAK and Urban Atla
 - Green Map × income: one point per eligible sector, with Statbel 2023 median taxable income on X and mean Green Map density on Y.
 - Landsat × income: one point per sector with at least ten eligible clear pixels, with income on X and mean temperature on Y.
 
-Eligibility is intentionally narrow. Urban Atlas must uniquely identify `11100`, `11210`, `11220`, `11230` or `11240`; isolated structures `11300` are excluded. JaarBAK must have enough valid source coverage and a sealed majority. Landsat points must also be clear and finite, and Green Map points require sufficient valid 2021 density coverage. The displayed lines are ordinary unweighted OLS summaries with R². They describe association within the selected scope and do not establish causation; no p-values are reported because pixels are spatially correlated and sector summaries are ecological observations.
+Eligibility is intentionally narrow. Urban Atlas must identify `11100`, `11210`, `11220`, `11230` or `11240`; isolated structures `11300` are excluded. The two Green Map comparison maps intersect the exact 1 m sealed JaarBAK footprint with a binary Urban Atlas PMTiles mask. Green Map × income colours that footprint with the selected 100 m density combination. Its sector mean is weighted by exact eligible 1 m area inside each parent 10 m density cell and requires at least 0.10 ha. Green Map × Landsat clips the visual temperature raster to exact sealed subpixels, while each graph observation deliberately remains one analytically eligible 30 m Landsat pixel under the established majority rules.
+
+The displayed lines are ordinary unweighted OLS summaries with R². They describe association within the selected scope and do not establish causation; no p-values are reported because pixels are spatially correlated and sector summaries are ecological observations.
 
 ### Comparison palette and interpretation
 

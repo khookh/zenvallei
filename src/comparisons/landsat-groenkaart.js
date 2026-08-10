@@ -1,21 +1,21 @@
 import { formatNumber, t } from "../i18n.js";
 import { authorityLink } from "../source-authorities.js";
-import { comparisonHeatGradient, comparisonLegendItems, thermalColor } from "./thermal-palette.js";
+import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette.js";
+import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import {
   comparisonPixelOffset, greenClassSelector, loadImageData, safeAsset, SEALED_URBAN_SOURCE_URLS,
 } from "./sealed-urban-shared.js";
 
-const SOURCE_ID = "landsat-groenkaart-canvas";
 const RASTER_LAYER_ID = "landsat-groenkaart-temperature";
 const BEFORE_LAYER = "heat-sectors-hit-area";
 
 export function validateLandsatGroenkaartManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 1 || manifest.comparisonId !== "landsat-groenkaart"
+  if (!manifest || manifest.schemaVersion !== 2 || manifest.comparisonId !== "landsat-groenkaart"
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "groenkaart"
     || manifest.greenMapYear !== 2021 || manifest.urbanAtlasYear !== 2021
     || manifest.analysisResolutionMeters !== 30 || manifest.minimumGreenCoverage !== 0.8
     || !manifest.observations || !Array.isArray(manifest.greenClasses) || !manifest.densityNonGreenUrl
-    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes) {
+    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes || !manifest.urbanFabricMaskUrl) {
     throw new TypeError("Unsupported Landsat-Green Map comparison manifest.");
   }
   return manifest;
@@ -25,22 +25,20 @@ const scopeId = (record) => record.scope === "region" ? "region:zennevallei"
   : record.scope === "municipality" ? `municipality:${record.municipality}`
     : `sector:${record.sectorId}`;
 
-export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, groenkaartLayer }) {
+export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, groenkaartLayer, jaarbakLayer }) {
   let manifest;
   let densityData;
   let densityNonGreenData;
-  let scopeData;
   let pointData;
   let statistics;
   let loadedObservation = "";
   let map;
-  let canvas;
-  let context;
   let active = false;
   let municipality = "";
   let previousYear = 2021;
   let selectedGreen = new Set([1, 2]);
   let generation = 0;
+  const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .95 });
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
   const observationId = () => landsatLayer.getOption("observation");
@@ -55,14 +53,14 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     manifest.densityGridUrl = safeAsset(descriptor.assetRoot, manifest.densityGridUrl, ".png");
     manifest.densityNonGreenUrl = safeAsset(descriptor.assetRoot, manifest.densityNonGreenUrl, ".png");
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
+    manifest.urbanFabricMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanFabricMaskUrl, ".pmtiles");
     Object.values(manifest.observations).forEach((item) => {
       item.pointDataUrl = safeAsset(descriptor.assetRoot, item.pointDataUrl, ".png");
       item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json");
     });
-    [densityData, densityNonGreenData, scopeData] = await Promise.all([
+    [densityData, densityNonGreenData] = await Promise.all([
       loadImageData(manifest.densityGridUrl, manifest.imageSize),
       loadImageData(manifest.densityNonGreenUrl, manifest.imageSize),
-      loadImageData(manifest.scopeIndexUrl, manifest.imageSize),
     ]);
     selectedGreen = new Set(manifest.defaultGreenClasses);
     sectorIdByIndex = new Map(Object.entries(manifest.sectorIndexes).map(([id, index]) => [Number(index), id]));
@@ -103,36 +101,16 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     return code ? code / 100 - 100 : null;
   };
 
-  const render = () => {
-    if (!active || !context || !pointData) return;
-    const output = context.createImageData(canvas.width, canvas.height);
-    const municipalityIndex = municipality ? manifest.municipalityIndexes[municipality] : 0;
-    for (let offset = 0, pixel = 0; offset < pointData.data.length; offset += 4, pixel += 1) {
-      const status = pointData.data[offset + 3];
-      const inScope = municipalityIndex ? scopeData.data[offset + 1] === municipalityIndex : scopeData.data[offset] === 1;
-      if (!status || !inScope) continue;
-      if (status === 255) {
-        const temperature = temperatureAt(offset);
-        const normalized = Math.round(Math.max(0, Math.min(1, (temperature - 15) / 35)) * 255);
-        const color = thermalColor(normalized);
-        output.data[offset] = color[0];
-        output.data[offset + 1] = color[1];
-        output.data[offset + 2] = color[2];
-        output.data[offset + 3] = 230;
-      } else if (status === 254) {
-        const light = (pixel % canvas.width + Math.floor(pixel / canvas.width)) % 2;
-        output.data[offset] = light ? 194 : 126;
-        output.data[offset + 1] = light ? 201 : 135;
-        output.data[offset + 2] = light ? 203 : 139;
-        output.data[offset + 3] = 225;
-      }
-    }
-    context.putImageData(output, 0, 0);
-    const source = map.getSource(SOURCE_ID);
-    source?.setCoordinates(manifest.coordinates);
-    source?.play?.();
-    map.triggerRepaint();
-    requestAnimationFrame(() => source?.pause?.());
+  const render = async () => {
+    if (!active || !pointData) return false;
+    const request = ++generation;
+    const item = manifest.observations[observationId()];
+    const jaarbakUrl = await jaarbakLayer.resolveArchive(item.jaarbakYear, municipality);
+    const shown = await exactRaster.show(map, {
+      mode: "temperature", jaarbakUrl, urbanMaskUrl: manifest.urbanFabricMaskUrl,
+      pointData, dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
+    });
+    return active && request === generation && shown;
   };
 
   const pixelPoints = (record) => {
@@ -148,7 +126,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     const request = ++generation;
     await loadObservation();
     if (!active || request !== generation) return;
-    render();
+    await render();
     notify();
   };
 
@@ -167,18 +145,6 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       groenkaartLayer.setOption(map, "year", 2021);
       groenkaartLayer.setVisible(map, false);
       landsatLayer.setVisible(map, false);
-      if (!map.getSource(SOURCE_ID)) {
-        canvas = document.createElement("canvas");
-        canvas.width = manifest.imageSize[0];
-        canvas.height = manifest.imageSize[1];
-        canvas.className = "comparison-render-canvas";
-        canvas.setAttribute("aria-hidden", "true");
-        document.body.append(canvas);
-        context = canvas.getContext("2d", { alpha: true });
-        map.addSource(SOURCE_ID, { type: "canvas", canvas, coordinates: manifest.coordinates, animate: false });
-        map.addLayer({ id: RASTER_LAYER_ID, type: "raster", source: SOURCE_ID,
-          paint: { "raster-opacity": .9, "raster-resampling": "nearest", "raster-fade-duration": 0 } }, BEFORE_LAYER);
-      }
       active = true;
       await refresh();
       return true;
@@ -186,25 +152,21 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     deactivate() {
       active = false;
       generation += 1;
-      if (map?.getLayer(RASTER_LAYER_ID)) map.removeLayer(RASTER_LAYER_ID);
-      if (map?.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
-      canvas?.remove();
-      canvas = null;
-      context = null;
+      exactRaster.remove();
       groenkaartLayer.setOption(map, "year", previousYear);
       groenkaartLayer.setVisible(map, false);
       landsatLayer.setVisible(map, true);
       notify();
     },
     async refreshObservation() { if (active) await refresh(); },
-    setMunicipality(value = "") { municipality = value; if (active) { render(); notify(); } return true; },
+    setMunicipality(value = "") { municipality = value; if (active) { render().then(notify).catch(console.error); } return true; },
     toggleGreenClass(code) {
       const value = Number(code);
       if (selectedGreen.has(value)) {
         if (selectedGreen.size === 1) return { changed: false, minimum: true };
         selectedGreen.delete(value);
       } else selectedGreen.add(value);
-      render();
+      render().then(notify).catch(console.error);
       notify();
       return { changed: true };
     },
@@ -232,7 +194,8 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
         ? [t("landsatGreen.popupValues", { density: formatNumber(density, 1), temperature: formatNumber(stats.meanTemperatureC, 1) })]
         : [t("sealedUrban.noComparableValue")] };
     },
-    inspectPoint(point) {
+    async inspectPoint(point) {
+      if (!(await exactRaster.contains(point))) return { unavailable: true };
       const offset = comparisonPixelOffset(manifest, point);
       if (offset < 0 || pointData?.data[offset + 3] !== 255 || !allowedIndex(pointData.data[offset + 2])) {
         return { unavailable: true };

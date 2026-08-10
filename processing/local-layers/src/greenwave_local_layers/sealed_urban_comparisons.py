@@ -18,14 +18,16 @@ import rasterio
 from PIL import Image
 from rasterio.features import rasterize
 from rasterio.transform import array_bounds
+from rasterio.windows import Window, bounds as window_bounds, from_bounds
 from rasterio.warp import Resampling, reproject, transform_bounds
+from shapely.geometry import box
 
 from .constants import CACHE_ROOT, GROENKAART_CLASSES, MUNICIPALITIES, PROJECT_ROOT, SECTORS_PATH
 from .density import ANALYSIS_RESOLUTION, _fraction_grid, circular_kernel, focal_density
 from .landsat import EXPECTED_SELECTED_OBSERVATIONS, _read_analysis
 from .landsat_jaarbak import YEAR_BY_OBSERVATION, _classify_jaarbak, display_scope_indexes
 from .landsat_urban_atlas import _subpixel_majority
-from .pipeline import file_hash, update_index
+from .pipeline import _pmtiles, _validate_pmtiles, _write_cutline, file_hash, update_index
 
 COMPARISON_IDS = ("landsat-groenkaart", "groenkaart-income", "landsat-income")
 URBAN_FABRIC_CODES = ("11100", "11210", "11220", "11230", "11240")
@@ -40,6 +42,8 @@ MINIMUM_SECTOR_LANDSAT_PIXELS = 10
 POINT_CLEAR = 255
 POINT_CLOUD = 254
 POINT_OTHER_MISSING = 253
+URBAN_FABRIC_MASK_URL = "shared/urban-fabric-2021.pmtiles"
+MINIMUM_GREEN_INCOME_AREA_HA = 0.10
 
 
 def ordinary_least_squares(x_values, y_values):
@@ -72,6 +76,17 @@ def ordinary_least_squares(x_values, y_values):
         "yMinimum": round(float(np.min(y)), 4),
         "yMaximum": round(float(np.max(y)), 4),
     }
+
+
+def exact_area_weighted_sums(density_values, pixel_counts):
+    """Weight parent-cell densities by their exact eligible 1 m pixel counts."""
+    values = np.asarray(density_values, dtype=np.float64)
+    weights = np.asarray(pixel_counts, dtype=np.float64)
+    if values.ndim == 1:
+        values = values[None, :]
+    if values.shape[1] != weights.size or np.any(weights < 0):
+        raise ValueError("Density values and exact pixel weights are incompatible.")
+    return np.sum(values * weights, axis=1)
 
 
 def _green_combinations():
@@ -178,16 +193,153 @@ def _urban_grid(grid, majority=False):
     ).astype(bool)
 
 
-def _native_jaarbak_mask(grid):
+def _prepare_urban_fabric_mask():
+    """Create one exact 1 m Urban Atlas mask used only for browser clipping."""
+    source_path = CACHE_ROOT / "raw" / "jaarbak" / "jaarbak-2021.tif"
+    if not source_path.exists():
+        raise FileNotFoundError(f"Missing cached JaarBAK 2021 raster: {source_path}")
+    urban_path = PROJECT_ROOT / "public" / "data" / "urban-atlas.geojson"
+    urban = gpd.read_file(urban_path)
+    urban = urban.loc[urban["classCode"].astype(str).isin(URBAN_FABRIC_CODES)].copy()
+    sectors = gpd.read_file(SECTORS_PATH)
+    output_root = CACHE_ROOT / "shared"
+    output_root.mkdir(parents=True, exist_ok=True)
+    mask_tif = output_root / "urban-fabric-2021-mask.tif"
+    archive = output_root / "urban-fabric-2021.pmtiles"
+    cutline = output_root / "zennevallei-cutline.geojson"
+    urban_sha = file_hash(urban_path)
+    if mask_tif.exists() and archive.exists():
+        with rasterio.open(mask_tif) as prepared:
+            tags = prepared.tags()
+        if tags.get("urban_atlas_sha256") == urban_sha \
+                and tags.get("urban_fabric_codes") == ",".join(URBAN_FABRIC_CODES):
+            _validate_pmtiles(archive, 10, 17)
+            return {"url": URBAN_FABRIC_MASK_URL, "sha256": file_hash(archive)}
+
+    with rasterio.open(source_path) as source:
+        urban = urban.to_crs(source.crs)
+        sector_union = sectors.to_crs(source.crs).geometry.union_all()
+        window = from_bounds(*sector_union.bounds, transform=source.transform)
+        window = window.round_offsets().round_lengths().intersection(Window(0, 0, source.width, source.height))
+        profile = source.profile.copy()
+        profile.update(
+            width=int(window.width), height=int(window.height), transform=source.window_transform(window),
+            count=4, dtype="uint8", nodata=None, photometric="RGB", tiled=True,
+            blockxsize=512, blockysize=512, compress="DEFLATE",
+        )
+        spatial_index = urban.sindex
+        with rasterio.open(mask_tif, "w", **profile) as output:
+            for _, output_window in output.block_windows(1):
+                transform = output.window_transform(output_window)
+                bounds = window_bounds(output_window, output.transform)
+                indexes = list(spatial_index.query(box(*bounds), predicate="intersects"))
+                shapes = [(geometry, 1) for geometry in urban.iloc[indexes].geometry if not geometry.is_empty]
+                selected = rasterize(
+                    shapes,
+                    out_shape=(int(output_window.height), int(output_window.width)),
+                    transform=transform,
+                    fill=0,
+                    dtype="uint8",
+                ) if shapes else np.zeros((int(output_window.height), int(output_window.width)), dtype=np.uint8)
+                rgba = np.zeros((4, *selected.shape), dtype=np.uint8)
+                rgba[:3, selected == 1] = 255
+                rgba[3, selected == 1] = 255
+                output.write(rgba, window=output_window)
+            output.update_tags(
+                urban_atlas_sha256=urban_sha,
+                urban_fabric_codes=",".join(URBAN_FABRIC_CODES),
+                excluded_code=EXCLUDED_URBAN_CODE,
+            )
+
+    _write_cutline(cutline, sectors.geometry.union_all())
+    _pmtiles(mask_tif, archive, cutline, "10..17")
+    _validate_pmtiles(archive, 10, 17)
+    return {"url": URBAN_FABRIC_MASK_URL, "sha256": file_hash(archive)}
+
+
+def _exact_green_income_statistics(densities, coverage, density_grid, sectors, income):
+    """Area-weight focal density by exact 1 m sealed urban-fabric pixels."""
     source_path = CACHE_ROOT / "density-source" / "jaarbak" / "jaarbak-2021-halo.tif"
-    fractions, valid = _fraction_grid(source_path, (1,))
-    radius_cells = 100 // ANALYSIS_RESOLUTION
-    sealed = fractions[0, radius_cells:-radius_cells, radius_cells:-radius_cells]
-    valid = valid[radius_cells:-radius_cells, radius_cells:-radius_cells]
-    sealed_ratio = np.divide(sealed, valid, out=np.zeros_like(sealed), where=valid > 0)
-    if sealed.shape != (grid["height"], grid["width"]):
-        raise ValueError("The Green Map and JaarBAK 10 m grids are not aligned.")
-    return (valid >= MINIMUM_NATIVE_JAARBAK_COVERAGE) & (sealed_ratio > 0.5)
+    if not source_path.exists():
+        raise FileNotFoundError(f"Missing cached JaarBAK halo: {source_path}")
+    urban = gpd.read_file(PROJECT_ROOT / "public" / "data" / "urban-atlas.geojson").to_crs("EPSG:31370")
+    urban = urban.loc[urban["classCode"].astype(str).isin(URBAN_FABRIC_CODES)].copy()
+    sector_meta = _sector_metadata(sectors)
+    sector_shapes = [(row.geometry, index + 1) for index, row in sectors.iterrows()]
+    pixels = np.zeros(len(sector_meta) + 1, dtype=np.int64)
+    density_cells = np.zeros(len(sector_meta) + 1, dtype=np.int64)
+    weighted = np.zeros((len(sector_meta) + 1, len(GREEN_CLASS_CODES)), dtype=np.float64)
+    flat_density = densities.reshape(len(GREEN_CLASS_CODES), -1)
+    flat_valid = np.isfinite(coverage).ravel()
+    cell_count = density_grid["height"] * density_grid["width"]
+
+    with rasterio.open(source_path) as source:
+        column_offset = int(round((density_grid["transform"].c - source.transform.c) / source.res[0]))
+        row_offset = int(round((source.transform.f - density_grid["transform"].f) / abs(source.res[1])))
+        native_width = density_grid["width"] * ANALYSIS_RESOLUTION
+        native_height = density_grid["height"] * ANALYSIS_RESOLUTION
+        if column_offset < 0 or row_offset < 0 or column_offset + native_width > source.width \
+                or row_offset + native_height > source.height:
+            raise ValueError("The exact JaarBAK window does not cover the Green Map density grid.")
+        urban_index = urban.sindex
+        rows_per_chunk = 100
+        for target_row in range(0, density_grid["height"], rows_per_chunk):
+            target_rows = min(rows_per_chunk, density_grid["height"] - target_row)
+            window = Window(
+                column_offset,
+                row_offset + target_row * ANALYSIS_RESOLUTION,
+                native_width,
+                target_rows * ANALYSIS_RESOLUTION,
+            )
+            values = source.read(1, window=window)
+            transform = source.window_transform(window)
+            bounds = window_bounds(window, source.transform)
+            urban_indexes = list(urban_index.query(box(*bounds), predicate="intersects"))
+            urban_shapes = [(geometry, 1) for geometry in urban.iloc[urban_indexes].geometry if not geometry.is_empty]
+            urban_mask = rasterize(
+                urban_shapes, out_shape=values.shape, transform=transform, fill=0, dtype="uint8",
+            ) if urban_shapes else np.zeros(values.shape, dtype=np.uint8)
+            sector_mask = rasterize(
+                sector_shapes, out_shape=values.shape, transform=transform, fill=0, dtype="uint16",
+            )
+            rows, columns = np.nonzero((values == 1) & (urban_mask == 1) & (sector_mask > 0))
+            if not len(rows):
+                continue
+            parent_rows = target_row + rows // ANALYSIS_RESOLUTION
+            parent_columns = columns // ANALYSIS_RESOLUTION
+            parent_cells = parent_rows * density_grid["width"] + parent_columns
+            valid = flat_valid[parent_cells]
+            if not np.any(valid):
+                continue
+            parent_cells = parent_cells[valid]
+            sector_values = sector_mask[rows[valid], columns[valid]].astype(np.int64)
+            combined = sector_values * cell_count + parent_cells
+            keys, counts = np.unique(combined, return_counts=True)
+            key_sectors = keys // cell_count
+            key_cells = keys % cell_count
+            for sector_index in np.unique(key_sectors):
+                selected = key_sectors == sector_index
+                weights = counts[selected].astype(np.float64)
+                cells = key_cells[selected]
+                pixels[sector_index] += int(np.sum(weights))
+                density_cells[sector_index] += int(len(cells))
+                weighted[sector_index] += exact_area_weighted_sums(flat_density[:, cells], weights)
+
+    sector_stats = {}
+    for index, metadata in sector_meta.items():
+        pixel_count = int(pixels[index])
+        fiscal = income.get(metadata["sectorId"], {})
+        sector_stats[metadata["sectorId"]] = {
+            **metadata,
+            "eligibleDensityCellCount": int(density_cells[index]),
+            "analysedAreaHa": round(pixel_count * 0.0001, 4),
+            "meanDensityByGreenClass": {
+                str(code): None if not pixel_count else round(float(weighted[index, band] / pixel_count), 5)
+                for band, code in enumerate(GREEN_CLASS_CODES)
+            },
+            "income": fiscal.get("medianNetTaxableIncome") if fiscal.get("sourceStatus") == "available" else None,
+        }
+    return sector_stats
 
 
 def _income_records():
@@ -244,41 +396,26 @@ def _display_scopes_10m(sectors, grid):
     return region, municipality, municipality_lookup
 
 
-def _green_income_product(densities, coverage, density_grid, sectors, sector_index, urban, sealed, income):
+def _green_income_product(densities, coverage, density_grid, sectors, income, urban_mask):
     output_root = CACHE_ROOT / "groenkaart-income"
-    eligible = urban & sealed & np.isfinite(coverage)
-    encoded = _encode_density(np.where(eligible[None, ...], densities, np.nan))
-    opaque = np.full_like(encoded[0], 255)
+    sector_meta = _sector_metadata(sectors)
+    encoded = _encode_density(densities)
+    validity = np.where(np.isfinite(coverage), 255, 0).astype(np.uint8)
     empty = np.zeros_like(encoded[0])
     grid_path = output_root / "density-grid.png"
-    _write_rgba(grid_path, [encoded[0], encoded[1], encoded[2], opaque])
+    _write_rgba(grid_path, [encoded[0], encoded[1], encoded[2], validity])
     non_green_path = output_root / "density-non-green.png"
-    _write_rgba(non_green_path, [encoded[3], empty, empty, opaque])
+    _write_rgba(non_green_path, [encoded[3], empty, empty, validity])
     region, municipality, municipality_lookup = _display_scopes_10m(sectors, density_grid)
     scope_path = output_root / "scope-index.png"
     _write_rgba(scope_path, [region, municipality, np.zeros_like(region), np.full_like(region, 255)])
 
-    sector_meta = _sector_metadata(sectors)
-    sector_stats = {}
-    for index, metadata in sector_meta.items():
-        selected = eligible & (sector_index == index)
-        count = int(np.count_nonzero(selected))
-        fiscal = income.get(metadata["sectorId"], {})
-        sector_stats[metadata["sectorId"]] = {
-            **metadata,
-            "validCellCount": count,
-            "analysedAreaHa": round(count * 0.01, 4),
-            "meanDensityByGreenClass": {
-                str(code): None if not count else round(float(np.mean(densities[band][selected])), 5)
-                for band, code in enumerate(GREEN_CLASS_CODES)
-            },
-            "income": fiscal.get("medianNetTaxableIncome") if fiscal.get("sourceStatus") == "available" else None,
-        }
+    sector_stats = _exact_green_income_statistics(densities, coverage, density_grid, sectors, income)
     regressions = {}
     for codes in _green_combinations():
         key = _combination_key(codes)
         def calculate(records, x_key, selected_codes=codes):
-            valid = [record for record in records if record["validCellCount"] >= 10
+            valid = [record for record in records if record["analysedAreaHa"] >= MINIMUM_GREEN_INCOME_AREA_HA
                      and record.get(x_key) is not None
                      and all(record["meanDensityByGreenClass"].get(str(code)) is not None for code in selected_codes)]
             return ordinary_least_squares(
@@ -288,10 +425,10 @@ def _green_income_product(densities, coverage, density_grid, sectors, sector_ind
         regressions[key] = _sector_regressions(sector_stats, "income", calculate)
     stats_path = output_root / "statistics.json"
     stats_path.write_text(json.dumps({
-        "schemaVersion": 1, "sectorStats": sector_stats, "regressions": regressions,
+        "schemaVersion": 2, "sectorStats": sector_stats, "regressions": regressions,
     }, separators=(",", ":")), encoding="utf-8")
     manifest = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "comparisonId": "groenkaart-income",
         "primaryLayerId": "groenkaart",
         "secondaryLayerId": "income",
@@ -300,6 +437,9 @@ def _green_income_product(densities, coverage, density_grid, sectors, sector_ind
         "jaarbakYear": 2021,
         "incomeYear": INCOME_YEAR,
         "analysisResolutionMeters": 10,
+        "displayResolutionMeters": 1,
+        "minimumEligibleAreaHa": MINIMUM_GREEN_INCOME_AREA_HA,
+        "statisticWeighting": "exact-sealed-urban-area",
         "minimumJaarbakCoverage": MINIMUM_NATIVE_JAARBAK_COVERAGE,
         "urbanFabricCodes": list(URBAN_FABRIC_CODES),
         "excludedUrbanAtlasCodes": [EXCLUDED_URBAN_CODE],
@@ -314,6 +454,8 @@ def _green_income_product(densities, coverage, density_grid, sectors, sector_ind
         "densityNonGreenUrl": "groenkaart-income/density-non-green.png",
         "scopeIndexUrl": "groenkaart-income/scope-index.png",
         "statisticsUrl": "groenkaart-income/statistics.json",
+        "urbanFabricMaskUrl": urban_mask["url"],
+        "urbanFabricMaskSha256": urban_mask["sha256"],
         "densityGridSha256": file_hash(grid_path),
         "densityNonGreenSha256": file_hash(non_green_path),
         "scopeIndexSha256": file_hash(scope_path),
@@ -342,7 +484,7 @@ def _scope_regressions(temperature, densities, clear, sector_index, sector_meta)
     return output
 
 
-def _landsat_products(densities10, coverage10, density_grid, sectors, income_payload, income):
+def _landsat_products(densities10, coverage10, density_grid, sectors, income_payload, income, urban_mask):
     landsat_manifest_path = CACHE_ROOT / "landsat-temperature" / "manifest.json"
     landsat = json.loads(landsat_manifest_path.read_text(encoding="utf-8"))
     selected_ids = tuple(item["value"] for item in landsat["timelineItems"])
@@ -471,6 +613,7 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
     }
     green_manifest = {
         **common,
+        "schemaVersion": 2,
         "comparisonId": "landsat-groenkaart",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "groenkaart",
@@ -481,6 +624,9 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
         "densityNonGreenUrl": "landsat-groenkaart/green-density-non-green.png",
         "densityGridSha256": file_hash(density_path),
         "densityNonGreenSha256": file_hash(density_non_green_path),
+        "urbanFabricMaskUrl": urban_mask["url"],
+        "urbanFabricMaskSha256": urban_mask["sha256"],
+        "displayResolutionMeters": 1,
         "observations": green_observations,
     }
     income_manifest = {
@@ -504,12 +650,10 @@ def prepare_sealed_urban_comparisons():
     """Generate all three products from verified local caches only."""
     densities, coverage, density_grid = _green_density_10m()
     sectors = gpd.read_file(SECTORS_PATH).to_crs(density_grid["crs"])
-    sector_index = _sector_grid(sectors, density_grid)
-    urban = _urban_grid(density_grid)
-    sealed = _native_jaarbak_mask(density_grid)
+    urban_mask = _prepare_urban_fabric_mask()
     income_payload, income = _income_records()
-    _green_income_product(densities, coverage, density_grid, sectors, sector_index, urban, sealed, income)
-    _landsat_products(densities, coverage, density_grid, sectors, income_payload, income)
+    _green_income_product(densities, coverage, density_grid, sectors, income, urban_mask)
+    _landsat_products(densities, coverage, density_grid, sectors, income_payload, income, urban_mask)
     for comparison_id in COMPARISON_IDS:
         manifest_path = CACHE_ROOT / comparison_id / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

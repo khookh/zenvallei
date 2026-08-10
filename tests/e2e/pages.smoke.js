@@ -32,12 +32,15 @@ async function rasterVisibility(page) {
   return page.evaluate(() => {
     const map = window.__heatMap.map;
     const visibility = (id) => map.getLayer(id) ? map.getLayoutProperty(id, "visibility") ?? "visible" : "missing";
+    const prefixedVisibility = (prefix) => {
+      const layer = map.getStyle().layers.find(({ id }) => id.startsWith(`${prefix}-`));
+      return layer ? map.getLayoutProperty(layer.id, "visibility") ?? "visible" : "missing";
+    };
     return {
       landsat: visibility("landsat-temperature-raster"),
       jaarbak: visibility("jaarbak-local-raster"),
       density: visibility("jaarbak-density-raster"),
-      sealed: visibility("landsat-jaarbak-sealed"),
-      comparison: visibility("landsat-jaarbak-temperature"),
+      sealed: prefixedVisibility("landsat-jaarbak-sealed"),
     };
   });
 }
@@ -200,10 +203,10 @@ test("serves the complete application below the GitHub Pages project path", asyn
     await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing");
     await expect.poll(() => ownResponses.some((url) => url.endsWith("/landsat-jaarbak/manifest.json"))).toBe(true);
     await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
-      landsat: "none", jaarbak: "none", density: "none", sealed: "visible", comparison: "visible",
+      landsat: "visible", jaarbak: "none", density: "none", sealed: "visible",
     });
     await page.locator("#analysis-pair-remove").click();
-    await expect.poll(() => rasterVisibility(page)).toMatchObject({ landsat: "visible", jaarbak: "none", sealed: "missing", comparison: "missing" });
+    await expect.poll(() => rasterVisibility(page)).toMatchObject({ landsat: "visible", jaarbak: "none", sealed: "missing" });
     await page.locator('[data-layer="jaarbak"]').click();
     await expect.poll(() => rasterVisibility(page)).toMatchObject({ jaarbak: "none", density: "visible" });
     await page.locator('[data-layer="landsat-temperature"]').click();

@@ -14,6 +14,7 @@ from greenwave_local_layers.sealed_urban_comparisons import (
     URBAN_FABRIC_CODES,
     _combination_key,
     _green_combinations,
+    exact_area_weighted_sums,
     ordinary_least_squares,
 )
 
@@ -53,3 +54,11 @@ def test_ordinary_least_squares_is_deterministic():
 def test_regression_rejects_small_or_zero_variance_samples():
     assert ordinary_least_squares([1, 2], [3, 4]) is None
     assert ordinary_least_squares([5, 5, 5], [1, 2, 3]) is None
+
+
+def test_green_density_uses_exact_sealed_urban_area_weights():
+    # The unweighted mean is 50%, but nine eligible 1 m pixels in the first
+    # parent cell make the scientifically correct result 18%.
+    sums = exact_area_weighted_sums(np.array([[10, 90]], dtype=np.float32), np.array([9, 1]))
+    assert sums.tolist() == [180.0]
+    assert sums[0] / 10 == 18.0

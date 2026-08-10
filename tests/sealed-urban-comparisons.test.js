@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateGroenkaartIncomeManifest } from "../src/comparisons/groenkaart-income.js";
 import { validateLandsatGroenkaartManifest } from "../src/comparisons/landsat-groenkaart.js";
 import { validateLandsatIncomeManifest } from "../src/comparisons/landsat-income.js";
+import { isOfficialSealedPixel } from "../src/comparisons/exact-sealed-raster.js";
 import {
   comparisonPixelOffset, incomeLevel, ordinaryLeastSquares, selectedDensity,
 } from "../src/comparisons/sealed-urban-shared.js";
@@ -22,12 +23,14 @@ describe("sealed urban comparison contracts", () => {
   it("validates the three explicit products", () => {
     expect(validateLandsatGroenkaartManifest({
       ...commonLandsat,
+      schemaVersion: 2,
       comparisonId: "landsat-groenkaart",
       primaryLayerId: "landsat-temperature",
       secondaryLayerId: "groenkaart",
       greenMapYear: 2021,
       minimumGreenCoverage: .8,
       greenClasses: [],
+      urbanFabricMaskUrl: "shared/urban-fabric-2021.pmtiles",
     }).comparisonId).toBe("landsat-groenkaart");
     expect(validateLandsatIncomeManifest({
       ...commonLandsat,
@@ -38,7 +41,7 @@ describe("sealed urban comparison contracts", () => {
       minimumSectorPixels: 10,
     }).comparisonId).toBe("landsat-income");
     expect(validateGroenkaartIncomeManifest({
-      schemaVersion: 1,
+      schemaVersion: 2,
       comparisonId: "groenkaart-income",
       primaryLayerId: "groenkaart",
       secondaryLayerId: "income",
@@ -50,13 +53,15 @@ describe("sealed urban comparison contracts", () => {
       scopeIndexUrl: "groenkaart-income/scope-index.png",
       densityNonGreenUrl: "groenkaart-income/density-non-green.png",
       municipalityIndexes: { Halle: 1 },
+      urbanFabricMaskUrl: "shared/urban-fabric-2021.pmtiles",
+      statisticWeighting: "exact-sealed-urban-area",
       urbanFabricCodes: ["11100", "11210", "11220", "11230", "11240"],
     }).comparisonId).toBe("groenkaart-income");
   });
 
   it("rejects isolated structures or incompatible analytical thresholds", () => {
     expect(() => validateGroenkaartIncomeManifest({
-      schemaVersion: 1,
+      schemaVersion: 2,
       comparisonId: "groenkaart-income",
       primaryLayerId: "groenkaart",
       secondaryLayerId: "income",
@@ -89,5 +94,11 @@ describe("sealed urban comparison contracts", () => {
     expect(incomeLevel(40_000).id).toBe("high");
     expect(comparisonPixelOffset(commonLandsat, { lng: 4.5, lat: 50.5 })).toBeGreaterThan(0);
     expect(comparisonPixelOffset(commonLandsat, { lng: 2, lat: 50.5 })).toBe(-1);
+  });
+
+  it("accepts only the official opaque JaarBAK sealed colour", () => {
+    expect(isOfficialSealedPixel(new Uint8ClampedArray([0xe8, 0x29, 0x2f, 255]), 0)).toBe(true);
+    expect(isOfficialSealedPixel(new Uint8ClampedArray([0x8e, 0xcf, 0x7c, 255]), 0)).toBe(false);
+    expect(isOfficialSealedPixel(new Uint8ClampedArray([0xe8, 0x29, 0x2f, 0]), 0)).toBe(false);
   });
 });

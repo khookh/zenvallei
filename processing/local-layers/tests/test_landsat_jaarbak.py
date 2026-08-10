@@ -9,6 +9,7 @@ from greenwave_local_layers.landsat_jaarbak import (
     YEAR_BY_OBSERVATION,
     classify_soil_pixels,
     display_scope_indexes,
+    _density_scope_analysis,
 )
 from greenwave_local_layers.landsat_urban_atlas import _subpixel_majority
 
@@ -50,3 +51,18 @@ def test_display_scope_dissolves_internal_sector_boundaries():
     assert analytical_sector[0, 0] == 0  # intentional statistical tie
     assert region[0, 0] == 1  # no visual hole inside the dissolved region
     assert municipality[0, 0] == municipality_lookup["Halle"]
+
+
+def test_density_analysis_includes_zero_and_masks_clouds():
+    temperature = np.array([[20, 25, 30, 99]], dtype=np.float32)
+    status = np.array([[1, 1, 1, 2]], dtype=np.uint8)
+    density = np.array([[0, 50, 100, 100]], dtype=np.float32)
+    indexes = np.array([[1, 1, 1, 1]], dtype=np.uint8)
+    meta = {1: {"sectorId": "sector", "municipality": "Halle"}}
+    result = _density_scope_analysis(
+        temperature, status, density, indexes, np.ones_like(indexes),
+        np.ones_like(indexes), meta, {"Halle": 1},
+    )
+    assert result["region:zennevallei"]["n"] == 3
+    assert result["region:zennevallei"]["slope"] == 0.1
+    assert result["region:zennevallei"]["analysedAreaHa"] == 0.27

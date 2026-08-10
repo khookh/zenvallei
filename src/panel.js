@@ -812,7 +812,7 @@ function comparisonChartContext(model) {
   };
 }
 
-function comparisonHistogram(model, { expanded = false } = {}) {
+function comparisonHistogram(model, { expanded = false, showExpand = true } = {}) {
   const available = model.selectedSeries.filter((series) => series.stats?.clearPixelCount >= 10);
   if (!model.selectedSeries.length) return `<p class="panel-empty-state">${escapeHtml(t("comparison.noSelectedSeries"))}</p>`;
   const percentages = available.map((series) => series.stats.binCounts.map((count) => (
@@ -851,7 +851,7 @@ function comparisonHistogram(model, { expanded = false } = {}) {
   return `<div class="comparison-chart ${expanded ? "is-expanded" : ""}" data-comparison-chart>
     <div class="comparison-chart-heading">
       <div class="comparison-series-chips">${chips}</div>
-      ${expanded ? "" : `<button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("comparison.expandHistogram"))}</button>`}
+      ${expanded || !showExpand ? "" : `<button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("comparison.expandHistogram"))}</button>`}
     </div>
     <div class="comparison-plot" style="--plot-left:${plot.left / layout.width * 100}%;--plot-right:${(layout.width - plot.left - plot.width) / layout.width * 100}%;--plot-top:${plot.top / layout.height * 100}%;--plot-bottom:${(layout.height - plot.top - plot.height) / layout.height * 100}%">
     <svg viewBox="0 0 ${layout.width} ${layout.height}" role="img" aria-labelledby="${prefix}-title ${prefix}-description">
@@ -882,7 +882,7 @@ function comparisonHistogram(model, { expanded = false } = {}) {
   </div>`;
 }
 
-function comparisonChartDialog(model) {
+function comparisonChartDialog(model, { includeDensity = false } = {}) {
   const context = comparisonChartContext(model);
   return `<dialog class="comparison-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("comparison.histogramTitle"))}">
     <div class="comparison-chart-dialog-content">
@@ -890,6 +890,15 @@ function comparisonChartDialog(model) {
       <p class="comparison-dialog-description">${escapeHtml(context.description)}</p>
       <p>${escapeHtml(t("comparison.histogramExplanation"))}</p>
       ${comparisonHistogram(model, { expanded: true })}
+      ${includeDensity && model.densityScatter?.pixelPoints ? `
+        <h3>${escapeHtml(t("soilComparison.densityChartTitle"))}</h3>
+        ${sealedUrbanScatterChart({
+          comparisonId: "landsat-jaarbak-density", record: model.record,
+          title: t("soilComparison.densityChartTitle"), definition: t("soilComparison.densityChartDefinition"),
+          xLabel: model.densityScatter.xLabel, yLabel: model.densityScatter.yLabel,
+          xKey: "density", yKey: "temperature", pixelPoints: model.densityScatter.pixelPoints,
+          regression: model.densityScatter.regression,
+        }, { expanded: true, showExpand: false })}` : ""}
       <p class="comparison-academic-note">${escapeHtml(t("comparison.academicDetails"))}</p>
     </div>
   </dialog>`;
@@ -986,8 +995,26 @@ function renderLandsatJaarbakComparison(model) {
       <div class="section-heading"><p class="section-kicker">${escapeHtml(t("soilComparison.title"))}</p><h3>${escapeHtml(t("comparison.histogramTitle"))}</h3></div>
       <p class="comparison-definition">${escapeHtml(t("comparison.surfaceTemperatureDefinition"))}</p>
       <p class="section-intro">${escapeHtml(t("comparison.histogramExplanation"))}</p>
-      ${comparisonHistogram(model)}
-      ${comparisonChartDialog(model)}
+      <div class="comparison-chart-heading"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("soilComparison.expandCharts"))}</button></div>
+      ${comparisonHistogram(model, { showExpand: false })}
+      ${model.densityScatter?.pixelPoints ? `
+        <div class="section-heading soil-density-heading"><p class="section-kicker">${escapeHtml(t("soilComparison.densityAnalysisKicker"))}</p><h3>${escapeHtml(t("soilComparison.densityChartTitle"))}</h3></div>
+        ${sealedUrbanScatterChart({
+          comparisonId: "landsat-jaarbak-density", record,
+          title: t("soilComparison.densityChartTitle"), definition: t("soilComparison.densityChartDefinition"),
+          xLabel: model.densityScatter.xLabel, yLabel: model.densityScatter.yLabel,
+          xKey: "density", yKey: "temperature", pixelPoints: model.densityScatter.pixelPoints,
+          regression: model.densityScatter.regression,
+        }, { showExpand: false })}` : `<p class="panel-empty-state">${escapeHtml(t("soilComparison.densityUnavailable"))}</p>`}
+      ${model.densityScatter?.regression ? `<div class="summary-grid sealed-regression-grid">
+        ${metricCard("sealedUrban.sample", formatNumber(model.densityScatter.regression.n, 0), "#315e66")}
+        ${metricCard("soilComparison.nominalArea", t("unit.hectares", { value: formatNumber(model.densityScatter.regression.analysedAreaHa, 1) }), "#176b43")}
+        ${metricCard("sealedUrban.rSquared", formatNumber(model.densityScatter.regression.rSquared, 3), "#6d4ca0")}
+        ${metricCard("sealedUrban.slope", `${formatNumber(model.densityScatter.regression.slope * 10, 3)} ${t("soilComparison.densitySlopeUnit")}`, "#8f1d2c")}
+        ${metricCard("soilComparison.intercept", `${formatNumber(model.densityScatter.regression.intercept, 2)} °C`, "#53666b")}
+        ${metricCard("soilComparison.matchedDensityYear", String(model.secondaryYear), "#53666b")}
+      </div>` : ""}
+      ${comparisonChartDialog(model, { includeDensity: true })}
     </section>
     <section aria-labelledby="soil-comparison-series-title">
       <div class="section-heading"><p class="section-kicker">${escapeHtml(t("panel.detailsKicker"))}</p><h3 id="soil-comparison-series-title">${escapeHtml(t("comparison.seriesMetrics"))}</h3></div>
@@ -1449,17 +1476,39 @@ function renderPopulation(model) {
     </article>`;
 }
 
+function packedPixelPoints(values) {
+  return ArrayBuffer.isView(values) && !(values instanceof DataView);
+}
+
+function pixelPointCount(values) {
+  return packedPixelPoints(values) ? Math.floor(values.length / 2) : values?.length ?? 0;
+}
+
 function sealedScatterBounds(model) {
   const values = model.pixelPoints ?? model.points?.map((point) => [point[model.xKey], point[model.yKey]]) ?? [];
-  const xs = values.map(([value]) => value).filter(Number.isFinite);
-  const ys = values.map(([, value]) => value).filter(Number.isFinite);
-  const xRawMinimum = xs.length ? Math.min(...xs) : 0;
-  const xRawMaximum = xs.length ? Math.max(...xs) : 1;
+  let xRawMinimum = Infinity;
+  let xRawMaximum = -Infinity;
+  let yMinimumValue = Infinity;
+  let yMaximumValue = -Infinity;
+  if (packedPixelPoints(values)) {
+    for (let index = 0; index < values.length; index += 2) {
+      xRawMinimum = Math.min(xRawMinimum, values[index]);
+      xRawMaximum = Math.max(xRawMaximum, values[index]);
+      yMinimumValue = Math.min(yMinimumValue, values[index + 1]);
+      yMaximumValue = Math.max(yMaximumValue, values[index + 1]);
+    }
+  } else {
+    values.forEach(([xValue, yValue]) => {
+      if (Number.isFinite(xValue)) { xRawMinimum = Math.min(xRawMinimum, xValue); xRawMaximum = Math.max(xRawMaximum, xValue); }
+      if (Number.isFinite(yValue)) { yMinimumValue = Math.min(yMinimumValue, yValue); yMaximumValue = Math.max(yMaximumValue, yValue); }
+    });
+  }
+  if (!Number.isFinite(xRawMinimum)) { xRawMinimum = 0; xRawMaximum = 1; }
   const xPadding = model.xKey === "density" ? 0 : Math.max(1, (xRawMaximum - xRawMinimum) * .06);
   const xMinimum = model.xKey === "density" ? 0 : Math.floor((xRawMinimum - xPadding) / 1000) * 1000;
   const xMaximum = model.xKey === "density" ? 100 : Math.ceil((xRawMaximum + xPadding) / 1000) * 1000;
-  const yRawMinimum = model.yKey === "density" ? 0 : (ys.length ? Math.min(...ys) : 15);
-  const yRawMaximum = model.yKey === "density" ? 100 : (ys.length ? Math.max(...ys) : 50);
+  const yRawMinimum = model.yKey === "density" ? 0 : (Number.isFinite(yMinimumValue) ? yMinimumValue : 15);
+  const yRawMaximum = model.yKey === "density" ? 100 : (Number.isFinite(yMaximumValue) ? yMaximumValue : 50);
   const yPadding = model.yKey === "temperature" ? Math.max(1, (yRawMaximum - yRawMinimum) * .06) : 0;
   return {
     xMinimum, xMaximum,
@@ -1478,8 +1527,8 @@ function sealedScatterPointLabel(model, point) {
   return `${point.sectorName} (${point.sectorId}), ${point.municipality}: ${sealedScatterValue(point[model.xKey], model.xKey)} · ${sealedScatterValue(point[model.yKey], model.yKey)}`;
 }
 
-function sealedUrbanScatterChart(model, { expanded = false } = {}) {
-  const pixel = Array.isArray(model.pixelPoints);
+function sealedUrbanScatterChart(model, { expanded = false, showExpand = true } = {}) {
+  const pixel = Array.isArray(model.pixelPoints) || packedPixelPoints(model.pixelPoints);
   const points = pixel ? model.pixelPoints : model.points;
   const bounds = sealedScatterBounds(model);
   const width = 900;
@@ -1499,15 +1548,15 @@ function sealedUrbanScatterChart(model, { expanded = false } = {}) {
   const prefix = `${model.comparisonId}-${expanded ? "expanded" : "inline"}`;
   const initial = !pixel ? points.find(({ sectorId }) => sectorId === model.highlightedSectorId) ?? points[0] : null;
   return `<div class="sealed-urban-scatter ${expanded ? "is-expanded" : ""}" data-sector-comparison-chart>
-    ${expanded ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("sealedUrban.expandChart"))}</button></div>`}
+    ${expanded || !showExpand ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("sealedUrban.expandChart"))}</button></div>`}
     <p class="sealed-scatter-intro">${escapeHtml(model.definition)}</p>
     <div class="sealed-scatter-stage">
-      ${pixel ? `<canvas width="${width}" height="${height}" data-pixel-scatter-canvas
+      ${pixel ? `<canvas width="${width}" height="${height}" data-pixel-scatter-canvas data-pixel-scatter-source="${model.comparisonId === "landsat-jaarbak-density" ? "densityScatter" : "pixelPoints"}"
         data-plot-left="${plot.left}" data-plot-top="${plot.top}" data-plot-width="${plot.width}" data-plot-height="${plot.height}"
         data-x-min="${bounds.xMinimum}" data-x-max="${bounds.xMaximum}" data-y-min="${bounds.yMinimum}" data-y-max="${bounds.yMaximum}" aria-hidden="true"></canvas>` : ""}
       <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
         <title id="${prefix}-title">${escapeHtml(model.title)}</title>
-        <desc id="${prefix}-description">${escapeHtml(t("sealedUrban.chartDescription", { count: points.length, area: panelAreaName(model.record) }))}</desc>
+        <desc id="${prefix}-description">${escapeHtml(t("sealedUrban.chartDescription", { count: pixelPointCount(points), area: panelAreaName(model.record) }))}</desc>
         <g class="sealed-scatter-grid" aria-hidden="true">
           ${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(value)}" y2="${y(value)}"></line>`).join("")}
         </g>
@@ -1526,7 +1575,7 @@ function sealedUrbanScatterChart(model, { expanded = false } = {}) {
       </svg>
     </div>
     <p class="sealed-scatter-output" data-scatter-output aria-live="polite">${escapeHtml(pixel
-      ? t("sealedUrban.pixelReadout", { count: formatNumber(points.length, 0) })
+      ? t("sealedUrban.pixelReadout", { count: formatNumber(pixelPointCount(points), 0) })
       : initial ? sealedScatterPointLabel(model, initial) : t("sealedUrban.noComparableValue"))}</p>
   </div>`;
 }
@@ -1544,7 +1593,7 @@ function sealedUrbanScatterDialog(model) {
 
 function renderSealedUrbanScatter(model) {
   const regression = model.regression;
-  const count = model.pixelPoints?.length ?? model.points.length;
+  const count = model.pixelPoints ? pixelPointCount(model.pixelPoints) : model.points.length;
   const analysedArea = model.pixelPoints
     ? count * .09
     : model.points.reduce((sum, point) => sum + Number(point.analysedAreaHa ?? 0), 0);
