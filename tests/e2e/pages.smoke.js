@@ -15,6 +15,19 @@ async function showControls(page) {
   await expect(page.locator("#map-controls-body")).toBeVisible();
 }
 
+async function showResults(page) {
+  const panel = page.locator("#detail-panel");
+  if (!await panel.evaluate((element) => element.classList.contains("is-peek"))) return;
+  if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
+    await page.locator("#map-controls-toggle").click();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  }
+  if (await panel.evaluate((element) => element.classList.contains("is-peek"))) {
+    await expect(page.locator("#panel-peek")).toBeVisible();
+    await page.locator("#panel-peek").click();
+  }
+}
+
 async function rasterVisibility(page) {
   return page.evaluate(() => {
     const map = window.__heatMap.map;
@@ -23,6 +36,7 @@ async function rasterVisibility(page) {
       landsat: visibility("landsat-temperature-raster"),
       jaarbak: visibility("jaarbak-local-raster"),
       density: visibility("jaarbak-density-raster"),
+      sealed: visibility("landsat-jaarbak-sealed"),
       comparison: visibility("landsat-jaarbak-temperature"),
     };
   });
@@ -31,6 +45,7 @@ async function rasterVisibility(page) {
 async function activateComparison(page, fromLayer, targetLayer, testInfo) {
   if (testInfo.project.name.includes("mobile")) await showControls(page);
   await page.locator(`[data-layer="${fromLayer}"]`).click();
+  await expect(page.locator(`[data-layer="${fromLayer}"]`)).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
   if (testInfo.project.name.includes("mobile")) await showControls(page);
   if (fromLayer === "groenkaart") {
     const actionPositions = await Promise.all([
@@ -55,23 +70,6 @@ async function removeComparison(page, restoredLayer, testInfo) {
   await page.locator("#analysis-pair-remove").click();
   await expect(page.locator(`[data-layer="${restoredLayer}"]`)).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#analysis-pair-result")).toBeHidden();
-}
-
-async function renderedPoint(page, layerId) {
-  return page.evaluate((id) => {
-    const map = window.__heatMap.map;
-    const canvas = map.getCanvas();
-    const bounds = canvas.getBoundingClientRect();
-    for (let y = 30; y < canvas.clientHeight - 30; y += 12) {
-      for (let x = 30; x < canvas.clientWidth - 30; x += 12) {
-        const topElement = document.elementFromPoint(bounds.left + x, bounds.top + y);
-        if (topElement === canvas && map.queryRenderedFeatures([x, y], { layers: [id] }).length) {
-          return { x: bounds.left + x, y: bounds.top + y };
-        }
-      }
-    }
-    return null;
-  }, layerId);
 }
 
 test("serves the complete application below the GitHub Pages project path", async ({ page }, testInfo) => {
@@ -202,10 +200,10 @@ test("serves the complete application below the GitHub Pages project path", asyn
     await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing");
     await expect.poll(() => ownResponses.some((url) => url.endsWith("/landsat-jaarbak/manifest.json"))).toBe(true);
     await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
-      landsat: "none", jaarbak: "visible", density: "none", comparison: "visible",
+      landsat: "none", jaarbak: "none", density: "none", sealed: "visible", comparison: "visible",
     });
     await page.locator("#analysis-pair-remove").click();
-    await expect.poll(() => rasterVisibility(page)).toMatchObject({ landsat: "visible", jaarbak: "none", comparison: "missing" });
+    await expect.poll(() => rasterVisibility(page)).toMatchObject({ landsat: "visible", jaarbak: "none", sealed: "missing", comparison: "missing" });
     await page.locator('[data-layer="jaarbak"]').click();
     await expect.poll(() => rasterVisibility(page)).toMatchObject({ jaarbak: "none", density: "visible" });
     await page.locator('[data-layer="landsat-temperature"]').click();
@@ -225,38 +223,6 @@ test("serves the complete application below the GitHub Pages project path", asyn
     expect(ownResponses.some((url) => url.endsWith("/landsat-temperature/query/landsat-2026-06-22.tif"))).toBe(true);
   }
   expect(failedOwnRequests).toEqual([]);
-});
-
-test("retries the same JaarBAK source without leaving an empty comparison", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name.includes("mobile"), "The responsive flow is covered by the complete mobile smoke test.");
-  test.setTimeout(45_000);
-  let allowJaarbak = false;
-  let rejectedRequests = 0;
-  await page.route("**/jaarbak-2024-all.pmtiles*", async (route) => {
-    if (allowJaarbak) await route.continue();
-    else {
-      rejectedRequests += 1;
-      await route.fulfill({ status: 503, contentType: "text/plain", body: "temporary test failure" });
-    }
-  });
-  await page.goto(".");
-  await page.locator("#project-intro-primary").click();
-  await page.locator('[data-layer="landsat-temperature"]').click();
-  await page.locator("#analysis-compare").click();
-  await page.locator('[data-layer="jaarbak"]').click();
-
-  await expect(page.locator("#analysis-pair-retry")).toBeVisible({ timeout: 20_000 });
-  expect(rejectedRequests).toBeGreaterThan(0);
-  await expect.poll(() => rasterVisibility(page)).toMatchObject({
-    landsat: "visible", jaarbak: "none", comparison: "none",
-  });
-
-  allowJaarbak = true;
-  await page.locator("#analysis-pair-retry").click();
-  await expect(page.locator("#analysis-pair-retry")).toBeHidden({ timeout: 20_000 });
-  await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
-    landsat: "none", jaarbak: "visible", density: "missing", comparison: "visible",
-  });
 });
 
 test("keeps classification visible when density loading fails", async ({ page }, testInfo) => {
@@ -294,39 +260,37 @@ test("opens every public comparison from either participant and restores the ini
     ["urban-atlas", "landsat-temperature", "landsat-urban-atlas"],
     ["landsat-temperature", "jaarbak", "landsat-jaarbak"],
     ["jaarbak", "landsat-temperature", "landsat-jaarbak"],
-    ["groenkaart", "urban-atlas", "groenkaart-urban-atlas"],
-    ["urban-atlas", "groenkaart", "groenkaart-urban-atlas"],
+    ["landsat-temperature", "groenkaart", "landsat-groenkaart"],
+    ["groenkaart", "landsat-temperature", "landsat-groenkaart"],
+    ["groenkaart", "income", "groenkaart-income"],
+    ["income", "groenkaart", "groenkaart-income"],
+    ["landsat-temperature", "income", "landsat-income"],
+    ["income", "landsat-temperature", "landsat-income"],
   ];
 
   for (const [fromLayer, targetLayer, comparisonId] of cases) {
     await activateComparison(page, fromLayer, targetLayer, testInfo);
-    if (testInfo.project.name.includes("mobile")
-      && await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-      await page.locator("#panel-peek").click();
-    }
+    if (testInfo.project.name.includes("mobile")) await showResults(page);
     if (comparisonId === "heat-income") {
       await expect(page.locator("[data-heat-income-chart]:not(.is-expanded)")).toBeVisible();
     } else if (comparisonId === "heat-population") {
       await expect(page.locator("[data-heat-population-box-chart]:not(.is-expanded)")).toBeVisible();
-    } else if (comparisonId === "groenkaart-urban-atlas") {
-      await expect(page.locator('[data-green-urban-selector="green"]')).toHaveCount(4);
-      await expect(page.locator('[data-green-urban-selector="fabric"]')).toHaveCount(5);
-      await expect(page.locator("#detail-panel")).toContainText(/Mean selected green density|Gemiddelde geselecteerde groendichtheid/);
-      const greenChart = page.locator(".green-density-boxplot:not(.is-expanded)");
-      await expect(greenChart).toBeVisible();
-      await expect(greenChart.locator(".green-density-boxes > g")).toHaveCount(5);
-      await greenChart.locator("[data-green-density-box]").first().focus();
-      await greenChart.locator("[data-green-density-box]").first().press("ArrowRight");
-      await expect(greenChart.locator("[data-green-density-output]")).toContainText("median");
-      await greenChart.locator("[data-expand-comparison-chart]").click();
-      await expect(page.locator("[data-comparison-chart-dialog] .green-density-boxplot.is-expanded")).toBeVisible();
-      await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
-      if (!testInfo.project.name.includes("mobile")) {
-        const point = await renderedPoint(page, "groenkaart-urban-atlas-query");
-        expect(point).not.toBeNull();
-        await page.mouse.move(point.x, point.y);
-        await expect(page.locator(".maplibregl-popup")).toContainText(/Urban Atlas surface|Urban Atlas-oppervlak/);
+    } else if (["landsat-groenkaart", "groenkaart-income", "landsat-income"].includes(comparisonId)) {
+      const chart = page.locator(".sealed-urban-scatter:not(.is-expanded)");
+      await expect(chart).toBeVisible();
+      if (comparisonId === "landsat-groenkaart") {
+        await expect(chart.locator("canvas[data-pixel-scatter-canvas]")).toBeVisible();
+        await expect(page.locator("#detail-panel")).toContainText(/eligible clear Landsat pixels are plotted/);
+        await expect(page.locator("#detail-panel")).not.toContainText("0 eligible clear Landsat pixels are plotted");
+      } else {
+        await expect(chart.locator("[data-scatter-sector]").first()).toBeVisible();
       }
+      if (comparisonId !== "landsat-income") {
+        await expect(page.locator("[data-density-class]")).toHaveCount(4);
+      }
+      await chart.locator("[data-expand-comparison-chart]").click();
+      await expect(page.locator("[data-comparison-chart-dialog] .sealed-urban-scatter.is-expanded")).toBeVisible();
+      await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
     } else {
       await expect(page.locator("[data-expand-comparison-chart]")).toBeVisible();
     }

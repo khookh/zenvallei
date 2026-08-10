@@ -13,10 +13,10 @@ pnpm landgebruik:prepare
 pnpm landsat-heat:prepare
 pnpm landsat-urban-atlas:prepare
 pnpm landsat-soil-sealing:prepare
-pnpm groenkaart-urban-atlas:prepare
+pnpm sealed-urban:prepare
 ```
 
-`--dataset all` prepares the source layers and all three raster comparisons. JaarBAK, Groenkaart and Landgebruik also accept `--source YEAR=C:\data\source.tif`. Landsat discovery reads public STAC metadata and signed source windows, without storing signed URLs. The comparison commands reuse prepared files and make no network request.
+`--dataset all` prepares the source layers and every raster comparison. JaarBAK, Groenkaart and Landgebruik also accept `--source YEAR=C:\data\source.tif`. Landsat discovery reads public STAC metadata and signed source windows, without storing signed URLs. The comparison commands reuse prepared files and make no network request.
 
 After validation, publish the browser derivatives:
 
@@ -32,7 +32,7 @@ JaarBAK and Groenkaart preparation also creates a 100 m focal-density product. N
 
 JaarBAK density always represents sealed surface. Groenkaart density can combine any of its four non-overlapping official classes and starts with high green plus low green. The density mode replaces the classification display but does not change the existing area summaries in the result panel.
 
-The `landsat-urban-atlas`, `landsat-jaarbak` and `groenkaart-urban-atlas` comparisons are prepared below `.cache/local-layers`. `official-layers:publish` copies only their validated browser assets into the static bundle. They remain lazy-loaded and are not requested before a visitor chooses a comparison.
+The raster comparisons are prepared below `.cache/local-layers`. `official-layers:publish` copies only their validated browser assets into the static bundle. They remain lazy-loaded and are not requested before a visitor chooses a comparison.
 
 ## Open and test
 
@@ -52,11 +52,11 @@ The local endpoint serves only allowed cache files and supports PMTiles byte ran
 - Groenkaart preserves high green, low green, agriculture and non-green as separate 1 m classes.
 - Landgebruik preserves all 19 official classes for the three-yearly 2019, 2022 and 2025 editions. Its optional 2025 parcel view shows the agricultural share of the complete Statbel area, crop-group composition and exact source crop attributes.
 
-In Landsat comparison mode, Urban Atlas is reduced to the selected analysis families or classes beneath a stronger thermal raster. JaarBAK uses its sealed classification as the faint map base while the analysis compares sealed and unsealed 30 m majority assignments. Histograms use fixed 0.5 degree Celsius bins; each curve is normalised independently and is descriptive rather than causal. See [Landsat surface temperature](landsat-surface-temperature.md) for exact family membership, year pairing and limitations.
+In Landsat comparison mode, Urban Atlas is reduced to the selected analysis families or classes beneath a stronger thermal raster. The JaarBAK comparison draws a deep-red aligned mask only for majority-sealed Landsat cells below the thermal raster, while its histogram compares sealed and unsealed assignments. Histograms use fixed 0.5 degree Celsius bins; each curve is normalised independently and is descriptive rather than causal. See [Landsat surface temperature](landsat-surface-temperature.md) for exact family membership, year pairing and limitations.
 
 The published demographic comparisons join the 2026 heat scores to Statbel income for 2023 or population for 2025 by statistical-sector code. They retain the selected heat metric on the map and update their charts to Entire Zennevallei or the selected municipality. They do not calculate a correlation, regression or causal effect. See [Demography data](demography-data.md).
 
-The Green Map comparison combines the selected 2021 Green Map class densities inside five Urban Atlas urban-fabric classes. The map masks out unselected fabrics. The result panel reports means and Tukey box plots from the scientific 10 m grid for sectors, municipalities and Entire Zennevallei. Isolated structures (11300) are excluded deliberately.
+Three sealed-urban comparisons use Urban Atlas classes `11100`, `11210`, `11220`, `11230` and `11240`, explicitly excluding isolated structures `11300`. JaarBAK must classify the cell as majority sealed. Green Map × Landsat compares eligible 30 m pixels; Green Map × income compares eligible sector means on the 10 m density grid; Landsat × income compares eligible sector mean temperatures. The charts show ordinary unweighted OLS lines and R² as descriptive summaries only. Spatial dependence, ecological aggregation and mismatched source years prevent causal interpretation; no p-values are reported.
 
 See [Landsat surface temperature](landsat-surface-temperature.md) and [Landgebruik Vlaanderen](landgebruik-vlaanderen.md). Never copy raw downloads or the full cache into `public`; use the publishing command so only allow-listed browser derivatives are distributed.
 

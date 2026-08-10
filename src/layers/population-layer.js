@@ -271,8 +271,11 @@ export function createPopulationLayer({ population: input }) {
       return DATASETS.flatMap((datasetId) => {
         const source = population.datasets[datasetId].source;
         const url = safeExternalUrl(source.pageUrl);
-        const authorityId = datasetId === DATASETS[0] ? "statbel" : "departmentEnvironment";
-        return url ? [`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(authorityName(authorityId))}</a>`] : [];
+        const isCurrentGrid = datasetId === DATASETS[0];
+        const authorityId = isCurrentGrid ? "statbel" : "departmentEnvironment";
+        const productLabel = t(isCurrentGrid ? "population.currentDataset" : "population.modelDataset");
+        const label = `${authorityName(authorityId)} · ${productLabel}`;
+        return url ? [`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`] : [];
       });
     },
   });

@@ -27,7 +27,7 @@ def main(argv=None):
         "--dataset",
         choices=(
             "all", "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
-            "landsat-urban-atlas", "landsat-jaarbak", "groenkaart-urban-atlas",
+            "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
         ),
         default="all",
     )
@@ -38,7 +38,7 @@ def main(argv=None):
         parser.error("Use --source with one explicit --dataset so the year cannot be assigned to the wrong product.")
     datasets = (
         "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
-        "landsat-urban-atlas", "landsat-jaarbak", "groenkaart-urban-atlas",
+        "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
     ) if arguments.dataset == "all" else (arguments.dataset,)
     for dataset_id in datasets:
         print(f"Preparing {dataset_id}…", flush=True)
@@ -57,11 +57,11 @@ def main(argv=None):
                 parser.error("The Landsat-JaarBAK comparison reuses prepared data and accepts no source override.")
             from .landsat_jaarbak import prepare_landsat_jaarbak
             prepare_landsat_jaarbak()
-        elif dataset_id == "groenkaart-urban-atlas":
+        elif dataset_id == "sealed-urban-comparisons":
             if sources:
-                parser.error("The Green Map-Urban Atlas comparison reuses prepared data and accepts no source override.")
-            from .groenkaart_urban_atlas import prepare_groenkaart_urban_atlas
-            prepare_groenkaart_urban_atlas()
+                parser.error("The sealed-urban comparisons reuse prepared data and accept no source override.")
+            from .sealed_urban_comparisons import prepare_sealed_urban_comparisons
+            prepare_sealed_urban_comparisons()
         elif dataset_id == "landgebruik":
             from .landgebruik import prepare_landgebruik
             prepare_landgebruik(sources)

@@ -11,13 +11,19 @@ function linksFromHtml(html) {
 }
 
 function uniqueLinks(links) {
-  const seen = new Set();
-  return links.filter(({ label, url }) => {
-    const key = `${label}|${url}`;
-    if (!label || !url || seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  const grouped = new Map();
+  links.forEach(({ label, url }) => {
+    if (!label || !url) return;
+    const labels = grouped.get(url) ?? new Set();
+    labels.add(label);
+    grouped.set(url, labels);
   });
+  return [...grouped].map(([url, labels]) => ({
+    url,
+    // One source URL gets one row. Joint producers remain credited without
+    // repeating the same destination as several apparently different sources.
+    label: [...labels].join(" · "),
+  }));
 }
 
 /** Own the compact source button and modal so long attributions never cover the map. */
@@ -48,9 +54,25 @@ export function createMapSourceDialog({ config, layers }) {
     // and isolate a malformed optional context from the complete dialog.
     let context;
     try { context = layer.getContext?.({ sectorCount: 154 }); } catch { context = null; }
-    const contextLinks = context?.sources?.map(({ label, url }) => ({ label, url: safeExternalUrl(url) })) ?? [];
-    const attributionLinks = (layer.getAttributions?.() ?? []).flatMap(linksFromHtml);
-    return [...contextLinks, ...attributionLinks];
+    // Several official products credit joint authorities at one catalogue URL.
+    // Collapse those authorities first, then prefix the layer title once. This
+    // keeps one readable row per product instead of repeating both title and URL.
+    const contextLinks = uniqueLinks(context?.sources?.map(({ label, url }) => ({
+      label,
+      url: safeExternalUrl(url),
+    })) ?? []).map(({ label, url }) => ({
+      label: `${layer.getLabel()} · ${label}`,
+      url,
+    }));
+    const contextUrls = new Set(contextLinks.map(({ url }) => url));
+    // Preserve genuinely distinct alternate products (for example Population
+    // 2019) but leave publication identifiers to Methodology. Listing both a
+    // catalogue page and its DOI here made one dataset look like two sources.
+    const additionalAttributions = (layer.getAttributions?.() ?? [])
+      .flatMap(linksFromHtml)
+      .filter(({ url }) => !contextUrls.has(url) && !url.startsWith("https://doi.org/"))
+      .map(({ label, url }) => ({ label: `${layer.getLabel()} · ${label}`, url }));
+    return [...contextLinks, ...additionalAttributions];
   }));
 
   const render = () => {

@@ -1449,108 +1449,131 @@ function renderPopulation(model) {
     </article>`;
 }
 
-function greenUrbanDensityBoxPlot(model, { expanded = false } = {}) {
-  const series = model.selectedFabricClasses.filter(({ densityDistribution }) => densityDistribution?.count);
-  if (!series.length) return `<p class="panel-empty-state">${escapeHtml(t("greenUrbanComparison.noData"))}</p>`;
-  const width = 900;
-  const height = expanded ? 590 : 500;
-  const plot = { left: 104, top: 42, width: 760, height: expanded ? 390 : 300 };
-  const y = (value) => plot.top + plot.height - Math.max(0, Math.min(100, value)) / 100 * plot.height;
-  const step = plot.width / series.length;
-  const boxWidth = Math.min(92, step * .55);
-  const ticks = [0, 20, 40, 60, 80, 100];
-  const valueLabel = (item) => {
-    const stats = item.densityDistribution;
-    return t("greenUrbanComparison.boxValue", {
-      surface: item.label,
-      median: formatNumber(stats.median, 1),
-      q1: formatNumber(stats.q1, 1),
-      q3: formatNumber(stats.q3, 1),
-      count: stats.count,
-    });
+function sealedScatterBounds(model) {
+  const values = model.pixelPoints ?? model.points?.map((point) => [point[model.xKey], point[model.yKey]]) ?? [];
+  const xs = values.map(([value]) => value).filter(Number.isFinite);
+  const ys = values.map(([, value]) => value).filter(Number.isFinite);
+  const xRawMinimum = xs.length ? Math.min(...xs) : 0;
+  const xRawMaximum = xs.length ? Math.max(...xs) : 1;
+  const xPadding = model.xKey === "density" ? 0 : Math.max(1, (xRawMaximum - xRawMinimum) * .06);
+  const xMinimum = model.xKey === "density" ? 0 : Math.floor((xRawMinimum - xPadding) / 1000) * 1000;
+  const xMaximum = model.xKey === "density" ? 100 : Math.ceil((xRawMaximum + xPadding) / 1000) * 1000;
+  const yRawMinimum = model.yKey === "density" ? 0 : (ys.length ? Math.min(...ys) : 15);
+  const yRawMaximum = model.yKey === "density" ? 100 : (ys.length ? Math.max(...ys) : 50);
+  const yPadding = model.yKey === "temperature" ? Math.max(1, (yRawMaximum - yRawMinimum) * .06) : 0;
+  return {
+    xMinimum, xMaximum,
+    yMinimum: model.yKey === "density" ? 0 : Math.floor(yRawMinimum - yPadding),
+    yMaximum: model.yKey === "density" ? 100 : Math.ceil(yRawMaximum + yPadding),
   };
-  const prefix = expanded ? "green-density-chart-expanded" : "green-density-chart-inline";
-  return `<div class="green-density-boxplot ${expanded ? "is-expanded" : ""}" data-green-density-chart>
-    <div class="green-density-chart-heading">
-      <div><h4 id="${prefix}-heading">${escapeHtml(t("greenUrbanComparison.boxTitle"))}</h4>
-      <p>${escapeHtml(t("greenUrbanComparison.boxExplanation"))}</p></div>
-      ${expanded ? "" : `<button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("greenUrbanComparison.expandChart"))}</button>`}
+}
+
+function sealedScatterValue(value, key) {
+  if (key === "income") return formatCurrency(value);
+  if (key === "temperature") return `${formatNumber(value, 1)} °C`;
+  return `${formatNumber(value, 1)}%`;
+}
+
+function sealedScatterPointLabel(model, point) {
+  return `${point.sectorName} (${point.sectorId}), ${point.municipality}: ${sealedScatterValue(point[model.xKey], model.xKey)} · ${sealedScatterValue(point[model.yKey], model.yKey)}`;
+}
+
+function sealedUrbanScatterChart(model, { expanded = false } = {}) {
+  const pixel = Array.isArray(model.pixelPoints);
+  const points = pixel ? model.pixelPoints : model.points;
+  const bounds = sealedScatterBounds(model);
+  const width = 900;
+  const height = expanded ? 610 : 520;
+  const plot = { left: 112, top: 48, width: 740, height: expanded ? 410 : 315 };
+  const x = (value) => plot.left + (value - bounds.xMinimum) / Math.max(1e-9, bounds.xMaximum - bounds.xMinimum) * plot.width;
+  const y = (value) => plot.top + plot.height - (value - bounds.yMinimum) / Math.max(1e-9, bounds.yMaximum - bounds.yMinimum) * plot.height;
+  const xTicks = Array.from({ length: 5 }, (_, index) => bounds.xMinimum + (bounds.xMaximum - bounds.xMinimum) / 4 * index);
+  const yTicks = Array.from({ length: 6 }, (_, index) => bounds.yMinimum + (bounds.yMaximum - bounds.yMinimum) / 5 * index);
+  const regression = model.regression;
+  const line = regression ? {
+    x1: bounds.xMinimum,
+    y1: regression.intercept + regression.slope * bounds.xMinimum,
+    x2: bounds.xMaximum,
+    y2: regression.intercept + regression.slope * bounds.xMaximum,
+  } : null;
+  const prefix = `${model.comparisonId}-${expanded ? "expanded" : "inline"}`;
+  const initial = !pixel ? points.find(({ sectorId }) => sectorId === model.highlightedSectorId) ?? points[0] : null;
+  return `<div class="sealed-urban-scatter ${expanded ? "is-expanded" : ""}" data-sector-comparison-chart>
+    ${expanded ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("sealedUrban.expandChart"))}</button></div>`}
+    <p class="sealed-scatter-intro">${escapeHtml(model.definition)}</p>
+    <div class="sealed-scatter-stage">
+      ${pixel ? `<canvas width="${width}" height="${height}" data-pixel-scatter-canvas
+        data-plot-left="${plot.left}" data-plot-top="${plot.top}" data-plot-width="${plot.width}" data-plot-height="${plot.height}"
+        data-x-min="${bounds.xMinimum}" data-x-max="${bounds.xMaximum}" data-y-min="${bounds.yMinimum}" data-y-max="${bounds.yMaximum}" aria-hidden="true"></canvas>` : ""}
+      <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
+        <title id="${prefix}-title">${escapeHtml(model.title)}</title>
+        <desc id="${prefix}-description">${escapeHtml(t("sealedUrban.chartDescription", { count: points.length, area: panelAreaName(model.record) }))}</desc>
+        <g class="sealed-scatter-grid" aria-hidden="true">
+          ${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(value)}" y2="${y(value)}"></line>`).join("")}
+        </g>
+        ${line ? `<line class="sealed-scatter-regression" x1="${x(line.x1)}" y1="${y(line.y1)}" x2="${x(line.x2)}" y2="${y(line.y2)}"></line>` : ""}
+        ${pixel ? "" : `<g class="sealed-scatter-points" role="group" aria-label="${escapeHtml(model.title)}">${points.map((point, index) => {
+          const label = sealedScatterPointLabel(model, point);
+          const highlighted = point.sectorId === model.highlightedSectorId;
+          return `<circle cx="${x(point[model.xKey]).toFixed(2)}" cy="${y(point[model.yKey]).toFixed(2)}" r="5" role="button" tabindex="${highlighted || (!model.highlightedSectorId && index === 0) ? 0 : -1}" class="sealed-scatter-point ${highlighted ? "is-selected" : ""}" data-scatter-sector="${escapeHtml(point.sectorId)}" data-scatter-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></circle>`;
+        }).join("")}</g>`}
+        <g class="sealed-scatter-axis-values" aria-hidden="true">
+          ${xTicks.map((value) => `<text x="${x(value)}" y="${plot.top + plot.height + 31}" text-anchor="middle">${escapeHtml(model.xKey === "income" ? compactEuroTick(value) : `${formatNumber(value, 0)}%`)}</text>`).join("")}
+          ${yTicks.map((value) => `<text x="${plot.left - 14}" y="${y(value) + 5}" text-anchor="end">${escapeHtml(model.yKey === "temperature" ? formatNumber(value, 0) : `${formatNumber(value, 0)}%`)}</text>`).join("")}
+        </g>
+        <text class="sealed-scatter-axis-label" x="${plot.left + plot.width / 2}" y="${height - 26}" text-anchor="middle">${escapeHtml(model.xLabel)}</text>
+        <text class="sealed-scatter-axis-label" transform="translate(30 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(model.yLabel)}</text>
+      </svg>
     </div>
-    <div class="green-density-series-key">${series.map((item) => `<span><i style="--series:${escapeHtml(item.color)}" aria-hidden="true"></i><b>${escapeHtml(item.code)}</b> ${escapeHtml(item.label)} <small>n=${escapeHtml(formatNumber(item.densityDistribution.count, 0))}</small></span>`).join("")}</div>
-    <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
-      <title id="${prefix}-title">${escapeHtml(t("greenUrbanComparison.boxTitle"))}</title>
-      <desc id="${prefix}-description">${escapeHtml(t("greenUrbanComparison.boxDescription", { area: panelAreaName(model.record), classes: model.greenClassLabels.join(", ") }))}</desc>
-      <g class="green-density-grid" aria-hidden="true">${ticks.map((tick) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(tick)}" y2="${y(tick)}"></line>`).join("")}</g>
-      <g class="green-density-axis-values" aria-hidden="true">
-        ${ticks.map((tick) => `<text x="${plot.left - 16}" y="${y(tick) + 5}" text-anchor="end">${tick}%</text>`).join("")}
-        ${series.map((item, index) => `<text x="${plot.left + step * (index + .5)}" y="${plot.top + plot.height + 38}" text-anchor="middle">${escapeHtml(item.code)}</text>`).join("")}
-      </g>
-      <text class="green-density-axis-label" transform="translate(30 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("greenUrbanComparison.axisDensity"))}</text>
-      <text class="green-density-axis-label" x="${plot.left + plot.width / 2}" y="${height - 28}" text-anchor="middle">${escapeHtml(t("greenUrbanComparison.axisFabric"))}</text>
-      <g class="green-density-boxes" role="list">${series.map((item, index) => {
-        const stats = item.densityDistribution;
-        const centre = plot.left + step * (index + .5);
-        const left = centre - boxWidth / 2;
-        const right = centre + boxWidth / 2;
-        const label = valueLabel(item);
-        return `<g role="listitem" tabindex="${index === 0 ? "0" : "-1"}" data-green-density-box data-green-density-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" style="--series:${escapeHtml(item.color)}">
-          <line class="green-density-whisker" x1="${centre}" x2="${centre}" y1="${y(stats.whiskerHigh)}" y2="${y(stats.whiskerLow)}"></line>
-          <line class="green-density-whisker" x1="${left}" x2="${right}" y1="${y(stats.whiskerHigh)}" y2="${y(stats.whiskerHigh)}"></line>
-          <line class="green-density-whisker" x1="${left}" x2="${right}" y1="${y(stats.whiskerLow)}" y2="${y(stats.whiskerLow)}"></line>
-          <rect x="${left}" y="${y(stats.q3)}" width="${boxWidth}" height="${Math.max(1, y(stats.q1) - y(stats.q3))}" rx="5"></rect>
-          <line class="green-density-median" x1="${left}" x2="${right}" y1="${y(stats.median)}" y2="${y(stats.median)}"></line>
-        </g>`;
-      }).join("")}</g>
-    </svg>
-    <p class="green-density-output" data-green-density-output aria-live="polite">${escapeHtml(valueLabel(series[0]))}</p>
+    <p class="sealed-scatter-output" data-scatter-output aria-live="polite">${escapeHtml(pixel
+      ? t("sealedUrban.pixelReadout", { count: formatNumber(points.length, 0) })
+      : initial ? sealedScatterPointLabel(model, initial) : t("sealedUrban.noComparableValue"))}</p>
   </div>`;
 }
 
-function greenUrbanDensityChartDialog(model) {
-  return `<dialog class="comparison-chart-dialog green-density-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("greenUrbanComparison.expandedTitle", { area: panelAreaName(model.record) }))}">
+function sealedUrbanScatterDialog(model) {
+  return `<dialog class="comparison-chart-dialog sealed-scatter-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(model.title)}">
     <div class="comparison-chart-dialog-content">
-      <header><h3>${escapeHtml(t("greenUrbanComparison.expandedTitle", { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("greenUrbanComparison.closeChart"))}">&times;</button></header>
-      <p class="comparison-dialog-description">${escapeHtml(t("greenUrbanComparison.expandedDescription", {
-        area: panelAreaName(model.record), classes: model.greenClassLabels.join(", "), radius: model.densityRadiusMeters,
-      }))}</p>
-      ${greenUrbanDensityBoxPlot(model, { expanded: true })}
-      <p class="comparison-academic-note">${escapeHtml(t("greenUrbanComparison.academicDetails", { resolution: model.analysisResolutionMeters }))}</p>
+      <header><h3>${escapeHtml(model.title)}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("sealedUrban.closeChart"))}">&times;</button></header>
+      <p class="comparison-dialog-description">${escapeHtml(t("sealedUrban.expandedDescription", { area: panelAreaName(model.record) }))}</p>
+      ${sealedUrbanScatterChart(model, { expanded: true })}
+      <p class="comparison-academic-note">${escapeHtml(model.caveat)}</p>
     </div>
   </dialog>`;
 }
 
-function renderGroenkaartUrbanAtlasComparison(model) {
-  const selectedGreen = model.greenClassLabels.join(", ");
-  return `<div class="panel-hero comparison-hero green-urban-comparison-hero">
-    <p class="panel-eyebrow">${escapeHtml(t("greenUrbanComparison.heroKicker"))}</p>
+function renderSealedUrbanScatter(model) {
+  const regression = model.regression;
+  const count = model.pixelPoints?.length ?? model.points.length;
+  const analysedArea = model.pixelPoints
+    ? count * .09
+    : model.points.reduce((sum, point) => sum + Number(point.analysedAreaHa ?? 0), 0);
+  return `<div class="panel-hero comparison-hero sealed-urban-hero">
+    <p class="panel-eyebrow">${escapeHtml(t("sealedUrban.heroKicker"))}</p>
     <h2 id="panel-title">${escapeHtml(panelAreaName(model.record))}</h2>
-    <p class="panel-subtitle">${escapeHtml(t("greenUrbanComparison.panelSubtitle"))}</p>
-    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("greenUrbanComparison.selectedGreen", { classes: selectedGreen }))}</p>
+    <p class="panel-subtitle">${escapeHtml(model.title)}</p>
+    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("sealedUrban.sampleCount", { count: formatNumber(count, 0) }))}</p>
   </div>
-  <div class="panel-body comparison-body green-urban-comparison-body">
-    <section aria-labelledby="green-urban-results-title">
-      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("greenUrbanComparison.title"))}</p><h3 id="green-urban-results-title">${escapeHtml(t("greenUrbanComparison.resultsTitle"))}</h3></div>
-      <p class="comparison-definition">${escapeHtml(t("greenUrbanComparison.definition", { radius: model.densityRadiusMeters }))}</p>
-      ${greenUrbanDensityBoxPlot(model)}
-      ${greenUrbanDensityChartDialog(model)}
-      <div class="green-urban-results-list">
-        ${model.selectedFabricClasses.map((item) => `<article class="green-urban-result-card" style="--series:${escapeHtml(item.color)}">
-          <header><i aria-hidden="true"></i><h4>${escapeHtml(item.label)}</h4></header>
-          ${item.stats?.validCellCount ? `<strong>${escapeHtml(formatNumber(item.meanDensity, 1))}%</strong>
-            <span>${escapeHtml(t("greenUrbanComparison.meanDensity"))}</span>
-            <small>${escapeHtml(t("greenUrbanComparison.validArea", { area: formatNumber(item.stats.validAreaHa, 1) }))}</small>`
-            : `<p>${escapeHtml(t("greenUrbanComparison.noData"))}</p>`}
-        </article>`).join("")}
+  <div class="panel-body comparison-body sealed-urban-body">
+    <section aria-labelledby="sealed-scatter-title">
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("sealedUrban.analysis"))}</p><h3 id="sealed-scatter-title">${escapeHtml(model.title)}</h3></div>
+      ${model.selectedClassLabels?.length ? `<p class="comparison-definition">${escapeHtml(t("sealedUrban.selectedClasses", { classes: model.selectedClassLabels.join(", ") }))}</p>` : ""}
+      ${sealedUrbanScatterChart(model)}
+      ${sealedUrbanScatterDialog(model)}
+      <div class="summary-grid sealed-regression-grid">
+        ${metricCard("sealedUrban.sample", formatNumber(count, 0), "#315e66")}
+        ${metricCard("sealedUrban.eligibleArea", t("unit.hectares", { value: formatNumber(analysedArea, 1) }), "#176b43")}
+        ${metricCard("sealedUrban.rSquared", regression?.rSquared == null ? t("value.notAvailable") : formatNumber(regression.rSquared, 3), "#6d4ca0")}
+        ${metricCard("sealedUrban.slope", regression ? `${formatNumber(regression.slope * model.slopeScale, 3)} ${model.slopeUnit}` : t("value.notAvailable"), "#8f1d2c")}
       </div>
     </section>
-    <details class="detail-accordion methodology-accordion" data-section="green-urban-methodology">
-      <summary data-focus-key="green-urban-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("greenUrbanComparison.methodologyTitle"))}</span></summary>
-      <div class="accordion-content methodology-copy">
-        <p>${escapeHtml(t("greenUrbanComparison.methodologyDensity", { radius: model.densityRadiusMeters }))}</p>
-        <p>${escapeHtml(t("greenUrbanComparison.methodologyAssignment", { resolution: model.analysisResolutionMeters }))}</p>
-        <p>${escapeHtml(t("greenUrbanComparison.methodologyYears"))}</p>
-        <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("greenUrbanComparison.methodologyCaveat"))}</p>
-      </div>
+    <details class="detail-accordion" data-section="sealed-scatter-details">
+      <summary data-focus-key="sealed-scatter-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("sealedUrban.detailsTitle"))}</span></summary>
+      <div class="accordion-content methodology-copy"><p>${escapeHtml(t("sealedUrban.olsDefinition"))}</p><p>${escapeHtml(model.caveat)}</p></div>
+    </details>
+    <details class="detail-accordion methodology-accordion" data-section="sealed-scatter-methodology">
+      <summary data-focus-key="sealed-scatter-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("sealedUrban.methodologyTitle"))}</span></summary>
+      <div class="accordion-content methodology-copy"><p>${escapeHtml(model.methodology)}</p><p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(model.caveat)}</p></div>
     </details>
   </div>`;
 }
@@ -1588,7 +1611,7 @@ export function renderSectorPanelModel(model) {
   if (model.template === "landsat-jaarbak-comparison") return renderLandsatJaarbakComparison(model);
   if (model.template === "heat-income-comparison") return renderHeatIncomeComparison(model);
   if (model.template === "heat-population-comparison") return renderHeatPopulationComparison(model);
-  if (model.template === "groenkaart-urban-atlas-comparison") return renderGroenkaartUrbanAtlasComparison(model);
+  if (model.template === "sealed-urban-scatter") return renderSealedUrbanScatter(model);
   if (model.template === "income") return renderIncome(model);
   if (model.template === "population") return renderPopulation(model);
   if (model.template === "metric-summary") return renderMetricSummary(model);

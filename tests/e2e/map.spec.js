@@ -265,9 +265,12 @@ test("opens complete bilingual map and data sources without covering the map", a
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Kaart- en databronnen");
   await expect(dialog).toContainText("OpenStreetMap");
-  await expect(dialog).toContainText("Urban Atlas DOI");
+  await expect(dialog).toContainText("Copernicus Land Monitoring Service (CLMS)");
+  await expect(dialog).not.toContainText("Urban Atlas DOI");
   await expect(dialog.locator('a[target="_blank"]')).not.toHaveCount(0);
   await expect(dialog.locator('a[target="_blank"]' ).first()).toHaveAttribute("rel", "noopener noreferrer");
+  const sourceHrefs = await dialog.locator("a").evaluateAll((links) => links.map((link) => link.href));
+  expect(new Set(sourceHrefs).size).toBe(sourceHrefs.length);
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(sourceButton).toBeFocused();
@@ -767,7 +770,8 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await expect(page.locator("#legend-content")).toContainText("Kruidachtige vegetatie");
   await expect(page.locator("#legend-content")).toContainText("Groen stedelijk gebied (publieke toegang)");
   await page.locator(".map-source-control").click();
-  await expect(page.locator(".map-source-dialog")).toContainText("Urban Atlas DOI");
+  await expect(page.locator(".map-source-dialog")).toContainText("Copernicus Land Monitoring Service (CLMS)");
+  await expect(page.locator(".map-source-dialog")).not.toContainText("Urban Atlas DOI");
   await page.keyboard.press("Escape");
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-opacity"))).toBe(0.68);
   expect(await page.evaluate(() => window.__heatMap.map.getPaintProperty("urban-atlas-fill", "fill-color"))).toContain("#ccf24d");

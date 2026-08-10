@@ -4,12 +4,9 @@ import { comparisonHeatGradient, comparisonLegendItems, thermalColor } from "./t
 
 const SOURCE_ID = "landsat-jaarbak-canvas";
 const RASTER_LAYER_ID = "landsat-jaarbak-temperature";
-const JAARBAK_RASTER_LAYER_ID = "jaarbak-local-raster";
+const SEALED_SOURCE_ID = "landsat-jaarbak-sealed-canvas";
+const SEALED_LAYER_ID = "landsat-jaarbak-sealed";
 const BEFORE_LAYER = "heat-sectors-hit-area";
-
-const waitForPaintCycle = () => new Promise((resolve) => {
-  requestAnimationFrame(() => requestAnimationFrame(resolve));
-});
 
 function resolveAsset(root, value, extension) {
   if (typeof value !== "string" || value.includes("..") || !value.endsWith(extension)) {
@@ -58,10 +55,10 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
   let map;
   let canvas;
   let outputContext;
+  let sealedCanvas;
+  let sealedContext;
   let scopeData;
   let municipality = "";
-  let savedYear;
-  let savedOpacity;
   let loadError = null;
   let drawGeneration = 0;
   let renderedScopeKey = "";
@@ -104,42 +101,14 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
     return distributionCache.get(observationId);
   };
 
-  const selectJaarbakYear = async ({ retry = false } = {}) => {
-    const year = activeObservation()?.secondaryYear;
-    if (!year) return;
-    jaarbakLayer.setOption(map, "year", year);
-    jaarbakLayer.applyFilter(map, null, { municipality });
-    jaarbakLayer.setOpacity(0.20);
-    // A hidden raster source can report itself as loaded before MapLibre has
-    // requested the tiles required by the current viewport. Make JaarBAK
-    // renderable beneath ordinary Landsat, then wait for that visible source.
-    jaarbakLayer.setVisible(map, true);
-    map.triggerRepaint();
-    await waitForPaintCycle();
-    await jaarbakLayer.waitUntilReady({ retry });
-    await waitForPaintCycle();
-  };
-
-  const reassertComparisonStack = () => {
-    if (!map?.getLayer(JAARBAK_RASTER_LAYER_ID) || !map.getLayer(RASTER_LAYER_ID)) return;
-    jaarbakLayer.setOpacity(0.20);
-    jaarbakLayer.setVisible(map, true);
-    map.moveLayer(JAARBAK_RASTER_LAYER_ID, RASTER_LAYER_ID);
-    map.moveLayer(RASTER_LAYER_ID, BEFORE_LAYER);
-    map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "visible");
-    map.setPaintProperty(RASTER_LAYER_ID, "raster-opacity", 0.94);
-    map.triggerRepaint();
-  };
-
-  const draw = async ({ retrySource = false } = {}) => {
-    if (!active || !manifest || !outputContext) return;
+  const draw = async () => {
+    if (!active || !manifest || !outputContext || !sealedContext) return;
     const requestGeneration = ++drawGeneration;
     const observationId = activeObservationId();
     landsatLayer.setVisible(map, true);
-    jaarbakLayer.setVisible(map, false);
     if (map.getLayer(RASTER_LAYER_ID)) map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "none");
+    if (map.getLayer(SEALED_LAYER_ID)) map.setLayoutProperty(SEALED_LAYER_ID, "visibility", "none");
     try {
-      await selectJaarbakYear({ retry: retrySource });
       const [pixels, scopes] = await Promise.all([
         loadPixels(observationId),
         scopeData ??= loadImageData(manifest.scopeIndexUrl, manifest.imageSize),
@@ -147,6 +116,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       ]);
       if (!active || requestGeneration !== drawGeneration || observationId !== activeObservationId()) return;
       const output = outputContext.createImageData(canvas.width, canvas.height);
+      const sealed = sealedContext.createImageData(sealedCanvas.width, sealedCanvas.height);
       const municipalityIndex = municipality ? manifest.municipalityIndexes[municipality] : 0;
       for (let offset = 0, pixel = 0; offset < pixels.data.length; offset += 4, pixel += 1) {
         // The red scope channel is the dissolved Zennevallei union and the
@@ -156,6 +126,14 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
           ? scopes.data[offset + 1] === municipalityIndex
           : scopes.data[offset] === 1;
         if (!inScope) continue;
+        // Green channel 1 is the majority-sealed result prepared from the
+        // native 1 m JaarBAK source on this exact 30 m Landsat grid.
+        if (pixels.data[offset + 1] === 1) {
+          sealed.data[offset] = 127;
+          sealed.data[offset + 1] = 0;
+          sealed.data[offset + 2] = 29;
+          sealed.data[offset + 3] = 255;
+        }
         const status = pixels.data[offset + 2];
         if (status === 1) {
           const color = thermalColor(pixels.data[offset]);
@@ -173,15 +151,22 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
         }
       }
       outputContext.putImageData(output, 0, 0);
+      sealedContext.putImageData(sealed, 0, 0);
       const source = map.getSource(SOURCE_ID);
+      const sealedSource = map.getSource(SEALED_SOURCE_ID);
       source?.setCoordinates(manifest.coordinates);
+      sealedSource?.setCoordinates(manifest.coordinates);
       source?.play?.();
+      sealedSource?.play?.();
       map.triggerRepaint();
-      requestAnimationFrame(() => source?.pause?.());
-      reassertComparisonStack();
-      await waitForPaintCycle();
-      if (!active || requestGeneration !== drawGeneration || observationId !== activeObservationId()) return;
-      reassertComparisonStack();
+      requestAnimationFrame(() => {
+        source?.pause?.();
+        sealedSource?.pause?.();
+      });
+      map.setLayoutProperty(SEALED_LAYER_ID, "visibility", "visible");
+      map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "visible");
+      map.moveLayer(SEALED_LAYER_ID, RASTER_LAYER_ID);
+      map.moveLayer(RASTER_LAYER_ID, BEFORE_LAYER);
       landsatLayer.setVisible(map, false);
       map.triggerRepaint();
       renderedScopeKey = `${observationId}|${municipality}`;
@@ -189,7 +174,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       notify();
     } catch (error) {
       if (requestGeneration === drawGeneration) {
-        jaarbakLayer.setVisible(map, false);
+        if (map.getLayer(SEALED_LAYER_ID)) map.setLayoutProperty(SEALED_LAYER_ID, "visibility", "none");
         if (map.getLayer(RASTER_LAYER_ID)) map.setLayoutProperty(RASTER_LAYER_ID, "visibility", "none");
         landsatLayer.setVisible(map, true);
         renderedScopeKey = "";
@@ -200,17 +185,8 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
     }
   };
 
-  const mount = async ({ retrySource = false } = {}) => {
+  const mount = async () => {
     await ensureManifest();
-    await jaarbakLayer.ensureManifest();
-    savedYear ??= jaarbakLayer.getOption("year");
-    savedOpacity ??= jaarbakLayer.getOpacity();
-    await jaarbakLayer.mount(map, { beforeLayerId: BEFORE_LAYER });
-    // A Landsat comparison always needs JaarBAK's binary classification, but
-    // the user's density-mode preference remains stored for later use.
-    jaarbakLayer.setClassificationOverride?.(true);
-    jaarbakLayer.setVisible(map, false);
-    jaarbakLayer.setOpacity(0.20);
     if (!map.getSource(SOURCE_ID)) {
       canvas = document.createElement("canvas");
       canvas.id = "landsat-jaarbak-comparison-canvas";
@@ -220,15 +196,32 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       canvas.setAttribute("aria-hidden", "true");
       document.body.append(canvas);
       outputContext = canvas.getContext("2d", { alpha: true });
+      sealedCanvas = document.createElement("canvas");
+      sealedCanvas.id = "landsat-jaarbak-sealed-canvas";
+      sealedCanvas.width = manifest.imageSize[0];
+      sealedCanvas.height = manifest.imageSize[1];
+      sealedCanvas.className = "comparison-render-canvas";
+      sealedCanvas.setAttribute("aria-hidden", "true");
+      document.body.append(sealedCanvas);
+      sealedContext = sealedCanvas.getContext("2d", { alpha: true });
+      map.addSource(SEALED_SOURCE_ID, {
+        type: "canvas", canvas: sealedCanvas, coordinates: manifest.coordinates, animate: false,
+      });
+      map.addLayer({
+        id: SEALED_LAYER_ID,
+        type: "raster",
+        source: SEALED_SOURCE_ID,
+        paint: { "raster-opacity": 0.96, "raster-resampling": "nearest", "raster-fade-duration": 0 },
+      }, BEFORE_LAYER);
       map.addSource(SOURCE_ID, { type: "canvas", canvas, coordinates: manifest.coordinates, animate: false });
       map.addLayer({
         id: RASTER_LAYER_ID,
         type: "raster",
         source: SOURCE_ID,
-        paint: { "raster-opacity": 0.94, "raster-resampling": "nearest", "raster-fade-duration": 0 },
+        paint: { "raster-opacity": 0.72, "raster-resampling": "nearest", "raster-fade-duration": 0 },
       }, BEFORE_LAYER);
     }
-    await draw({ retrySource });
+    await draw();
   };
 
   return {
@@ -254,18 +247,17 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       active = false;
       drawGeneration += 1;
       if (map.getLayer(RASTER_LAYER_ID)) map.removeLayer(RASTER_LAYER_ID);
+      if (map.getLayer(SEALED_LAYER_ID)) map.removeLayer(SEALED_LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
+      if (map.getSource(SEALED_SOURCE_ID)) map.removeSource(SEALED_SOURCE_ID);
       canvas?.remove();
+      sealedCanvas?.remove();
       canvas = null;
       outputContext = null;
+      sealedCanvas = null;
+      sealedContext = null;
       loadError = null;
       renderedScopeKey = "";
-      jaarbakLayer.setVisible(map, false);
-      jaarbakLayer.setClassificationOverride?.(false);
-      if (savedYear != null) jaarbakLayer.setOption(map, "year", savedYear);
-      if (savedOpacity != null) jaarbakLayer.setOpacity(savedOpacity);
-      savedYear = undefined;
-      savedOpacity = undefined;
       landsatLayer.setVisible(map, true);
       notify();
     },
@@ -286,7 +278,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       if (!active) active = true;
       landsatLayer.setVisible(map, true);
       try {
-        await mount({ retrySource: true });
+        await mount();
         return true;
       } catch (error) {
         console.error(error);

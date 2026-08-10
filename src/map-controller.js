@@ -97,6 +97,7 @@ export function createMapController({
   let activeMunicipality = "";
   let activeLayerId = initialLayerId;
   let popupModelProvider = null;
+  let pointInspectionProvider = null;
   let selectedSectorId = "";
   let viewportPaddingOverride = null;
   let basemapErrorReported = false;
@@ -114,7 +115,7 @@ export function createMapController({
   };
 
   const inspectPoint = (lngLat, { immediate = false } = {}) => {
-    const layer = currentLayer();
+    const layer = pointInspectionProvider ?? currentLayer();
     if (!layer?.inspectPoint || !layer?.getPointPopupModel || layer.isPointInspectionActive?.() === false) return false;
     clearInspection();
     const radiusMeters = layer.getInspectionRadiusMeters?.() ?? 0;
@@ -129,7 +130,7 @@ export function createMapController({
           { lng: lngLat.lng, lat: lngLat.lat },
           { signal: controller.signal },
         );
-        if (controller.signal.aborted || layer !== currentLayer()) return;
+        if (controller.signal.aborted || layer !== (pointInspectionProvider ?? currentLayer())) return;
         popup.setLngLat(lngLat).setDOMContent(renderPopup(layer.getPointPopupModel(result))).addTo(map);
       } catch (error) {
         if (error.name !== "AbortError") popup.remove();
@@ -408,6 +409,11 @@ export function createMapController({
     },
     setPopupModelProvider(provider = null) {
       popupModelProvider = typeof provider === "function" ? provider : null;
+      popup.remove();
+    },
+    setPointInspectionProvider(provider = null) {
+      clearInspection();
+      pointInspectionProvider = provider?.inspectPoint && provider?.getPointPopupModel ? provider : null;
       popup.remove();
     },
     async ensureLayer(layerId) {

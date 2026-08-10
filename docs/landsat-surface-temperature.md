@@ -83,9 +83,19 @@ Run `pnpm landsat-soil-sealing:prepare` after JaarBAK and Landsat are prepared. 
 | 13 June and 9 September 2023 | 2023 |
 | 13 August 2025 and 22 June 2026 | 2024 |
 
-Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded from the two distributions. The comparison always shows those two independently normalised curves. The faint 20% JaarBAK base retains its official red and green classes; the thermal raster is drawn above it at 94%. Its display mask uses the dissolved Zennevallei or municipality boundary, so pixels excluded from statistics by an internal sector tie remain thermally visible instead of becoming square gaps along sector borders.
+Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded from the two distributions. The comparison always shows those two independently normalised curves. A dedicated aligned mask draws only majority-sealed Landsat cells in deep red; unsealed cells remain transparent. The thermal raster is drawn above that mask with enough transparency to retain the sealing context. Both canvases mount atomically and do not depend on the asynchronous JaarBAK PMTiles source.
 
 The UI discloses that the JaarBAK method changed in 2023 and that the 2024 edition is provisional. The 2024 mask is the closest available reference for the 2025 and 2026 Landsat observations.
+
+### Sealed urban-fabric scatter comparisons
+
+Run `pnpm sealed-urban:prepare` after Landsat, Green Map, JaarBAK and Urban Atlas are available. It creates three cached-only comparisons without downloading sources:
+
+- Green Map × Landsat: one point per eligible clear 30 m pixel, with selected Green Map density on X and temperature on Y.
+- Green Map × income: one point per eligible sector, with Statbel 2023 median taxable income on X and mean Green Map density on Y.
+- Landsat × income: one point per sector with at least ten eligible clear pixels, with income on X and mean temperature on Y.
+
+Eligibility is intentionally narrow. Urban Atlas must uniquely identify `11100`, `11210`, `11220`, `11230` or `11240`; isolated structures `11300` are excluded. JaarBAK must have enough valid source coverage and a sealed majority. Landsat points must also be clear and finite, and Green Map points require sufficient valid 2021 density coverage. The displayed lines are ordinary unweighted OLS summaries with R². They describe association within the selected scope and do not establish causation; no p-values are reported because pixels are spatially correlated and sector summaries are ecological observations.
 
 ### Comparison palette and interpretation
 

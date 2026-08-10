@@ -33,9 +33,9 @@ Scientific displays must name variables, units, reference years, sample sizes an
 | Medium | Repeating a human symbol as text would depend on the platform font and could be mistaken for decoration | Population comparison symbols use deterministic map sprites, repeated visual icons in the legend and complete textual labels |
 | Medium | Heat-population charts can imply the same weighting | The box plots state that every sector counts once; the second chart states that residents are summed |
 | Medium | Comparison explanations could repeat the same caveat in context, legend and panel | Context explains the comparison, the legend only decodes it, Details explains chart reading and Methodology contains limitations |
-| Medium | Directional comparison controls made the same analysis discoverable from only one participant | One explicit five-pair table now discovers every functional comparison from either linked layer and restores the initiating state |
+| Medium | Directional comparison controls made the same analysis discoverable from only one participant | One explicit seven-pair table now discovers every functional comparison from either linked layer and restores the initiating state |
 | Medium | About and the expanded MapLibre attribution strip competed with map controls | About is now a permanent header action; a bilingual modal source view replaces the overlapping attribution strip while retaining every link |
-| Medium | Green-density means concealed variation within an Urban Atlas class | The result adds readable and expandable Tukey box plots with sample counts, keyboard readouts and a short academic interpretation |
+| Medium | Green, temperature and income could be compared over unlike surfaces | The three new scatter comparisons share one explicit sealed urban-fabric eligibility rule and disclose its spatial and temporal limits |
 
 ## Layer and comparison checklist
 
@@ -43,7 +43,7 @@ Every active legend was checked for a descriptive title, units or class meaning,
 
 Every result panel was checked for one useful first result, natural English and Belgian Dutch, complete-area denominators where applicable, closed Methodology and safe source attribution. Persistent comparison panels can be minimised, retain chart state and return after About closes.
 
-Comparison legends use a visual divider between the primary map scale and the secondary symbols. Green Map keeps **Show density** and **Compare** as peer actions. Its comparison hover names both the Green Map result and the corresponding selected Urban Atlas surface class.
+Comparison legends use a visual divider between the primary map scale and secondary symbols or selectors. Green Map keeps **Show density** and **Compare** as peer actions. Sealed-urban scatter plots state their analytical unit, eligible surface, source years, sample size and descriptive OLS result without repeating the full method in the first view.
 
 The heat-population comparison adds two complementary views:
 

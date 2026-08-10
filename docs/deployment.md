@@ -50,7 +50,7 @@ The Pages build uses `/zenvallei/` for application, worker and data assets. Do n
 
 Every deployment repeats the complete verification suite before packaging and publishing. The workflow writes `release.json` into the artifact and checks that exact commit on the public site. A matching live SHA is authoritative even when the Pages status API times out; a stale or unavailable marker keeps the workflow red.
 
-For a local Pages-path check before pushing, run `pnpm build:pages` followed by `pnpm test:pages`. If official raster data changed, first run `pnpm official-layers:publish` and `pnpm data:validate`. The Pages smoke test asserts the exact eight-layer inventory and activates all five comparisons from both participating layers below `/zenvallei/`.
+For a local Pages-path check before pushing, run `pnpm build:pages` followed by `pnpm test:pages`. If official raster data changed, first run `pnpm official-layers:publish` and `pnpm data:validate`. The Pages smoke test asserts the exact eight-layer inventory and activates all seven comparisons from both participating layers below `/zenvallei/`.
 
 ### Workflow troubleshooting
 
@@ -107,6 +107,6 @@ GitHub Pages records visitor IP addresses for security. Browser requests to Open
 3. Review `THIRD_PARTY_DATA.md` and every visible attribution.
 4. Test desktop, mobile, keyboard navigation and a failed tile connection.
 5. Confirm no application cookies, analytics or browser storage are present.
-6. Push `main`, wait for **Verify application**, then run **Deploy GitHub Pages** once and smoke-test all layers, all five comparisons and both languages over HTTPS.
+6. Push `main`, wait for **Verify application**, then run **Deploy GitHub Pages** once and smoke-test all layers, all seven comparisons and both languages over HTTPS.
 
 Rollback by reverting the faulty commit on `main`, waiting for verification and manually deploying the revert. Data migrations are not required because there is no server-side state.

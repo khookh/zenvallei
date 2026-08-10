@@ -1,6 +1,7 @@
 import { t } from "./i18n.js";
 import { DEFAULT_HEAT_METRIC, normalizeHeatMetric } from "./heat-metric.js";
 import { renderAboutPanelModel, renderSectorPanelModel } from "./panel.js";
+import { mountPixelScatterCharts } from "./scatter-chart.js";
 
 /** Responsive shell that owns focus, disclosure state and panel rerendering. */
 export function createDetailPanel({
@@ -87,9 +88,11 @@ export function createDetailPanel({
       const model = getAboutModel();
       content.innerHTML = renderAboutPanelModel(model);
     } else {
-      content.innerHTML = renderSectorPanelModel(getPanelModel(currentView.layerId, currentView.record, {
+      const model = getPanelModel(currentView.layerId, currentView.record, {
         heatMetric: activeHeatMetric,
-      }));
+      });
+      content.innerHTML = renderSectorPanelModel(model);
+      mountPixelScatterCharts(content, model);
     }
     let restoredSection = false;
     renderState.openSections.forEach((sectionId) => {
@@ -247,18 +250,6 @@ export function createDetailPanel({
       bars[nextIndex]?.focus();
       return;
     }
-    const densityBox = event.target.closest("[data-green-density-box]");
-    if (densityBox && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
-      event.preventDefault();
-      const boxes = [...densityBox.closest("[data-green-density-chart]").querySelectorAll("[data-green-density-box]")];
-      const currentIndex = boxes.indexOf(densityBox);
-      const nextIndex = event.key === "Home" ? 0
-        : event.key === "End" ? boxes.length - 1
-          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + boxes.length) % boxes.length;
-      boxes.forEach((box, index) => box.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
-      boxes[nextIndex]?.focus();
-      return;
-    }
     const histogramBin = event.target.closest("[data-histogram-bin]");
     if (histogramBin && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
       event.preventDefault();
@@ -311,14 +302,6 @@ export function createDetailPanel({
   };
   content.addEventListener("focusin", updatePopulationBar);
   content.addEventListener("pointerover", updatePopulationBar);
-  const updateGreenDensityBox = (event) => {
-    const box = event.target.closest?.("[data-green-density-box]");
-    if (!box) return;
-    const output = box.closest("[data-green-density-chart]")?.querySelector("[data-green-density-output]");
-    if (output) output.textContent = box.dataset.greenDensityLabel;
-  };
-  content.addEventListener("focusin", updateGreenDensityBox);
-  content.addEventListener("pointerover", updateGreenDensityBox);
   content.addEventListener("pointerout", (event) => {
     if (!event.target.closest?.("[data-scatter-sector]") || event.relatedTarget?.closest?.("[data-scatter-sector]")) return;
     onSectorHover?.("");

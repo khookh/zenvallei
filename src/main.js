@@ -796,14 +796,26 @@ async function start() {
     });
     application.comparisons.set(comparison.id, comparison);
   }
-  if (data.comparisons?.["groenkaart-urban-atlas"]
-    && application.layers.has("groenkaart") && application.layers.has("urban-atlas")) {
-    const { createGroenkaartUrbanAtlasComparison } = await import("./comparisons/groenkaart-urban-atlas.js");
-    const comparison = createGroenkaartUrbanAtlasComparison({
-      descriptor: data.comparisons["groenkaart-urban-atlas"],
-      groenkaartLayer: application.layers.get("groenkaart"),
-      urbanAtlasLayer: application.layers.get("urban-atlas"),
-      urbanAtlas: data.urbanAtlas,
+  const groenkaartLayer = application.layers.get("groenkaart");
+  const incomeLayer = application.layers.get("income");
+  if (landsatLayer && groenkaartLayer && data.comparisons?.["landsat-groenkaart"]) {
+    const { createLandsatGroenkaartComparison } = await import("./comparisons/landsat-groenkaart.js");
+    const comparison = createLandsatGroenkaartComparison({
+      descriptor: data.comparisons["landsat-groenkaart"], landsatLayer, groenkaartLayer,
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
+  if (groenkaartLayer && incomeLayer && data.comparisons?.["groenkaart-income"]) {
+    const { createGroenkaartIncomeComparison } = await import("./comparisons/groenkaart-income.js");
+    const comparison = createGroenkaartIncomeComparison({
+      descriptor: data.comparisons["groenkaart-income"], groenkaartLayer, incomeLayer,
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
+  if (landsatLayer && incomeLayer && data.comparisons?.["landsat-income"]) {
+    const { createLandsatIncomeComparison } = await import("./comparisons/landsat-income.js");
+    const comparison = createLandsatIncomeComparison({
+      descriptor: data.comparisons["landsat-income"], landsatLayer, incomeLayer,
     });
     application.comparisons.set(comparison.id, comparison);
   }
@@ -890,6 +902,7 @@ async function start() {
     }
     await next.setMunicipality(elements.municipality.value);
     application.mapController.setPopupModelProvider(next.getPopupModel?.bind(next));
+    application.mapController.setPointInspectionProvider(next.inspectPoint ? next : null);
     renderLegend();
     updateLayerContext();
     updateLayerControls();
@@ -911,6 +924,7 @@ async function start() {
     comparison.deactivate();
     application.activeComparisonId = null;
     application.mapController.setPopupModelProvider(null);
+    application.mapController.setPointInspectionProvider(null);
     if (application.activeLayer !== session.initiatorLayerId) {
       await application.mapController.setLayer(session.initiatorLayerId);
       application.activeLayer = session.initiatorLayerId;
@@ -1059,21 +1073,11 @@ async function start() {
     if (!application.surfaceLayout?.isApplying()) application.surfaceLayout?.requestLegend(elements.legendDisclosure.open);
   });
   elements.legend.addEventListener("click", (event) => {
-    const greenUrbanButton = event.target.closest("[data-green-urban-selector]");
-    if (greenUrbanButton && activeComparison()?.isActive()) {
-      const method = greenUrbanButton.dataset.greenUrbanSelector === "green"
-        ? "toggleGreenClass" : "toggleFabricClass";
-      const result = activeComparison()[method]?.(greenUrbanButton.dataset.greenUrbanValue);
-      if (result?.minimum) {
-        const feedback = elements.legend.querySelector("[data-green-urban-feedback]");
-        if (feedback) feedback.textContent = t("greenUrbanComparison.minimumSelection");
-        elements.announcement.textContent = t("greenUrbanComparison.minimumSelection");
-      }
-      return;
-    }
     const densityButton = event.target.closest("[data-density-class]");
-    if (densityButton && activeLayer()?.toggleDensityClass) {
-      const result = activeLayer().toggleDensityClass(densityButton.dataset.densityClass);
+    if (densityButton && (activeComparison()?.toggleGreenClass || activeLayer()?.toggleDensityClass)) {
+      const result = activeComparison()?.isActive() && activeComparison().toggleGreenClass
+        ? activeComparison().toggleGreenClass(densityButton.dataset.densityClass)
+        : activeLayer().toggleDensityClass(densityButton.dataset.densityClass);
       if (result.minimum) {
         const feedback = elements.legend.querySelector("[data-density-feedback]");
         if (feedback) feedback.textContent = t("density.minimumClass");
@@ -1146,6 +1150,7 @@ async function start() {
         application.activeComparisonId = null;
         application.comparisonSession = null;
         application.mapController.setPopupModelProvider(null);
+        application.mapController.setPointInspectionProvider(null);
       }
       let activated;
       try {

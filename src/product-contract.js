@@ -19,7 +19,9 @@ export const PUBLIC_COMPARISON_IDS = Object.freeze([
   "heat-population",
   "landsat-urban-atlas",
   "landsat-jaarbak",
-  "groenkaart-urban-atlas",
+  "landsat-groenkaart",
+  "groenkaart-income",
+  "landsat-income",
 ]);
 
 export const LAYER_ACTIONS = Object.freeze({

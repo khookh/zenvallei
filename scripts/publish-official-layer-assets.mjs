@@ -6,7 +6,10 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const sourceRoot = path.join(projectRoot, ".cache", "local-layers");
 const outputRoot = path.join(projectRoot, "public", "data", "official-layers");
 const datasetIds = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature"];
-const comparisonIds = ["landsat-urban-atlas", "landsat-jaarbak", "groenkaart-urban-atlas"];
+const comparisonIds = [
+  "landsat-urban-atlas", "landsat-jaarbak", "landsat-groenkaart",
+  "groenkaart-income", "landsat-income",
+];
 const forbiddenText = /(?:Bearer\s+eyJ|client_secret|[A-Z]:\\Users\\|se=\d{4}-\d{2}-\d{2}T)/i;
 
 async function readJson(file) {
@@ -89,15 +92,21 @@ async function publishComparison(comparisonId, descriptor) {
   const manifest = await readJson(sourceManifestPath);
   if (manifest.comparisonId !== comparisonId) throw new Error(`${comparisonId}: manifest identifier mismatch.`);
 
-  if (comparisonId === "groenkaart-urban-atlas") {
-    await copyAsset(manifest.fabricMaskUrl, ".png");
+  if (comparisonId === "groenkaart-income") {
+    await copyAsset(manifest.densityGridUrl, ".png");
+    await copyAsset(manifest.densityNonGreenUrl, ".png");
+    await copyAsset(manifest.scopeIndexUrl, ".png");
     await copyAsset(manifest.statisticsUrl, ".json");
-  } else {
+  } else if (comparisonId === "landsat-groenkaart") {
+    await copyAsset(manifest.densityGridUrl, ".png");
+    await copyAsset(manifest.densityNonGreenUrl, ".png");
+    await copyAsset(manifest.scopeIndexUrl, ".png");
+  } else if (manifest.scopeIndexUrl) {
     await copyAsset(manifest.scopeIndexUrl, ".png");
   }
   for (const observation of Object.values(manifest.observations ?? {})) {
-    await copyAsset(observation.pixelDataUrl, ".png");
-    await copyAsset(observation.distributionUrl, ".json");
+    if (comparisonId !== "landsat-income") await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
+    await copyAsset(observation.statisticsUrl ?? observation.distributionUrl, ".json");
   }
   await writeJson(path.join(outputRoot, comparisonId, "manifest.json"), manifest);
 }
@@ -142,8 +151,8 @@ const comparisonBytes = (await Promise.all(comparisonIds.map(async (comparisonId
   return (await Promise.all(entries.map(async (file) => (await fs.stat(file)).size)))
     .reduce((sum, size) => sum + size, 0);
 }))).reduce((sum, size) => sum + size, 0);
-if (comparisonBytes > 20 * 1024 * 1024) {
-  throw new Error(`Comparison derivatives exceed the 20 MiB budget (${(comparisonBytes / 1024 / 1024).toFixed(1)} MiB).`);
+if (comparisonBytes > 32 * 1024 * 1024) {
+  throw new Error(`Comparison derivatives exceed the 32 MiB budget (${(comparisonBytes / 1024 / 1024).toFixed(1)} MiB).`);
 }
 
 const densityBytes = (await Promise.all(
