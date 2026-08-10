@@ -15,7 +15,9 @@ from greenwave_local_layers.sealed_urban_comparisons import (
     _combination_key,
     _green_combinations,
     exact_area_weighted_sums,
+    landsat_display_status,
     ordinary_least_squares,
+    sealed_urban_analysis_masks,
 )
 
 
@@ -62,3 +64,22 @@ def test_green_density_uses_exact_sealed_urban_area_weights():
     sums = exact_area_weighted_sums(np.array([[10, 90]], dtype=np.float32), np.array([9, 1]))
     assert sums.tolist() == [180.0]
     assert sums[0] / 10 == 18.0
+
+
+def test_display_status_is_independent_from_graph_eligibility():
+    temperature = np.array([[35.0, 36.0, np.nan, np.nan]], dtype=np.float32)
+    status = np.array([[1, 1, 2, 0]], dtype=np.uint8)
+    encoded = landsat_display_status(temperature, status)
+    assert encoded.tolist() == [[POINT_CLEAR, POINT_CLEAR, POINT_CLOUD, POINT_OTHER_MISSING]]
+
+    masks = sealed_urban_analysis_masks(
+        urban=np.array([[True, True, True, True]]),
+        soil=np.array([[1, 1, 1, 0]], dtype=np.uint8),
+        status=status,
+        temperature=temperature,
+        density_coverage=np.array([[.9, .2, .9, .9]], dtype=np.float32),
+    )
+    # The second clear observation remains displayable but is intentionally
+    # excluded only from the Green Map scatter. Income has no Green Map gate.
+    assert masks["greenClear"].tolist() == [[True, False, False, False]]
+    assert masks["incomeClear"].tolist() == [[True, True, False, False]]

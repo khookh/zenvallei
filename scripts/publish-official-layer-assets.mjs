@@ -103,6 +103,8 @@ async function publishComparison(comparisonId, descriptor) {
     await copyAsset(manifest.densityNonGreenUrl, ".png");
     await copyAsset(manifest.scopeIndexUrl, ".png");
     await copyAsset(manifest.urbanFabricMaskUrl, ".pmtiles");
+  } else if (comparisonId === "landsat-income") {
+    await copyAsset(manifest.urbanFabricMaskUrl, ".pmtiles");
   } else if (comparisonId === "landsat-jaarbak") {
     await copyAsset(manifest.scopeIndexUrl, ".png");
     await copyAsset(manifest.analysisScopeIndexUrl, ".png");
@@ -113,7 +115,12 @@ async function publishComparison(comparisonId, descriptor) {
     if (comparisonId === "landsat-jaarbak") {
       await copyAsset(observation.densityPointDataUrl, ".png");
       await copyAsset(observation.densityDataUrl, ".png");
-    } else if (comparisonId !== "landsat-income") {
+    } else if (comparisonId === "landsat-groenkaart") {
+      await copyAsset(observation.displayDataUrl, ".png");
+      await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
+    } else if (comparisonId === "landsat-income") {
+      await copyAsset(observation.displayDataUrl, ".png");
+    } else {
       await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
     }
     await copyAsset(observation.statisticsUrl ?? observation.distributionUrl, ".json");

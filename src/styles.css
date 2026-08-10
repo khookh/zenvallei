@@ -458,6 +458,11 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .legend-content { padding: 0 15px 13px; border-top: 1px solid #edf0ee; }
 .legend-footnote { margin: 11px 0 0; padding-top: 10px; border-top: 1px solid #e2e9e6; color: #607579; font-size: 0.64rem; line-height: 1.45; }
 .legend-scale { display: grid; grid-template-columns: repeat(11, minmax(26px, 1fr)); gap: 5px; padding: 11px 0 8px; }
+.legend-continuous-scale { display: grid; gap: 5px; padding: 13px 0 9px; }
+.legend-continuous-ramp { display: block; height: 16px; border: 1px solid rgba(10,43,52,.16); border-radius: 999px; box-shadow: inset 0 1px 2px rgba(0,0,0,.12); }
+.legend-continuous-ticks { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.heat-population-chart-title-row { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.heat-population-chart-title-row h4 { min-width: 0; }
 .legend-item { display: grid; gap: 3px; text-align: center; color: var(--muted); font-size: 0.65rem; }
 .legend-item span { display: block; height: 11px; border-radius: 4px; background: var(--swatch); border: 1px solid rgba(0, 0, 0, 0.06); }
 .legend-statuses { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 0.66rem; }
@@ -1161,6 +1166,8 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .sealed-scatter-stage svg { display: block; width: 100%; height: auto; }
 .sealed-scatter-stage canvas { position: absolute; inset: 0; pointer-events: none; }
 .sealed-scatter-grid line { stroke: #dce5e2; stroke-width: 1; }
+.sealed-scatter-hitarea { fill: transparent; pointer-events: all; cursor: crosshair; }
+.sealed-scatter-hitarea:focus { outline: none; stroke: #0b7b86; stroke-width: 3; stroke-dasharray: 8 5; }
 .sealed-scatter-regression { stroke: #6d3695; stroke-width: 3; stroke-dasharray: 10 6; }
 .sealed-scatter-axis-values { fill: #526a70; font-size: 13px; }
 .sealed-scatter-axis-label { fill: #294b53; font-size: 16px; font-weight: 850; }
@@ -1171,6 +1178,7 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .sealed-scatter-point.is-highlighted { r: 8; fill: #7959ad; fill-opacity: 1; stroke: #301a5d; stroke-width: 2.5; outline: none; }
 .sealed-scatter-output { min-height: 3.2em; margin: 8px 0 0; padding: 10px 12px; border: 1px solid #dce6e3; border-radius: 10px; color: #294e55; background: #f4f8f6; font-size: .74rem; font-weight: 700; line-height: 1.45; }
 .sealed-regression-grid { margin-top: 12px; }
+.comparison-chart-summary { max-width: 1040px; margin-inline: auto; }
 .sealed-scatter-dialog .sealed-urban-scatter { width: min(1080px, 100%); margin-inline: auto; }
 .sealed-scatter-dialog .sealed-scatter-axis-label { font-size: 18px; }
 

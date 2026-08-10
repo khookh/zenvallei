@@ -126,6 +126,10 @@ for (const comparisonId of comparisonIds) {
   Object.values(manifest.observations ?? {}).forEach((observation) => {
     if (comparisonId === "landsat-jaarbak") {
       referencedAssets.push(observation.densityPointDataUrl, observation.densityDataUrl, observation.distributionUrl);
+    } else if (comparisonId === "landsat-groenkaart") {
+      referencedAssets.push(observation.displayDataUrl, observation.pointDataUrl, observation.statisticsUrl);
+    } else if (comparisonId === "landsat-income") {
+      referencedAssets.push(observation.displayDataUrl, observation.statisticsUrl);
     } else {
       referencedAssets.push(observation.pointDataUrl ?? observation.pixelDataUrl,
         observation.statisticsUrl ?? observation.distributionUrl);
@@ -142,6 +146,14 @@ for (const comparisonId of comparisonIds) {
     }
   } else if (comparisonId === "landsat-groenkaart") {
     referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.urbanFabricMaskUrl);
+    if (manifest.schemaVersion !== 3 || manifest.displayResolutionMeters !== 1) {
+      throw new Error(`${comparisonId}: published display contract is incompatible.`);
+    }
+  } else if (comparisonId === "landsat-income") {
+    referencedAssets.push(manifest.urbanFabricMaskUrl);
+    if (manifest.schemaVersion !== 2 || manifest.displayResolutionMeters !== 1) {
+      throw new Error(`${comparisonId}: published display contract is incompatible.`);
+    }
   } else if (comparisonId === "landsat-jaarbak") {
     referencedAssets.push(manifest.analysisScopeIndexUrl);
     if (manifest.schemaVersion !== 2 || manifest.densityAnalysis?.radiusMeters !== 100
@@ -153,6 +165,20 @@ for (const comparisonId of comparisonIds) {
   if (["landsat-groenkaart", "landsat-income"].includes(comparisonId)
     && (manifest.analysisResolutionMeters !== 30 || manifest.urbanAtlasYear !== 2021)) {
     throw new Error(`${comparisonId}: published Landsat contract is incompatible.`);
+  }
+  if (comparisonId === "landsat-groenkaart"
+    && Object.values(manifest.observations).some(({ displayDataUrl, pointDataUrl }) => displayDataUrl === pointDataUrl)) {
+    throw new Error("landsat-groenkaart: display status must be independent from graph eligibility.");
+  }
+  if (comparisonId === "landsat-income") {
+    for (const observation of Object.values(manifest.observations)) {
+      const statistics = JSON.parse(await fs.readFile(path.join(officialRoot, observation.statisticsUrl), "utf8"));
+      const sectors = Object.values(statistics.sectorStats ?? {});
+      if (!sectors.some(({ clearPixelCount }) => clearPixelCount >= manifest.minimumSectorPixels)
+        || sectors.some((record) => Object.hasOwn(record, "meanDensityByGreenClass"))) {
+        throw new Error("landsat-income: sector temperatures must not depend on Green Map coverage.");
+      }
+    }
   }
   for (const asset of referencedAssets) {
     if (typeof asset !== "string" || asset.includes("..") || path.isAbsolute(asset)) {

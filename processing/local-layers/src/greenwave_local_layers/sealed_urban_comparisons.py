@@ -472,6 +472,27 @@ def _temperature_code(temperature):
     return encoded
 
 
+def landsat_display_status(temperature, status):
+    """Encode every Landsat status without applying comparison eligibility."""
+    output = np.full(np.asarray(status).shape, POINT_OTHER_MISSING, dtype=np.uint8)
+    output[(status == 1) & np.isfinite(temperature)] = POINT_CLEAR
+    output[status == 2] = POINT_CLOUD
+    return output
+
+
+def sealed_urban_analysis_masks(urban, soil, status, temperature, density_coverage):
+    """Return the intentionally distinct Green Map and income analysis masks."""
+    base = urban & (soil == 1)
+    green_eligible = base & (density_coverage >= MINIMUM_LANDSAT_GREEN_COVERAGE)
+    income_eligible = base
+    return {
+        "greenEligible": green_eligible,
+        "greenClear": green_eligible & (status == 1) & np.isfinite(temperature),
+        "incomeEligible": income_eligible,
+        "incomeClear": income_eligible & (status == 1) & np.isfinite(temperature),
+    }
+
+
 def _scope_regressions(temperature, densities, clear, sector_index, sector_meta):
     output = {}
     for scope_id, indexes in _scope_indexes(sector_meta).items():
@@ -523,15 +544,28 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
         )
         if observation_grid != grid:
             raise ValueError(f"{observation_id}: Landsat analytical grids differ.")
-        eligible = urban & (soil == 1) & (density_coverage >= MINIMUM_LANDSAT_GREEN_COVERAGE)
-        clear = eligible & (status == 1) & np.isfinite(temperature)
+        # Display and analysis have deliberately different masks. The exact
+        # browser footprint uses every Landsat status over native 1 m sealed
+        # urban fabric, while each graph keeps its documented 30 m eligibility.
+        analysis_masks = sealed_urban_analysis_masks(urban, soil, status, temperature, density_coverage)
+        green_eligible = analysis_masks["greenEligible"]
+        green_clear = analysis_masks["greenClear"]
+        income_clear = analysis_masks["incomeClear"]
         encoded_temperature = _temperature_code(temperature)
+        display_status = landsat_display_status(temperature, status)
+        display_path = CACHE_ROOT / "shared" / "landsat-display" / f"{observation_id}.png"
+        _write_rgba(display_path, [
+            (encoded_temperature >> 8).astype(np.uint8),
+            (encoded_temperature & 255).astype(np.uint8),
+            sector_index.astype(np.uint8),
+            display_status,
+        ])
         point_status = np.zeros(status.shape, dtype=np.uint8)
         # PNG alpha is premultiplied by browsers. Opaque status codes preserve
         # the temperature and sector channels exactly through Canvas decoding.
-        point_status[eligible & (status == 1)] = POINT_CLEAR
-        point_status[eligible & (status == 2)] = POINT_CLOUD
-        point_status[eligible & (status != 1) & (status != 2)] = POINT_OTHER_MISSING
+        point_status[green_eligible & (status == 1)] = POINT_CLEAR
+        point_status[green_eligible & (status == 2)] = POINT_CLOUD
+        point_status[green_eligible & (status != 1) & (status != 2)] = POINT_OTHER_MISSING
         point_path = CACHE_ROOT / "landsat-groenkaart" / "points" / f"{observation_id}.png"
         _write_rgba(point_path, [
             (encoded_temperature >> 8).astype(np.uint8),
@@ -542,7 +576,7 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
 
         sector_stats = {}
         for index, metadata in sector_meta.items():
-            selected = clear & (sector_index == index)
+            selected = green_clear & (sector_index == index)
             count = int(np.count_nonzero(selected))
             fiscal = income.get(metadata["sectorId"], {})
             sector_stats[metadata["sectorId"]] = {
@@ -563,11 +597,23 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
             "observationId": observation_id,
             "secondaryYear": year,
             "sectorStats": sector_stats,
-            "regressions": _scope_regressions(temperature, density30, clear, sector_index, sector_meta),
+            "regressions": _scope_regressions(temperature, density30, green_clear, sector_index, sector_meta),
         }, separators=(",", ":")), encoding="utf-8")
 
         income_stats_path = CACHE_ROOT / "landsat-income" / "statistics" / f"{observation_id}.json"
         income_stats_path.parent.mkdir(parents=True, exist_ok=True)
+        income_sector_stats = {}
+        for index, metadata in sector_meta.items():
+            selected = income_clear & (sector_index == index)
+            count = int(np.count_nonzero(selected))
+            fiscal = income.get(metadata["sectorId"], {})
+            income_sector_stats[metadata["sectorId"]] = {
+                **metadata,
+                "clearPixelCount": count,
+                "analysedAreaHa": round(count * 0.09, 4),
+                "meanTemperatureC": None if not count else round(float(np.mean(temperature[selected])), 5),
+                "income": fiscal.get("medianNetTaxableIncome") if fiscal.get("sourceStatus") == "available" else None,
+            }
         def temperature_regression(records, x_key):
             valid = [record for record in records if record["clearPixelCount"] >= MINIMUM_SECTOR_LANDSAT_PIXELS
                      and record.get(x_key) is not None and record["meanTemperatureC"] is not None]
@@ -578,20 +624,23 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
             "schemaVersion": 1,
             "observationId": observation_id,
             "secondaryYear": year,
-            "sectorStats": sector_stats,
-            "regressions": _sector_regressions(sector_stats, "income", temperature_regression),
+            "sectorStats": income_sector_stats,
+            "regressions": _sector_regressions(income_sector_stats, "income", temperature_regression),
         }, separators=(",", ":")), encoding="utf-8")
         green_observations[observation_id] = {
             "jaarbakYear": year,
+            "displayDataUrl": f"shared/landsat-display/{observation_id}.png",
             "pointDataUrl": f"landsat-groenkaart/points/{observation_id}.png",
             "statisticsUrl": f"landsat-groenkaart/statistics/{observation_id}.json",
+            "displayDataSha256": file_hash(display_path),
             "pointDataSha256": file_hash(point_path),
             "statisticsSha256": file_hash(green_stats_path),
         }
         income_observations[observation_id] = {
             "jaarbakYear": year,
-            "pointDataUrl": f"landsat-groenkaart/points/{observation_id}.png",
+            "displayDataUrl": f"shared/landsat-display/{observation_id}.png",
             "statisticsUrl": f"landsat-income/statistics/{observation_id}.json",
+            "displayDataSha256": file_hash(display_path),
             "statisticsSha256": file_hash(income_stats_path),
         }
 
@@ -601,7 +650,6 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
         "urbanFabricCodes": list(URBAN_FABRIC_CODES),
         "excludedUrbanAtlasCodes": [EXCLUDED_URBAN_CODE],
         "minimumJaarbakCoverage": MINIMUM_LANDSAT_JAARBAK_COVERAGE,
-        "minimumGreenCoverage": MINIMUM_LANDSAT_GREEN_COVERAGE,
         "analysisResolutionMeters": 30,
         "coordinates": _coordinates(grid),
         "imageSize": [grid["width"], grid["height"]],
@@ -613,11 +661,12 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
     }
     green_manifest = {
         **common,
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "comparisonId": "landsat-groenkaart",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "groenkaart",
         "greenMapYear": 2021,
+        "minimumGreenCoverage": MINIMUM_LANDSAT_GREEN_COVERAGE,
         "defaultGreenClasses": list(DEFAULT_GREEN_CLASSES),
         "greenClasses": list(GROENKAART_CLASSES),
         "densityGridUrl": "landsat-groenkaart/green-density-grid.png",
@@ -631,11 +680,15 @@ def _landsat_products(densities10, coverage10, density_grid, sectors, income_pay
     }
     income_manifest = {
         **common,
+        "schemaVersion": 2,
         "comparisonId": "landsat-income",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "income",
         "incomeYear": INCOME_YEAR,
         "minimumSectorPixels": MINIMUM_SECTOR_LANDSAT_PIXELS,
+        "urbanFabricMaskUrl": urban_mask["url"],
+        "urbanFabricMaskSha256": urban_mask["sha256"],
+        "displayResolutionMeters": 1,
         "observations": income_observations,
         "incomeSourceSha256": income_payload["source"]["sourceSha256"],
     }

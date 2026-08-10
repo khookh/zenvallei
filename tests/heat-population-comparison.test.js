@@ -49,6 +49,10 @@ describe("heat-population comparison", () => {
       expect(populationByScore.reduce((sum, entry) => sum + entry.population, 0)).toBe(139_939);
       expect(populationByScore.reduce((sum, entry) => sum + entry.sectorCount, 0)).toBe(140);
       expect(populationByScore.reduce((sum, entry) => sum + entry.populationShare, 0)).toBeCloseTo(100, 8);
+      expect(populationByScore[0].atOrAbovePopulation).toBe(139_939);
+      expect(populationByScore[0].atOrAbovePopulationShare).toBeCloseTo(100, 8);
+      expect(populationByScore[10].atOrAbovePopulation).toBe(populationByScore[10].population);
+      expect(populationByScore[10].atOrAbovePopulationShare).toBe(populationByScore[10].populationShare);
     }
   });
 
@@ -135,9 +139,13 @@ describe("heat-population comparison", () => {
     expect(english).toContain("Heat score by population band");
     expect(english).toContain("Residents by heat-score level");
     expect(english.match(/data-scatter-sector=/g)).toHaveLength(280);
-    expect(english.match(/data-population-score-bar/g)).toHaveLength(22);
+    // Inline, combined expanded and independently expanded bar charts each
+    // contain the same eleven score bars.
+    expect(english.match(/data-population-score-bar/g)).toHaveLength(33);
     expect(english).toContain("139,939 of 140,122 residents are represented");
     expect(english).toContain("data-expand-comparison-chart");
+    expect(english).toContain("At score 0 or above: 139,939 residents, 100%.");
+    expect(english).toContain('data-dialog-target="heat-population-bars"');
     expect(english).not.toMatch(/regression|correlation/i);
 
     setLanguage("nl");

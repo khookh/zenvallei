@@ -11,6 +11,8 @@ The map remains the primary workspace. Panels adapt to the available space, impo
 
 Scientific displays must name variables, units, reference years, sample sizes and exclusions. Plain-language interpretation comes first; formulas, provenance and limitations belong in Methodology.
 
+The factual map, metric, denominator, chart and limitation inventory now lives in [Layer and comparison audit](layer-and-comparison-audit.md). This UI audit evaluates placement and interaction only, avoiding a second, potentially divergent description of the scientific contracts.
+
 ## Content placement
 
 | Surface | Contains | Does not repeat |

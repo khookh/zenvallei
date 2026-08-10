@@ -1,4 +1,4 @@
-import { GREEN_DENSITY_COLORS } from "./sealed-urban-shared.js";
+import { greenDensityColor } from "./sealed-urban-shared.js";
 import { thermalColor } from "./thermal-palette.js";
 
 const PROTOCOL = "greenwave-compose";
@@ -60,12 +60,6 @@ export function isOfficialSealedPixel(data, offset) {
     && data[offset + 2] === SEALED_RGB[2] && data[offset + 3] > 0;
 }
 
-function densityColor(value) {
-  const index = Math.max(0, Math.min(GREEN_DENSITY_COLORS.length - 1, Math.floor(value / 25)));
-  const hex = GREEN_DENSITY_COLORS[index];
-  return [Number.parseInt(hex.slice(1, 3), 16), Number.parseInt(hex.slice(3, 5), 16), Number.parseInt(hex.slice(5, 7), 16)];
-}
-
 function rasterOffset(configuration, z, x, y, column, row) {
   const world = 2 ** z;
   const normalizedX = (x + (column + 0.5) / TILE_SIZE) / world;
@@ -113,11 +107,14 @@ async function composeTile(configuration, z, x, y, signal) {
       if (configuration.mode === "density") {
         const density = selectedDensity(configuration, offset);
         if (density == null) continue;
-        output.data.set([...densityColor(density), 232], tileOffset);
+        output.data.set([...greenDensityColor(density), 232], tileOffset);
       } else if (configuration.mode === "temperature") {
-        const status = configuration.pointData.data[offset + 3];
+        // Display status is deliberately independent from the narrower point
+        // set used by comparison charts. This prevents graph eligibility rules
+        // from punching artificial 30 m holes into the exact 1 m footprint.
+        const status = configuration.temperatureData.data[offset + 3];
         if (status === 255) {
-          const code = configuration.pointData.data[offset] * 256 + configuration.pointData.data[offset + 1];
+          const code = configuration.temperatureData.data[offset] * 256 + configuration.temperatureData.data[offset + 1];
           const temperature = code / 100 - 100;
           output.data.set([...thermalColor(Math.round(Math.max(0, Math.min(1, (temperature - 15) / 35)) * 255)), 242], tileOffset);
         } else if (status === 254) {

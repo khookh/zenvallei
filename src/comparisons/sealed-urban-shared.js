@@ -1,6 +1,41 @@
 import { formatCurrency, formatNumber, getLanguage, t } from "../i18n.js";
 
-export const GREEN_DENSITY_COLORS = ["#f7fbff", "#c6dbef", "#6baed6", "#2171b5", "#08306b"];
+/**
+ * Continuous Green Map density ramp. These are interpolation stops, not
+ * analytical classes: every value from 0 to 100 receives an interpolated
+ * colour while the original density value remains available to queries.
+ */
+export const GREEN_DENSITY_STOPS = Object.freeze([
+  Object.freeze({ value: 0, color: "#f7fcf5" }),
+  Object.freeze({ value: 25, color: "#c7e9c0" }),
+  Object.freeze({ value: 50, color: "#74c476" }),
+  Object.freeze({ value: 75, color: "#238b45" }),
+  Object.freeze({ value: 100, color: "#00441b" }),
+]);
+export const GREEN_DENSITY_COLORS = Object.freeze(GREEN_DENSITY_STOPS.map(({ color }) => color));
+export const GREEN_DENSITY_GRADIENT = `linear-gradient(90deg, ${GREEN_DENSITY_STOPS
+  .map(({ value, color }) => `${color} ${value}%`).join(", ")})`;
+export const SURROUNDING_RADIUS_METRES = 100;
+export const SURROUNDING_AREA_HA = Math.PI;
+
+const hexRgb = (hex) => [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
+
+/** Return the continuously interpolated RGB colour for a 0-100% density. */
+export function greenDensityColor(value) {
+  const bounded = Math.max(0, Math.min(100, Number(value) || 0));
+  const endIndex = Math.max(1, GREEN_DENSITY_STOPS.findIndex((stop) => stop.value >= bounded));
+  const start = GREEN_DENSITY_STOPS[endIndex - 1];
+  const end = GREEN_DENSITY_STOPS[endIndex];
+  const mix = (bounded - start.value) / Math.max(1, end.value - start.value);
+  const startRgb = hexRgb(start.color);
+  const endRgb = hexRgb(end.color);
+  return startRgb.map((component, index) => Math.round(component + (endRgb[index] - component) * mix));
+}
+
+/** Convert a 0-100% focal-cover value into hectares in the 100 m circle. */
+export function surroundingAreaHa(percentage) {
+  return Math.max(0, Math.min(100, Number(percentage) || 0)) / 100 * SURROUNDING_AREA_HA;
+}
 export const INCOME_SYMBOL_LAYER_PREFIX = "sealed-urban-income-symbols";
 export const SEALED_URBAN_SOURCE_URLS = Object.freeze({
   landsat: "https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature",

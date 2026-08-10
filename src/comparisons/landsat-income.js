@@ -1,12 +1,12 @@
 import { t } from "../i18n.js";
 import { authorityLink } from "../source-authorities.js";
-import { comparisonHeatGradient, comparisonLegendItems, thermalColor } from "./thermal-palette.js";
+import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette.js";
+import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import {
-  comparisonAreaRecord, hideIncomeSymbols, incomeLegend, loadImageData, mountIncomeSymbols,
+  comparisonAreaRecord, comparisonPixelOffset, hideIncomeSymbols, incomeLegend, loadImageData, mountIncomeSymbols,
   ordinaryLeastSquares, safeAsset, SEALED_URBAN_SOURCE_URLS, sectorPointLabel,
 } from "./sealed-urban-shared.js";
 
-const SOURCE_ID = "landsat-income-canvas";
 const RASTER_LAYER_ID = "landsat-income-temperature";
 const SYMBOL_LAYER_ID = "sealed-urban-income-symbols-landsat";
 const BEFORE_LAYER = "heat-sectors-hit-area";
@@ -14,29 +14,29 @@ const scopeId = (record) => record.scope === "region" ? "region:zennevallei"
   : record.scope === "municipality" ? `municipality:${record.municipality}` : `sector:${record.sectorId}`;
 
 export function validateLandsatIncomeManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 1 || manifest.comparisonId !== "landsat-income"
+  if (!manifest || manifest.schemaVersion !== 2 || manifest.comparisonId !== "landsat-income"
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "income"
     || manifest.incomeYear !== 2023 || manifest.analysisResolutionMeters !== 30
     || manifest.minimumSectorPixels !== 10 || !manifest.observations
-    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes) {
+    || !Object.values(manifest.observations).every((item) => item.displayDataUrl)
+    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes || !manifest.urbanFabricMaskUrl
+    || manifest.displayResolutionMeters !== 1) {
     throw new TypeError("Unsupported Landsat-income comparison manifest.");
   }
   return manifest;
 }
 
-export function createLandsatIncomeComparison({ descriptor, landsatLayer, incomeLayer }) {
+export function createLandsatIncomeComparison({ descriptor, landsatLayer, incomeLayer, jaarbakLayer }) {
   let manifest;
   let map;
-  let canvas;
-  let context;
   let active = false;
   let municipality = "";
   let highlightedSectorId = "";
-  let pointData;
-  let scopeData;
+  let displayData;
   let statistics;
   let loadedObservation = "";
   let generation = 0;
+  const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .95 });
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
   const observationId = () => landsatLayer.getOption("observation");
@@ -48,11 +48,11 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     if (!response.ok) throw new Error(`Comparison manifest HTTP ${response.status}.`);
     manifest = validateLandsatIncomeManifest(await response.json());
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
+    manifest.urbanFabricMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanFabricMaskUrl, ".pmtiles");
     Object.values(manifest.observations).forEach((item) => {
-      item.pointDataUrl = safeAsset(descriptor.assetRoot, item.pointDataUrl, ".png");
+      item.displayDataUrl = safeAsset(descriptor.assetRoot, item.displayDataUrl, ".png");
       item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json");
     });
-    scopeData = await loadImageData(manifest.scopeIndexUrl, manifest.imageSize);
   };
 
   const loadObservation = async () => {
@@ -61,46 +61,26 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     if (loadedObservation === id) return;
     const item = manifest.observations[id];
     if (!item) throw new Error(`No sealed-urban comparison data for ${id}.`);
-    const [pixels, statsResponse] = await Promise.all([
-      loadImageData(item.pointDataUrl, manifest.imageSize), fetch(item.statisticsUrl),
+    const [display, statsResponse] = await Promise.all([
+      loadImageData(item.displayDataUrl, manifest.imageSize), fetch(item.statisticsUrl),
     ]);
     if (!statsResponse.ok) throw new Error(`Comparison statistics HTTP ${statsResponse.status}.`);
-    pointData = pixels;
+    displayData = display;
     statistics = await statsResponse.json();
     loadedObservation = id;
   };
 
-  const render = () => {
-    if (!active || !context || !pointData) return;
-    const output = context.createImageData(canvas.width, canvas.height);
-    const municipalityIndex = municipality ? manifest.municipalityIndexes[municipality] : 0;
-    for (let offset = 0, pixel = 0; offset < pointData.data.length; offset += 4, pixel += 1) {
-      const status = pointData.data[offset + 3];
-      const inScope = municipalityIndex ? scopeData.data[offset + 1] === municipalityIndex : scopeData.data[offset] === 1;
-      if (!status || !inScope) continue;
-      if (status === 255) {
-        const code = pointData.data[offset] * 256 + pointData.data[offset + 1];
-        const temperature = code / 100 - 100;
-        const normalized = Math.round(Math.max(0, Math.min(1, (temperature - 15) / 35)) * 255);
-        const color = thermalColor(normalized);
-        output.data[offset] = color[0];
-        output.data[offset + 1] = color[1];
-        output.data[offset + 2] = color[2];
-        output.data[offset + 3] = 226;
-      } else if (status === 254) {
-        const light = (pixel % canvas.width + Math.floor(pixel / canvas.width)) % 2;
-        output.data[offset] = light ? 194 : 126;
-        output.data[offset + 1] = light ? 201 : 135;
-        output.data[offset + 2] = light ? 203 : 139;
-        output.data[offset + 3] = 225;
-      }
-    }
-    context.putImageData(output, 0, 0);
-    const source = map.getSource(SOURCE_ID);
-    source?.setCoordinates(manifest.coordinates);
-    source?.play?.();
-    map.triggerRepaint();
-    requestAnimationFrame(() => source?.pause?.());
+  const render = async () => {
+    if (!active || !displayData) return false;
+    const request = ++generation;
+    const item = manifest.observations[observationId()];
+    const jaarbakUrl = await jaarbakLayer.resolveArchive(item.jaarbakYear, municipality);
+    const shown = await exactRaster.show(map, {
+      mode: "temperature", jaarbakUrl, urbanMaskUrl: manifest.urbanFabricMaskUrl,
+      temperatureData: displayData,
+      dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
+    });
+    return active && request === generation && shown;
   };
 
   const points = () => Object.values(statistics?.sectorStats ?? {}).flatMap((record) => {
@@ -114,7 +94,7 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     await loadObservation();
     if (!active || request !== generation) return;
     mountIncomeSymbols(map, { id: SYMBOL_LAYER_ID, sectorStats: statistics.sectorStats, municipality });
-    render();
+    await render();
     notify();
   };
 
@@ -132,18 +112,6 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
       await ensureManifest();
       landsatLayer.setVisible(map, false);
       incomeLayer.setVisible(map, false);
-      if (!map.getSource(SOURCE_ID)) {
-        canvas = document.createElement("canvas");
-        canvas.width = manifest.imageSize[0];
-        canvas.height = manifest.imageSize[1];
-        canvas.className = "comparison-render-canvas";
-        canvas.setAttribute("aria-hidden", "true");
-        document.body.append(canvas);
-        context = canvas.getContext("2d", { alpha: true });
-        map.addSource(SOURCE_ID, { type: "canvas", canvas, coordinates: manifest.coordinates, animate: false });
-        map.addLayer({ id: RASTER_LAYER_ID, type: "raster", source: SOURCE_ID,
-          paint: { "raster-opacity": .88, "raster-resampling": "nearest", "raster-fade-duration": 0 } }, BEFORE_LAYER);
-      }
       active = true;
       await refresh();
       return true;
@@ -152,11 +120,7 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
       active = false;
       generation += 1;
       highlightedSectorId = "";
-      if (map?.getLayer(RASTER_LAYER_ID)) map.removeLayer(RASTER_LAYER_ID);
-      if (map?.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
-      canvas?.remove();
-      canvas = null;
-      context = null;
+      exactRaster.remove();
       hideIncomeSymbols(map, SYMBOL_LAYER_ID);
       incomeLayer.setVisible(map, false);
       landsatLayer.setVisible(map, true);
@@ -167,8 +131,7 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
       municipality = value;
       if (active) {
         mountIncomeSymbols(map, { id: SYMBOL_LAYER_ID, sectorStats: statistics.sectorStats, municipality });
-        render();
-        notify();
+        render().then(notify).catch(console.error);
       }
       return true;
     },
@@ -194,6 +157,22 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
       return { title: record.sectorName, subtitle: t("landsatIncome.popupSubtitle"),
         lines: point ? [sectorPointLabel(point, { x: "income", y: "temperature", observation: observation()?.acquiredAt })]
           : [t("sealedUrban.noComparableValue")] };
+    },
+    async inspectPoint(point) {
+      if (!(await exactRaster.contains(point))) return { unavailable: true };
+      const offset = comparisonPixelOffset(manifest, point);
+      if (offset < 0 || displayData?.data[offset + 3] !== 255) return { unavailable: true };
+      const code = displayData.data[offset] * 256 + displayData.data[offset + 1];
+      return { temperature: code / 100 - 100, acquiredAt: observation()?.acquiredAt };
+    },
+    getPointPopupModel(result) {
+      return result?.unavailable ? {
+        title: t("landsatIncome.popupSubtitle"), lines: [t("sealedUrban.noComparableValue")],
+      } : {
+        title: t("landsatIncome.popupSubtitle"),
+        subtitle: landsatLayer.getPointPopupModel?.({ acquiredAt: result.acquiredAt, status: "clear", temperatureC: result.temperature })?.subtitle,
+        lines: [t("landsatIncome.pointTemperature", { temperature: result.temperature.toFixed(1) })],
+      };
     },
     getPanelModel(record) {
       const current = points();

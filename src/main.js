@@ -814,10 +814,11 @@ async function start() {
     });
     application.comparisons.set(comparison.id, comparison);
   }
-  if (landsatLayer && incomeLayer && data.comparisons?.["landsat-income"]) {
+  if (landsatLayer && incomeLayer && application.layers.has("jaarbak") && data.comparisons?.["landsat-income"]) {
     const { createLandsatIncomeComparison } = await import("./comparisons/landsat-income.js");
     const comparison = createLandsatIncomeComparison({
       descriptor: data.comparisons["landsat-income"], landsatLayer, incomeLayer,
+      jaarbakLayer: application.layers.get("jaarbak"),
     });
     application.comparisons.set(comparison.id, comparison);
   }

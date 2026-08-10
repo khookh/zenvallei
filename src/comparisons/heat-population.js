@@ -94,7 +94,7 @@ export function summarizeHeatByPopulationLevel(points) {
 /** Sum residents by score; unlike the box plot, this chart weights by population. */
 export function sumPopulationByHeatScore(points) {
   const totalPopulation = points.reduce((sum, point) => sum + point.population, 0);
-  return Array.from({ length: 11 }, (_, score) => {
+  const entries = Array.from({ length: 11 }, (_, score) => {
     const matching = points.filter((point) => point.score === score);
     const population = matching.reduce((sum, point) => sum + point.population, 0);
     return {
@@ -104,6 +104,14 @@ export function sumPopulationByHeatScore(points) {
       populationShare: totalPopulation ? population / totalPopulation * 100 : 0,
     };
   });
+  let atOrAbovePopulation = 0;
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    atOrAbovePopulation += entries[index].population;
+    entries[index].atOrAbovePopulation = atOrAbovePopulation;
+    entries[index].atOrAbovePopulationShare = totalPopulation
+      ? atOrAbovePopulation / totalPopulation * 100 : 0;
+  }
+  return entries;
 }
 
 function iconId(level) {

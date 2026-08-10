@@ -2,9 +2,10 @@ import { formatNumber, t } from "../i18n.js";
 import { authorityLink } from "../source-authorities.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import {
-  comparisonAreaRecord, comparisonPixelOffset, GREEN_DENSITY_COLORS, greenClassSelector, hideIncomeSymbols, incomeLegend,
+  comparisonAreaRecord, comparisonPixelOffset, GREEN_DENSITY_COLORS, GREEN_DENSITY_GRADIENT,
+  GREEN_DENSITY_STOPS, greenClassSelector, hideIncomeSymbols, incomeLegend,
   loadImageData, mountIncomeSymbols, ordinaryLeastSquares, safeAsset,
-  SEALED_URBAN_SOURCE_URLS, sectorPointLabel, selectedDensity,
+  SEALED_URBAN_SOURCE_URLS, sectorPointLabel, selectedDensity, surroundingAreaHa,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "groenkaart-income-density";
@@ -152,6 +153,11 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     getLegendModel: () => ({
       title: t("greenIncome.legendTitle"), layout: "scale",
       groups: [{ items: GREEN_DENSITY_COLORS.map((color, index) => ({ label: String(index * 25), color })) }],
+      continuousScale: {
+        gradient: GREEN_DENSITY_GRADIENT,
+        ticks: GREEN_DENSITY_STOPS.map(({ value }) => value), unit: "%",
+        accessibleLabel: t("greenIncome.continuousLegendLabel"),
+      },
       densitySelector: greenClassSelector(manifest, selectedGreen),
       comparisonLegend: incomeLegend(),
       footnote: t("greenIncome.legendFootnote"),
@@ -176,7 +182,10 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
         title: t("greenIncome.popupSubtitle"), lines: [t("sealedUrban.noComparableValue")],
       } : {
         title: t("greenIncome.popupSubtitle"),
-        lines: [t("greenIncome.pixelDensity", { value: formatNumber(result.density, 1) })],
+        lines: [t("greenIncome.pixelDensity", {
+          value: formatNumber(result.density, 1),
+          area: formatNumber(surroundingAreaHa(result.density), 2),
+        })],
       };
     },
     getPanelModel(record) {

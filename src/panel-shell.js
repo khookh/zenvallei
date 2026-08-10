@@ -218,7 +218,10 @@ export function createDetailPanel({
   content.addEventListener("click", (event) => {
     const expand = event.target.closest("[data-expand-comparison-chart]");
     if (expand) {
-      const dialog = expand.closest("section")?.querySelector("[data-comparison-chart-dialog]");
+      const target = expand.dataset.dialogTarget;
+      const dialog = target
+        ? content.querySelector(`[data-chart-dialog-id="${CSS.escape(target)}"]`)
+        : expand.closest("section")?.querySelector("[data-comparison-chart-dialog]");
       if (dialog) {
         dialog.dataset.returnFocusKey = "comparison-chart-expand";
         expand.dataset.focusKey = "comparison-chart-expand";

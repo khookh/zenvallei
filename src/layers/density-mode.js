@@ -8,7 +8,7 @@ const rasterCache = new Map();
 const scopeCache = new Map();
 const DENSITY_COLOURS = Object.freeze({
   jaarbak: ["#fff5f0", "#fee0d2", "#fcbba1", "#fc9272", "#fb6a4a", "#ef3b2c", "#cb181d", "#a50f15", "#85000d", "#740008", "#67000d"],
-  groenkaart: ["#f7fbff", "#e3eef8", "#c6dbef", "#a9cce5", "#6baed6", "#4292c6", "#2171b5", "#1764a0", "#0d4f8b", "#0a3e70", "#08306b"],
+  groenkaart: ["#f7fcf5", "#e3f4df", "#c7e9c0", "#9fd99b", "#74c476", "#4cad64", "#238b45", "#167d38", "#0c6b2d", "#055722", "#00441b"],
 });
 
 const localized = (value, fallback = "") => typeof value === "string"
@@ -269,6 +269,11 @@ export function createDensityMode({
         footnote: t("density.legendFootnote"),
         layout: "scale",
         groups: [{ items: colours.map((color, index) => ({ label: String(index * 10), color })) }, { items: [] }],
+        continuousScale: datasetId === "groenkaart" ? {
+          gradient: "linear-gradient(90deg,#f7fcf5 0%,#c7e9c0 25%,#74c476 50%,#238b45 75%,#00441b 100%)",
+          ticks: [0, 25, 50, 75, 100], unit: "%",
+          accessibleLabel: t("density.greenContinuousLabel"),
+        } : null,
         densitySelector: datasetId === "groenkaart" ? {
           title: t("density.selectedClasses"), items: classDefinitions(),
         } : null,

@@ -924,7 +924,7 @@ test("loads the published 100 m density modes only when requested", async ({ pag
   ))).toBe("visible");
   await showControls(page);
   await page.locator("#map-mode-action").click();
-  await expect(page.locator("#legend-title")).toContainText("Dichtheid geselecteerde Groenkaartklassen");
+  await expect(page.locator("#legend-title")).toContainText("Vegetatiebedekking binnen 100 m");
   await expect.poll(() => requests.some((url) => url.includes("groenkaart-2021-density.tif"))).toBe(true);
   await expect.poll(() => page.evaluate(() => ({
     classification: window.__heatMap.map.getLayoutProperty("groenkaart-local-raster", "visibility"),

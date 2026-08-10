@@ -535,6 +535,7 @@ Image.fromarray(green_non_green, mode="RGBA").save(landsat_green_root / "green-d
 Image.fromarray(sealed_scope, mode="RGBA").save(landsat_green_root / "scope-index.png")
 landsat_green_observations = {}
 landsat_income_observations = {}
+(ROOT / "shared" / "landsat-display").mkdir(parents=True, exist_ok=True)
 for observation_number, item in enumerate(landsat_items):
     temperature = 35.5 + observation_number * 1.5
     temperature_code = int(round((temperature + 100) * 100))
@@ -544,7 +545,9 @@ for observation_number, item in enumerate(landsat_items):
     points_image[..., 2] = sector_index
     points_image[..., 3] = np.where(sector_index > 0, 255, 0).astype(np.uint8)
     point_url = f"landsat-groenkaart/points/{item['value']}.png"
+    display_url = f"shared/landsat-display/{item['value']}.png"
     Image.fromarray(points_image, mode="RGBA").save(ROOT / point_url)
+    Image.fromarray(points_image, mode="RGBA").save(ROOT / display_url)
     observation_stats = {
         sector_id: {**record, "clearPixelCount": 25, "analysedAreaHa": 2.25,
                     "meanTemperatureC": temperature}
@@ -563,11 +566,12 @@ for observation_number, item in enumerate(landsat_items):
         "regressions": {scope_id: None for scope_id in scope_ids},
     }), encoding="utf-8")
     landsat_green_observations[item["value"]] = {
-        "jaarbakYear": soil_years[item["value"]], "pointDataUrl": point_url,
+        "jaarbakYear": soil_years[item["value"]], "displayDataUrl": display_url,
+        "pointDataUrl": point_url,
         "statisticsUrl": green_statistics_url,
     }
     landsat_income_observations[item["value"]] = {
-        "jaarbakYear": soil_years[item["value"]], "pointDataUrl": point_url,
+        "jaarbakYear": soil_years[item["value"]], "displayDataUrl": display_url,
         "statisticsUrl": income_statistics_url,
     }
 
@@ -581,7 +585,7 @@ sealed_landsat_common = {
     "scopeIndexUrl": "landsat-groenkaart/scope-index.png",
 }
 landsat_green_manifest = {
-    **sealed_landsat_common, "schemaVersion": 2, "comparisonId": "landsat-groenkaart",
+    **sealed_landsat_common, "schemaVersion": 3, "comparisonId": "landsat-groenkaart",
     "primaryLayerId": "landsat-temperature", "secondaryLayerId": "groenkaart",
     "greenMapYear": 2021, "defaultGreenClasses": [1, 2], "greenClasses": green_classes,
     "densityGridUrl": "landsat-groenkaart/green-density-grid.png",
@@ -593,9 +597,11 @@ landsat_green_manifest = {
 landsat_income_root = ROOT / "landsat-income"
 landsat_income_root.mkdir(parents=True, exist_ok=True)
 landsat_income_manifest = {
-    **sealed_landsat_common, "comparisonId": "landsat-income",
+    **sealed_landsat_common, "schemaVersion": 2, "comparisonId": "landsat-income",
     "primaryLayerId": "landsat-temperature", "secondaryLayerId": "income",
-    "incomeYear": 2023, "minimumSectorPixels": 10, "observations": landsat_income_observations,
+    "incomeYear": 2023, "minimumSectorPixels": 10, "displayResolutionMeters": 1,
+    "urbanFabricMaskUrl": "shared/urban-fabric-2021.pmtiles",
+    "observations": landsat_income_observations,
 }
 (landsat_income_root / "manifest.json").write_text(json.dumps(landsat_income_manifest), encoding="utf-8")
 

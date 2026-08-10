@@ -155,8 +155,8 @@ test("compares heat vulnerability with authoritative sector population", async (
   await firstBar.press("End");
   await expect(inlineBars.locator("[data-population-bar-output]")).toContainText("Score 10");
 
-  await page.locator("[data-expand-comparison-chart]").click();
-  const dialog = page.locator("[data-comparison-chart-dialog]");
+  await page.getByRole("button", { name: "Expand charts", exact: true }).click();
+  const dialog = page.locator("[data-comparison-chart-dialog]:visible");
   await expect(dialog).toContainText("Heat vulnerability and population in Entire Zennevallei");
   await expect(dialog.locator("[data-heat-population-box-chart].is-expanded")).toBeVisible();
   await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded")).toBeVisible();
@@ -169,6 +169,12 @@ test("compares heat vulnerability with authoritative sector population", async (
     });
   }
   await dialog.locator("[data-close-comparison-chart]").click();
+
+  await inlineBars.locator('[data-dialog-target="heat-population-bars"]').click();
+  const residentsDialog = page.locator('[data-chart-dialog-id="heat-population-bars"]:visible');
+  await expect(residentsDialog).toContainText("Residents by heat-vulnerability score");
+  await expect(residentsDialog.locator("[data-population-score-bar]")).toHaveCount(11);
+  await residentsDialog.locator("[data-close-comparison-chart]").click();
 
   const accessibility = await new AxeBuilder({ page })
     .include("#detail-panel")
@@ -257,12 +263,12 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
   await page.locator("#project-intro-primary").click();
   const cases = [
-    ["landsat-temperature", "groenkaart", "Land-surface temperature versus pixel green density", "landsat-groenkaart-temperature-"],
-    ["groenkaart", "landsat-temperature", "Land-surface temperature versus pixel green density", "landsat-groenkaart-temperature-"],
-    ["groenkaart", "income", "Green density versus median taxable income", "groenkaart-income-density-"],
-    ["income", "groenkaart", "Green density versus median taxable income", "groenkaart-income-density-"],
-    ["landsat-temperature", "income", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature"],
-    ["income", "landsat-temperature", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature"],
+    ["landsat-temperature", "groenkaart", "Land-surface temperature and surrounding vegetation cover", "landsat-groenkaart-temperature-"],
+    ["groenkaart", "landsat-temperature", "Land-surface temperature and surrounding vegetation cover", "landsat-groenkaart-temperature-"],
+    ["groenkaart", "income", "Vegetation cover versus median taxable income", "groenkaart-income-density-"],
+    ["income", "groenkaart", "Vegetation cover versus median taxable income", "groenkaart-income-density-"],
+    ["landsat-temperature", "income", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature-"],
+    ["income", "landsat-temperature", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature-"],
   ];
   for (const [fromLayer, targetLayer, chartTitle, mapLayer] of cases) {
     await activateComparison(page, fromLayer, targetLayer);
@@ -278,6 +284,24 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
     if (targetLayer === "groenkaart" || fromLayer === "groenkaart") {
       await expandComparisonLegend(page);
       await expect(page.locator("[data-density-class]")).toHaveCount(4);
+    }
+    if (fromLayer === "landsat-temperature" && targetLayer === "groenkaart") {
+      // Sector records do not carry the synthetic scope field used by area
+      // summaries. The chart must nevertheless use the selected sector only.
+      await expandControls(page);
+      await page.locator("#sector-search").fill("23027A00-");
+      await page.locator("#sector-search").press("Enter");
+      await expect(page.locator("#detail-panel")).toContainText("4 eligible clear Landsat observations are plotted.");
+      await expandControls(page);
+      await page.locator("#reset-view").click();
+      await expect(page.locator("#detail-panel")).toContainText("1,960 eligible clear Landsat observations are plotted.");
+    }
+    if ([fromLayer, targetLayer].includes("groenkaart") && [fromLayer, targetLayer].includes("income")) {
+      const ramp = page.locator("#legend-content .legend-continuous-scale");
+      await expect(ramp).toHaveAttribute("aria-label", /continuous vegetation-cover scale/i);
+      expect(await ramp.locator(".legend-continuous-ramp").evaluate((element) => getComputedStyle(element).backgroundImage))
+        .toContain("linear-gradient");
+      await expect(ramp.locator(".legend-continuous-ticks")).toContainText("100%");
     }
     await expandControls(page);
     await expect(page.locator("#analysis-pairing")).toBeVisible();
@@ -482,12 +506,22 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(page.locator("#legend-content")).toContainText("Sealed");
   await expect(page.locator("#legend-content")).not.toContainText("Unsealed");
   await expect(page.locator("#detail-panel")).toContainText("Soil-sealing composition");
-  await page.locator("[data-expand-comparison-chart]").click();
-  const soilChartsDialog = page.locator("[data-comparison-chart-dialog]");
+  await page.locator('[aria-labelledby="soil-temperature-distribution-title"] [data-expand-comparison-chart]').click();
+  const soilChartsDialog = page.locator("[data-comparison-chart-dialog]:visible");
   await expect(soilChartsDialog).toBeVisible();
   await expect(soilChartsDialog).toContainText("Land-surface temperature on sealed and unsealed surfaces");
   await expect(soilChartsDialog).toContainText("JaarBAK");
   await soilChartsDialog.locator("[data-close-comparison-chart]").click();
+  const densitySection = page.locator('[aria-labelledby="soil-density-analysis-title"]');
+  await densitySection.locator("[data-expand-comparison-chart]").click();
+  const densityDialog = page.locator("[data-comparison-chart-dialog]:visible");
+  await expect(densityDialog).toContainText("Land-surface temperature and surrounding soil sealing");
+  await expect(densityDialog).toContainText("Sealed surface within 100 m (%)");
+  await expect(densityDialog.locator("[data-pixel-scatter-hit]")).toBeVisible();
+  await densityDialog.locator("[data-pixel-scatter-hit]").focus();
+  await densityDialog.locator("[data-pixel-scatter-hit]").press("ArrowRight");
+  await expect(densityDialog.locator("[data-scatter-output]")).toContainText("3.1416 ha");
+  await densityDialog.locator("[data-close-comparison-chart]").click();
   await expect(page.locator("[data-comparison-series]")).toHaveCount(0);
   expect(localRequests.some((url) => url.includes("/landsat-jaarbak/manifest.json"))).toBe(true);
   await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({

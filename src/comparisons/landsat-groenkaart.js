@@ -4,17 +4,19 @@ import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import {
   comparisonPixelOffset, greenClassSelector, loadImageData, safeAsset, SEALED_URBAN_SOURCE_URLS,
+  surroundingAreaHa,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "landsat-groenkaart-temperature";
 const BEFORE_LAYER = "heat-sectors-hit-area";
 
 export function validateLandsatGroenkaartManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 2 || manifest.comparisonId !== "landsat-groenkaart"
+  if (!manifest || manifest.schemaVersion !== 3 || manifest.comparisonId !== "landsat-groenkaart"
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "groenkaart"
     || manifest.greenMapYear !== 2021 || manifest.urbanAtlasYear !== 2021
     || manifest.analysisResolutionMeters !== 30 || manifest.minimumGreenCoverage !== 0.8
-    || !manifest.observations || !Array.isArray(manifest.greenClasses) || !manifest.densityNonGreenUrl
+    || !manifest.observations || !Object.values(manifest.observations).every((item) => item.displayDataUrl && item.pointDataUrl)
+    || !Array.isArray(manifest.greenClasses) || !manifest.densityNonGreenUrl
     || !manifest.scopeIndexUrl || !manifest.municipalityIndexes || !manifest.urbanFabricMaskUrl) {
     throw new TypeError("Unsupported Landsat-Green Map comparison manifest.");
   }
@@ -30,6 +32,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
   let densityData;
   let densityNonGreenData;
   let pointData;
+  let displayData;
   let statistics;
   let loadedObservation = "";
   let map;
@@ -55,6 +58,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
     manifest.urbanFabricMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanFabricMaskUrl, ".pmtiles");
     Object.values(manifest.observations).forEach((item) => {
+      item.displayDataUrl = safeAsset(descriptor.assetRoot, item.displayDataUrl, ".png");
       item.pointDataUrl = safeAsset(descriptor.assetRoot, item.pointDataUrl, ".png");
       item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json");
     });
@@ -71,10 +75,12 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     const id = observationId();
     if (loadedObservation === id) return;
     const item = manifest.observations[id];
-    const [pixels, statsResponse] = await Promise.all([
+    const [display, pixels, statsResponse] = await Promise.all([
+      loadImageData(item.displayDataUrl, manifest.imageSize),
       loadImageData(item.pointDataUrl, manifest.imageSize), fetch(item.statisticsUrl),
     ]);
     if (!statsResponse.ok) throw new Error(`Comparison statistics HTTP ${statsResponse.status}.`);
+    displayData = display;
     pointData = pixels;
     statistics = await statsResponse.json();
     loadedObservation = id;
@@ -83,7 +89,12 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
   const allowedIndex = (index, record = null) => {
     const sectorId = sectorIdByIndex.get(index);
     if (!sectorId) return false;
-    if (record?.scope === "sector") return sectorId === record.sectorId;
+    // Sector records come directly from scores.json and intentionally have no
+    // synthetic `scope` field. A record with a sectorId is therefore the most
+    // specific scope, unless it explicitly identifies an aggregate.
+    if (record?.sectorId && record.scope !== "municipality" && record.scope !== "region") {
+      return sectorId === record.sectorId;
+    }
     const selectedMunicipality = record?.scope === "municipality" ? record.municipality : municipality;
     return !selectedMunicipality || manifest.sectorMunicipalities[sectorId] === selectedMunicipality;
   };
@@ -96,8 +107,8 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     return Math.max(0, Math.min(100, value));
   };
 
-  const temperatureAt = (offset) => {
-    const code = pointData.data[offset] * 256 + pointData.data[offset + 1];
+  const temperatureAt = (data, offset) => {
+    const code = data.data[offset] * 256 + data.data[offset + 1];
     return code ? code / 100 - 100 : null;
   };
 
@@ -108,7 +119,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     const jaarbakUrl = await jaarbakLayer.resolveArchive(item.jaarbakYear, municipality);
     const shown = await exactRaster.show(map, {
       mode: "temperature", jaarbakUrl, urbanMaskUrl: manifest.urbanFabricMaskUrl,
-      pointData, dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
+      temperatureData: displayData, dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
     });
     return active && request === generation && shown;
   };
@@ -117,7 +128,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     const output = [];
     for (let offset = 0; offset < pointData.data.length; offset += 4) {
       if (pointData.data[offset + 3] !== 255 || !allowedIndex(pointData.data[offset + 2], record)) continue;
-      output.push([densityAt(offset), temperatureAt(offset)]);
+      output.push([densityAt(offset), temperatureAt(pointData, offset)]);
     }
     return output;
   };
@@ -191,16 +202,24 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       const stats = statistics?.sectorStats?.[record.sectorId];
       const density = [...selectedGreen].reduce((sum, code) => sum + Number(stats?.meanDensityByGreenClass?.[code] ?? 0), 0);
       return { title: record.sectorName, subtitle: t("landsatGreen.popupSubtitle"), lines: stats?.clearPixelCount
-        ? [t("landsatGreen.popupValues", { density: formatNumber(density, 1), temperature: formatNumber(stats.meanTemperatureC, 1) })]
+        ? [t("landsatGreen.popupValues", {
+          density: formatNumber(density, 1), area: formatNumber(surroundingAreaHa(density), 2),
+          temperature: formatNumber(stats.meanTemperatureC, 1),
+        })]
         : [t("sealedUrban.noComparableValue")] };
     },
     async inspectPoint(point) {
       if (!(await exactRaster.contains(point))) return { unavailable: true };
       const offset = comparisonPixelOffset(manifest, point);
-      if (offset < 0 || pointData?.data[offset + 3] !== 255 || !allowedIndex(pointData.data[offset + 2])) {
+      if (offset < 0 || displayData?.data[offset + 3] !== 255) {
         return { unavailable: true };
       }
-      return { density: densityAt(offset), temperature: temperatureAt(offset), acquiredAt: observation()?.acquiredAt };
+      const comparable = pointData?.data[offset + 3] === 255 && allowedIndex(pointData.data[offset + 2]);
+      return {
+        density: comparable ? densityAt(offset) : null,
+        temperature: temperatureAt(displayData, offset),
+        acquiredAt: observation()?.acquiredAt,
+      };
     },
     getPointPopupModel(result) {
       return result?.unavailable ? {
@@ -208,9 +227,13 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       } : {
         title: t("landsatGreen.popupSubtitle"),
         subtitle: landsatLayer.getPointPopupModel?.({ acquiredAt: result.acquiredAt, status: "clear", temperatureC: result.temperature })?.subtitle,
-        lines: [t("landsatGreen.popupValues", {
-          density: formatNumber(result.density, 1), temperature: formatNumber(result.temperature, 1),
-        })],
+        lines: [Number.isFinite(result.density)
+          ? t("landsatGreen.popupValues", {
+            density: formatNumber(result.density, 1),
+            area: formatNumber(surroundingAreaHa(result.density), 2),
+            temperature: formatNumber(result.temperature, 1),
+          })
+          : t("landsatGreen.popupTemperatureOnly", { temperature: formatNumber(result.temperature, 1) })],
       };
     },
     getPanelModel(record) {
@@ -219,7 +242,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       return {
         template: "sealed-urban-scatter", comparisonId: "landsat-groenkaart", record,
         title: t("landsatGreen.chartTitle"), definition: t("landsatGreen.definition"),
-        xLabel: t("sealedUrban.axisPixelGreenDensity"), yLabel: t("sealedUrban.axisTemperature"),
+        xLabel: t("sealedUrban.axisVegetationCover100m"), yLabel: t("sealedUrban.axisTemperature"),
         xKey: "density", yKey: "temperature", pixelPoints: pixelPoints(record),
         regression: statistics?.regressions?.[scopeId(record)]?.[key] ?? null,
         slopeScale: 10, slopeUnit: t("landsatGreen.slopeUnit"), observation: observation(),

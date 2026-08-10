@@ -36,6 +36,28 @@ function comparisonLegend(model) {
   return section;
 }
 
+function continuousScale(model) {
+  if (!model?.gradient || !Array.isArray(model.ticks) || model.ticks.length < 2) return null;
+  const figure = document.createElement("div");
+  figure.className = "legend-continuous-scale";
+  figure.setAttribute("role", "img");
+  if (model.accessibleLabel) figure.setAttribute("aria-label", model.accessibleLabel);
+  const ramp = document.createElement("span");
+  ramp.className = "legend-continuous-ramp";
+  ramp.style.background = model.gradient;
+  ramp.setAttribute("aria-hidden", "true");
+  const ticks = document.createElement("div");
+  ticks.className = "legend-continuous-ticks";
+  ticks.setAttribute("aria-hidden", "true");
+  ticks.append(...model.ticks.map((value) => {
+    const label = document.createElement("span");
+    label.textContent = `${value}${model.unit ?? ""}`;
+    return label;
+  }));
+  figure.append(ramp, ticks);
+  return figure;
+}
+
 function surfaceSelector(model) {
   const wrapper = document.createElement("section");
   wrapper.className = "comparison-surface-selector";
@@ -178,6 +200,7 @@ export function renderLegendModel({ title, note, content }, model) {
     const scale = document.createElement("div");
     scale.className = "legend-scale";
     scale.append(...model.groups[0].items.map((item) => legendItem(item, { score: true })));
+    const continuous = continuousScale(model.continuousScale);
     const statuses = document.createElement("div");
     statuses.className = "legend-statuses";
     statuses.append(...(model.groups[1]?.items ?? []).map((item) => legendItem(item)));
@@ -185,7 +208,7 @@ export function renderLegendModel({ title, note, content }, model) {
     const surfaces = model.surfaceSelector ? surfaceSelector(model.surfaceSelector) : null;
     const density = model.densitySelector ? densitySelector(model.densitySelector) : null;
     const dual = model.dualSelector ? dualSelector(model.dualSelector) : null;
-    content.replaceChildren(scale, statuses, ...(comparison ? [comparison] : []), ...(surfaces ? [surfaces] : []), ...(density ? [density] : []), ...(dual ? [dual] : []), ...(footnote ? [footnote] : []));
+    content.replaceChildren(...(continuous ? [continuous] : [scale]), statuses, ...(comparison ? [comparison] : []), ...(surfaces ? [surfaces] : []), ...(density ? [density] : []), ...(dual ? [dual] : []), ...(footnote ? [footnote] : []));
     return;
   }
   const hasGroups = model.groups.some((group) => group.title);

@@ -882,7 +882,7 @@ function comparisonHistogram(model, { expanded = false, showExpand = true } = {}
   </div>`;
 }
 
-function comparisonChartDialog(model, { includeDensity = false } = {}) {
+function comparisonChartDialog(model) {
   const context = comparisonChartContext(model);
   return `<dialog class="comparison-chart-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t("comparison.histogramTitle"))}">
     <div class="comparison-chart-dialog-content">
@@ -890,15 +890,6 @@ function comparisonChartDialog(model, { includeDensity = false } = {}) {
       <p class="comparison-dialog-description">${escapeHtml(context.description)}</p>
       <p>${escapeHtml(t("comparison.histogramExplanation"))}</p>
       ${comparisonHistogram(model, { expanded: true })}
-      ${includeDensity && model.densityScatter?.pixelPoints ? `
-        <h3>${escapeHtml(t("soilComparison.densityChartTitle"))}</h3>
-        ${sealedUrbanScatterChart({
-          comparisonId: "landsat-jaarbak-density", record: model.record,
-          title: t("soilComparison.densityChartTitle"), definition: t("soilComparison.densityChartDefinition"),
-          xLabel: model.densityScatter.xLabel, yLabel: model.densityScatter.yLabel,
-          xKey: "density", yKey: "temperature", pixelPoints: model.densityScatter.pixelPoints,
-          regression: model.densityScatter.regression,
-        }, { expanded: true, showExpand: false })}` : ""}
       <p class="comparison-academic-note">${escapeHtml(t("comparison.academicDetails"))}</p>
     </div>
   </dialog>`;
@@ -983,6 +974,26 @@ function renderLandsatJaarbakComparison(model) {
   const heatwave = landsatManifest?.heatwaves?.find(({ id }) => observation?.heatwaveIds?.includes(id));
   const sealed = surfaceStats?.sealedPercentage ?? 0;
   const unsealed = surfaceStats?.unsealedPercentage ?? 0;
+  const densityModel = model.densityScatter?.pixelPoints ? {
+    comparisonId: "landsat-jaarbak-density", record,
+    title: t("soilComparison.densityChartTitle"), definition: t("soilComparison.densityChartDefinition"),
+    xLabel: model.densityScatter.xLabel, yLabel: model.densityScatter.yLabel,
+    xKey: "density", yKey: "temperature", pixelPoints: model.densityScatter.pixelPoints,
+    regression: model.densityScatter.regression,
+    slopeScale: 10,
+    slopeUnit: t("soilComparison.densitySlopeUnit"),
+    observation,
+    secondaryYear: model.secondaryYear,
+    expandedDescription: t("soilComparison.expandedDensityDescription", {
+      area: panelAreaName(record),
+      observed: landsatDateTime(observation?.acquiredAt),
+      year: model.secondaryYear,
+      heatwave: heatwave
+        ? t("landsat.heatwavePeriod", { start: formatDate(heatwave.start), end: formatDate(heatwave.end) })
+        : t("landsat.kindHeatwave"),
+    }),
+    caveat: t("sealedUrban.pixelRegressionCaveat"),
+  } : null;
   return `<div class="panel-hero comparison-hero">
     <p class="panel-eyebrow">${escapeHtml(t("soilComparison.heroKicker"))}</p>
     <h2 id="panel-title">${escapeHtml(record.sectorName)}</h2>
@@ -991,21 +1002,16 @@ function renderLandsatJaarbakComparison(model) {
     <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("soilComparison.matchedYear", { year: model.secondaryYear }))}</p>
   </div>
   <div class="panel-body comparison-body">
-    <section>
-      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("soilComparison.title"))}</p><h3>${escapeHtml(t("comparison.histogramTitle"))}</h3></div>
+    <section aria-labelledby="soil-temperature-distribution-title">
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("soilComparison.title"))}</p><h3 id="soil-temperature-distribution-title">${escapeHtml(t("comparison.histogramTitle"))}</h3></div>
       <p class="comparison-definition">${escapeHtml(t("comparison.surfaceTemperatureDefinition"))}</p>
       <p class="section-intro">${escapeHtml(t("comparison.histogramExplanation"))}</p>
-      <div class="comparison-chart-heading"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("soilComparison.expandCharts"))}</button></div>
-      ${comparisonHistogram(model, { showExpand: false })}
-      ${model.densityScatter?.pixelPoints ? `
-        <div class="section-heading soil-density-heading"><p class="section-kicker">${escapeHtml(t("soilComparison.densityAnalysisKicker"))}</p><h3>${escapeHtml(t("soilComparison.densityChartTitle"))}</h3></div>
-        ${sealedUrbanScatterChart({
-          comparisonId: "landsat-jaarbak-density", record,
-          title: t("soilComparison.densityChartTitle"), definition: t("soilComparison.densityChartDefinition"),
-          xLabel: model.densityScatter.xLabel, yLabel: model.densityScatter.yLabel,
-          xKey: "density", yKey: "temperature", pixelPoints: model.densityScatter.pixelPoints,
-          regression: model.densityScatter.regression,
-        }, { showExpand: false })}` : `<p class="panel-empty-state">${escapeHtml(t("soilComparison.densityUnavailable"))}</p>`}
+      ${comparisonHistogram(model)}
+      ${comparisonChartDialog(model)}
+    </section>
+    <section aria-labelledby="soil-density-analysis-title">
+      <div class="section-heading soil-density-heading"><p class="section-kicker">${escapeHtml(t("soilComparison.densityAnalysisKicker"))}</p><h3 id="soil-density-analysis-title">${escapeHtml(t("soilComparison.densityChartTitle"))}</h3></div>
+      ${densityModel ? `${sealedUrbanScatterChart(densityModel)}${sealedUrbanScatterDialog(densityModel)}` : `<p class="panel-empty-state">${escapeHtml(t("soilComparison.densityUnavailable"))}</p>`}
       ${model.densityScatter?.regression ? `<div class="summary-grid sealed-regression-grid">
         ${metricCard("sealedUrban.sample", formatNumber(model.densityScatter.regression.n, 0), "#315e66")}
         ${metricCard("soilComparison.nominalArea", t("unit.hectares", { value: formatNumber(model.densityScatter.regression.analysedAreaHa, 1) }), "#176b43")}
@@ -1014,7 +1020,6 @@ function renderLandsatJaarbakComparison(model) {
         ${metricCard("soilComparison.intercept", `${formatNumber(model.densityScatter.regression.intercept, 2)} °C`, "#53666b")}
         ${metricCard("soilComparison.matchedDensityYear", String(model.secondaryYear), "#53666b")}
       </div>` : ""}
-      ${comparisonChartDialog(model, { includeDensity: true })}
     </section>
     <section aria-labelledby="soil-comparison-series-title">
       <div class="section-heading"><p class="section-kicker">${escapeHtml(t("panel.detailsKicker"))}</p><h3 id="soil-comparison-series-title">${escapeHtml(t("comparison.seriesMetrics"))}</h3></div>
@@ -1035,6 +1040,7 @@ function renderLandsatJaarbakComparison(model) {
       <summary data-focus-key="soil-comparison-methodology-summary"><span><small>${escapeHtml(t("panel.methodologyKicker"))}</small>${escapeHtml(t("comparison.methodologyTitle"))}</span></summary>
       <div class="accordion-content methodology-copy">
         <p>${escapeHtml(t("soilComparison.assignment"))}</p>
+        <p>${escapeHtml(t("soilComparison.densityMethodology"))}</p>
         <p>${escapeHtml(t("soilComparison.methodTime"))}</p>
         ${model.secondaryStatus === "provisional" ? `<p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("soilComparison.provisional"))}</p>` : ""}
         <p>${escapeHtml(t("comparison.cloudExplanation"))}</p>
@@ -1214,7 +1220,7 @@ function compactPopulationTick(value) {
   return `${formatNumber(value / 1_000, value < 10_000 ? 1 : 0)}k`;
 }
 
-function heatPopulationBarChart(model, { expanded = false } = {}) {
+function heatPopulationBarChart(model, { expanded = false, showExpand = false } = {}) {
   const maximum = Math.max(...model.populationByScore.map(({ population }) => population), 1);
   const axisMaximum = Math.ceil(maximum / 5_000) * 5_000;
   const layout = heatPopulationBarLayout(axisMaximum);
@@ -1228,9 +1234,13 @@ function heatPopulationBarChart(model, { expanded = false } = {}) {
     population: formatNumber(entry.population, 0),
     sectors: entry.sectorCount,
     share: formatNumber(entry.populationShare, 1),
+    cumulativePopulation: formatNumber(entry.atOrAbovePopulation, 0),
+    cumulativeShare: formatNumber(entry.atOrAbovePopulationShare, 1),
   });
   return `<div class="heat-population-chart ${expanded ? "is-expanded" : ""}" data-heat-population-bar-chart>
-    <h4>${escapeHtml(t("heatPopulation.barTitle"))}</h4>
+    <div class="heat-population-chart-title-row"><h4>${escapeHtml(t("heatPopulation.barTitle"))}</h4>
+      ${expanded || !showExpand ? "" : `<button class="comparison-chart-expand" type="button" data-expand-comparison-chart data-dialog-target="heat-population-bars">${escapeHtml(t("heatPopulation.expandResidentsChart"))}</button>`}
+    </div>
     <p class="heat-population-chart-intro">${escapeHtml(t("heatPopulation.barDefinition"))}</p>
     <svg viewBox="0 0 ${layout.width} ${layout.height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
       <title id="${prefix}-title">${escapeHtml(t("heatPopulation.barTitle"))}</title>
@@ -1260,8 +1270,22 @@ function heatPopulationCharts(model, { expanded = false } = {}) {
   return `<div class="heat-population-charts ${expanded ? "is-expanded" : ""}">
     ${expanded ? "" : `<div class="heat-population-chart-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart>${escapeHtml(t("heatPopulation.expandCharts"))}</button></div>`}
     ${heatPopulationBoxPlot(model, { expanded })}
-    ${heatPopulationBarChart(model, { expanded })}
+    ${heatPopulationBarChart(model, { expanded, showExpand: !expanded })}
   </div>`;
+}
+
+function heatPopulationBarDialog(model) {
+  return `<dialog class="comparison-chart-dialog heat-population-chart-dialog" data-comparison-chart-dialog data-chart-dialog-id="heat-population-bars" aria-label="${escapeHtml(t("heatPopulation.expandedBarTitle", { area: panelAreaName(model.record) }))}">
+    <div class="comparison-chart-dialog-content">
+      <header><h3>${escapeHtml(t("heatPopulation.expandedBarTitle", { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("heatPopulation.closeResidentsChart"))}">&times;</button></header>
+      <p class="comparison-dialog-description">${escapeHtml(t("heatPopulation.expandedBarDescription", { metric: t(`heatMetric.${model.metric}`), area: panelAreaName(model.record) }))}</p>
+      ${heatPopulationBarChart(model, { expanded: true })}
+      <p class="comparison-academic-note">${escapeHtml(t("heatPopulation.cumulativeDenominator", {
+        population: formatNumber(model.comparablePopulation, 0),
+        excluded: formatNumber(model.excludedPopulation, 0),
+      }))}</p>
+    </div>
+  </dialog>`;
 }
 
 function heatPopulationChartDialog(model) {
@@ -1295,6 +1319,7 @@ function renderHeatPopulationComparison(model) {
       }))}</strong></p>
       ${heatPopulationCharts(model)}
       ${heatPopulationChartDialog(model)}
+      ${heatPopulationBarDialog(model)}
     </section>
     <details class="detail-accordion" data-section="heat-population-details">
       <summary data-focus-key="heat-population-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("heatPopulation.detailsTitle"))}</span></summary>
@@ -1552,6 +1577,7 @@ function sealedUrbanScatterChart(model, { expanded = false, showExpand = true } 
     <p class="sealed-scatter-intro">${escapeHtml(model.definition)}</p>
     <div class="sealed-scatter-stage">
       ${pixel ? `<canvas width="${width}" height="${height}" data-pixel-scatter-canvas data-pixel-scatter-source="${model.comparisonId === "landsat-jaarbak-density" ? "densityScatter" : "pixelPoints"}"
+        data-comparison-id="${escapeHtml(model.comparisonId)}"
         data-plot-left="${plot.left}" data-plot-top="${plot.top}" data-plot-width="${plot.width}" data-plot-height="${plot.height}"
         data-x-min="${bounds.xMinimum}" data-x-max="${bounds.xMaximum}" data-y-min="${bounds.yMinimum}" data-y-max="${bounds.yMaximum}" aria-hidden="true"></canvas>` : ""}
       <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
@@ -1560,6 +1586,7 @@ function sealedUrbanScatterChart(model, { expanded = false, showExpand = true } 
         <g class="sealed-scatter-grid" aria-hidden="true">
           ${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(value)}" y2="${y(value)}"></line>`).join("")}
         </g>
+        ${pixel ? `<rect class="sealed-scatter-hitarea" data-pixel-scatter-hit x="${plot.left}" y="${plot.top}" width="${plot.width}" height="${plot.height}" tabindex="0" aria-label="${escapeHtml(t("sealedUrban.keyboardInstructions"))}"></rect>` : ""}
         ${line ? `<line class="sealed-scatter-regression" x1="${x(line.x1)}" y1="${y(line.y1)}" x2="${x(line.x2)}" y2="${y(line.y2)}"></line>` : ""}
         ${pixel ? "" : `<g class="sealed-scatter-points" role="group" aria-label="${escapeHtml(model.title)}">${points.map((point, index) => {
           const label = sealedScatterPointLabel(model, point);
@@ -1581,11 +1608,22 @@ function sealedUrbanScatterChart(model, { expanded = false, showExpand = true } 
 }
 
 function sealedUrbanScatterDialog(model) {
+  const regression = model.regression;
+  const count = pixelPointCount(model.pixelPoints ?? model.points ?? []);
+  const analysedArea = regression?.analysedAreaHa ?? (model.pixelPoints ? count * .09 : null);
   return `<dialog class="comparison-chart-dialog sealed-scatter-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(model.title)}">
     <div class="comparison-chart-dialog-content">
       <header><h3>${escapeHtml(model.title)}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("sealedUrban.closeChart"))}">&times;</button></header>
-      <p class="comparison-dialog-description">${escapeHtml(t("sealedUrban.expandedDescription", { area: panelAreaName(model.record) }))}</p>
+      <p class="comparison-dialog-description">${escapeHtml(model.expandedDescription ?? t("sealedUrban.expandedDescription", { area: panelAreaName(model.record) }))}</p>
       ${sealedUrbanScatterChart(model, { expanded: true })}
+      ${regression ? `<div class="summary-grid sealed-regression-grid comparison-chart-summary">
+        ${metricCard("sealedUrban.sample", formatNumber(regression.n ?? regression.count ?? count, 0), "#315e66")}
+        ${Number.isFinite(analysedArea) ? metricCard("sealedUrban.eligibleArea", t("unit.hectares", { value: formatNumber(analysedArea, 1) }), "#176b43") : ""}
+        ${metricCard("sealedUrban.rSquared", regression.rSquared == null ? t("value.notAvailable") : formatNumber(regression.rSquared, 3), "#6d4ca0")}
+        ${metricCard("sealedUrban.slope", `${formatNumber(regression.slope * (model.slopeScale ?? 1), 3)} ${model.slopeUnit ?? ""}`.trim(), "#8f1d2c")}
+        ${model.yKey === "temperature" ? metricCard("soilComparison.intercept", `${formatNumber(regression.intercept, 2)} °C`, "#53666b") : ""}
+        ${model.secondaryYear ? metricCard("soilComparison.matchedDensityYear", String(model.secondaryYear), "#53666b") : ""}
+      </div>` : ""}
       <p class="comparison-academic-note">${escapeHtml(model.caveat)}</p>
     </div>
   </dialog>`;

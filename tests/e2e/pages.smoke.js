@@ -283,8 +283,8 @@ test("opens every public comparison from either participant and restores the ini
       await expect(chart).toBeVisible();
       if (comparisonId === "landsat-groenkaart") {
         await expect(chart.locator("canvas[data-pixel-scatter-canvas]")).toBeVisible();
-        await expect(page.locator("#detail-panel")).toContainText(/eligible clear Landsat pixels are plotted/);
-        await expect(page.locator("#detail-panel")).not.toContainText("0 eligible clear Landsat pixels are plotted");
+        await expect(page.locator("#detail-panel")).toContainText(/eligible clear Landsat observations are plotted/);
+        await expect(page.locator("#detail-panel")).not.toContainText("0 eligible clear Landsat observations are plotted");
       } else {
         await expect(chart.locator("[data-scatter-sector]").first()).toBeVisible();
       }
@@ -295,7 +295,7 @@ test("opens every public comparison from either participant and restores the ini
       await expect(page.locator("[data-comparison-chart-dialog] .sealed-urban-scatter.is-expanded")).toBeVisible();
       await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
     } else {
-      await expect(page.locator("[data-expand-comparison-chart]")).toBeVisible();
+      await expect(page.locator("[data-expand-comparison-chart]").first()).toBeVisible();
     }
     await removeComparison(page, fromLayer, testInfo);
   }

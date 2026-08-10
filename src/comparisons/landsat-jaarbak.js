@@ -119,7 +119,10 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
     const loaded = densityPointCache.get(observationId);
     if (!loaded || typeof loaded.then === "function") return null;
     const { points, density, scope } = loaded;
-    const targetSector = record.scope === "sector" ? manifest.sectorIndexes?.[record.sectorId] : null;
+    // Selected sector records have a sectorId but no synthetic scope field.
+    const targetSector = record.sectorId && record.scope !== "municipality" && record.scope !== "region"
+      ? manifest.sectorIndexes?.[record.sectorId]
+      : null;
     const targetMunicipality = record.scope === "municipality" ? manifest.municipalityIndexes?.[record.municipality] : null;
     const belongs = (offset) => {
       if (targetSector) return scope.data[offset + 2] === Number(targetSector);

@@ -4,7 +4,8 @@ import { validateLandsatGroenkaartManifest } from "../src/comparisons/landsat-gr
 import { validateLandsatIncomeManifest } from "../src/comparisons/landsat-income.js";
 import { isOfficialSealedPixel } from "../src/comparisons/exact-sealed-raster.js";
 import {
-  comparisonPixelOffset, incomeLevel, ordinaryLeastSquares, selectedDensity,
+  comparisonPixelOffset, greenDensityColor, incomeLevel, ordinaryLeastSquares, selectedDensity,
+  surroundingAreaHa,
 } from "../src/comparisons/sealed-urban-shared.js";
 
 const commonLandsat = {
@@ -16,14 +17,14 @@ const commonLandsat = {
   municipalityIndexes: { Halle: 1 },
   coordinates: [[4, 51], [5, 51], [5, 50], [4, 50]],
   imageSize: [100, 100],
-  observations: { observation: {} },
+  observations: { observation: { displayDataUrl: "shared/display.png", pointDataUrl: "points.png" } },
 };
 
 describe("sealed urban comparison contracts", () => {
   it("validates the three explicit products", () => {
     expect(validateLandsatGroenkaartManifest({
       ...commonLandsat,
-      schemaVersion: 2,
+      schemaVersion: 3,
       comparisonId: "landsat-groenkaart",
       primaryLayerId: "landsat-temperature",
       secondaryLayerId: "groenkaart",
@@ -34,11 +35,14 @@ describe("sealed urban comparison contracts", () => {
     }).comparisonId).toBe("landsat-groenkaart");
     expect(validateLandsatIncomeManifest({
       ...commonLandsat,
+      schemaVersion: 2,
       comparisonId: "landsat-income",
       primaryLayerId: "landsat-temperature",
       secondaryLayerId: "income",
       incomeYear: 2023,
       minimumSectorPixels: 10,
+      displayResolutionMeters: 1,
+      urbanFabricMaskUrl: "shared/urban-fabric-2021.pmtiles",
     }).comparisonId).toBe("landsat-income");
     expect(validateGroenkaartIncomeManifest({
       schemaVersion: 2,
@@ -86,6 +90,17 @@ describe("sealed urban comparison contracts", () => {
     expect(ordinaryLeastSquares([
       { income: 20_000, density: 10 }, { income: 20_000, density: 20 }, { income: 20_000, density: 30 },
     ], "income", "density")).toBeNull();
+  });
+
+  it("uses a continuous green interpolation rather than density bins", () => {
+    expect(greenDensityColor(0)).toEqual([247, 252, 245]);
+    expect(greenDensityColor(25)).toEqual([199, 233, 192]);
+    expect(greenDensityColor(12.5)).toEqual([223, 243, 219]);
+    expect(greenDensityColor(42.37)).not.toEqual(greenDensityColor(42));
+    expect(greenDensityColor(100)).toEqual([0, 68, 27]);
+    expect(surroundingAreaHa(0)).toBe(0);
+    expect(surroundingAreaHa(50)).toBeCloseTo(1.5708, 4);
+    expect(surroundingAreaHa(100)).toBeCloseTo(3.1416, 4);
   });
 
   it("uses fixed income boundaries and locates browser pixels", () => {
