@@ -210,6 +210,11 @@ test("serves the complete application below the GitHub Pages project path", asyn
     await expect.poll(() => rasterVisibility(page)).toMatchObject({ jaarbak: "none", density: "visible" });
     await page.locator('[data-layer="landsat-temperature"]').click();
     await page.locator("#panel-close").click();
+    // The panel closes with a short transition. Wait until it no longer covers
+    // the map before moving the pointer, otherwise a slower CI runner can send
+    // the single hover event to the departing panel instead of MapLibre.
+    await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+    await page.waitForTimeout(250);
     const point = await page.evaluate(() => {
       const projected = window.__heatMap.map.project([4.29, 50.73]);
       const rectangle = window.__heatMap.map.getCanvas().getBoundingClientRect();
