@@ -129,7 +129,7 @@ export const nl = Object.freeze({
   "soilComparison.contextMeta": "Landsat-temperatuur van 30 m · bodemafdekking van 1 m {year}",
   "soilComparison.contextText": "NASA/USGS Landsat meet de landoppervlaktetemperatuur tijdens de geselecteerde satellietoverkomst in een hittegolf. De Vlaamse overheid classificeert elke bronpixel van 1 m als afgedekt of niet afgedekt; wij tonen de exacte afgedekte pixels onder de volledige Landsat-waarneming.",
   "soilComparison.contextTextExact": "De volledige NASA/USGS Landsat-waarneming van de landoppervlaktetemperatuur blijft zichtbaar. Helderrood toont exacte pixels van 1 m die in de gekoppelde bodemafdekkingskaart als afgedekt zijn geclassificeerd.",
-  "soilComparison.contextNote": "De landoppervlaktetemperatuur is niet de luchttemperatuur. Het histogram groepeert Landsat-metingen van 30 m volgens hun dominante oppervlakteklasse; de tweede grafiek relateert elke heldere meting aan de bodemafdekkingsdichtheid binnen 100 m.",
+  "soilComparison.contextNote": "De landoppervlaktetemperatuur is niet de luchttemperatuur. Het histogram weegt elke Landsat-temperatuur volgens het exact waargenomen afgedekte of onafgedekte oppervlak; de tweede grafiek relateert elke heldere meting aan de bodemafdekkingsdichtheid binnen 100 m.",
   "soilComparison.legendTitle": "Temperatuur en bodemafdekking",
   "soilComparison.baseLegendTitle": "Onderlaag bodemafdekking",
   "soilComparison.legendNote": "15-50 °C · bodemafdekking {year}",
