@@ -1,9 +1,8 @@
-"""Prepare Landsat surface-temperature distributions by JaarBAK class.
+"""Prepare exact-area Landsat temperature distributions by Soil sealing class.
 
-The analytical join happens on the native aligned 30 m Landsat grid. JaarBAK
-remains a 1 m binary source: its pixels are area-averaged into each Landsat
-pixel, then classified only when at least half of that Landsat pixel has valid
-JaarBAK coverage. Browser PNGs are lossless visual indexes, never statistics.
+Each native 1 m Soil sealing cell inherits its parent 30 m Landsat temperature
+and contributes one square metre to the distribution. It never becomes a new
+temperature observation. Browser PNGs are visual indexes, never statistics.
 """
 
 from __future__ import annotations
@@ -15,6 +14,7 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import rasterio
+from scipy.stats import rankdata
 from PIL import Image
 from affine import Affine
 from rasterio.transform import array_bounds
@@ -24,10 +24,11 @@ from rasterio.windows import Window, from_bounds
 from .constants import CACHE_ROOT, MUNICIPALITIES, SECTORS_PATH
 from .landsat import EXPECTED_SELECTED_OBSERVATIONS, _read_analysis
 from .landsat_urban_atlas import (
-    BIN_EDGES, _reproject_byte, _scope_distributions, _subpixel_majority, _web_grid, _write_png,
+    BIN_EDGES, _reproject_byte, _subpixel_majority, _web_grid, _write_png,
 )
 from .pipeline import file_hash, update_index
 from .density import _fraction_grid, focal_density
+from .exact_landsat_mask import SOIL_SEALED, SOIL_UNSEALED, prepare_exact_mask_table
 
 OUTPUT_ROOT = CACHE_ROOT / "landsat-jaarbak"
 YEAR_BY_OBSERVATION = {
@@ -138,9 +139,20 @@ def ordinary_least_squares(x_values, y_values):
     predicted = intercept + slope * x
     denominator = np.sum((y - np.mean(y)) ** 2)
     r_squared = 0.0 if denominator == 0 else 1 - np.sum((y - predicted) ** 2) / denominator
+    x_scale = np.sqrt(np.sum((x - np.mean(x)) ** 2))
+    y_scale = np.sqrt(np.sum((y - np.mean(y)) ** 2))
+    pearson = None if x_scale == 0 or y_scale == 0 else np.sum((x - np.mean(x)) * (y - np.mean(y))) / (x_scale * y_scale)
+    ranked_x, ranked_y = rankdata(x, method="average"), rankdata(y, method="average")
+    rank_x_scale = np.sqrt(np.sum((ranked_x - np.mean(ranked_x)) ** 2))
+    rank_y_scale = np.sqrt(np.sum((ranked_y - np.mean(ranked_y)) ** 2))
+    spearman = None if rank_x_scale == 0 or rank_y_scale == 0 else np.sum(
+        (ranked_x - np.mean(ranked_x)) * (ranked_y - np.mean(ranked_y))
+    ) / (rank_x_scale * rank_y_scale)
     return {
         "n": int(x.size), "slope": round(float(slope), 10),
         "intercept": round(float(intercept), 8), "rSquared": round(float(r_squared), 8),
+        "pearsonR": None if pearson is None else round(float(pearson), 8),
+        "spearmanRho": None if spearman is None else round(float(spearman), 8),
         "analysedAreaHa": round(float(x.size) * 0.09, 4),
     }
 
@@ -215,6 +227,60 @@ def display_scope_indexes(sectors, grid):
     return region_index, municipality_index, municipality_lookup
 
 
+def _weighted_percentile(values, weights, percentile):
+    if not len(values):
+        return None
+    order = np.argsort(values, kind="stable")
+    values, weights = values[order], weights[order]
+    threshold = float(np.sum(weights)) * percentile / 100
+    return round(float(values[np.searchsorted(np.cumsum(weights), threshold, side="left")]), 3)
+
+
+def _exact_soil_distribution(table, selected):
+    temperature = table.temperature[table.landsat - 1]
+    clear = selected & (table.status == 1) & np.isfinite(temperature)
+    cloud = selected & (table.status == 2)
+    missing = selected & (table.status == 0)
+    values = temperature[clear]
+    weights = table.area_m2[clear].astype(np.float64)
+    inside = (values >= BIN_EDGES[0]) & (values <= BIN_EDGES[-1])
+    bins, _ = np.histogram(values[inside], bins=BIN_EDGES, weights=weights[inside])
+    area = float(np.sum(weights))
+    return {
+        "clearObservedAreaHa": round(area / 10_000, 4),
+        "cloudObservedAreaHa": round(float(np.sum(table.area_m2[cloud])) / 10_000, 4),
+        "otherMissingAreaHa": round(float(np.sum(table.area_m2[missing])) / 10_000, 4),
+        "contributingLandsatCount": int(np.unique(table.landsat[clear]).size),
+        "underflowAreaM2": int(round(float(np.sum(weights[values < BIN_EDGES[0]])))),
+        "overflowAreaM2": int(round(float(np.sum(weights[values > BIN_EDGES[-1]])))),
+        "binAreaM2": np.rint(bins).astype(int).tolist(),
+        "meanC": None if not area else round(float(np.average(values, weights=weights)), 3),
+        "medianC": _weighted_percentile(values, weights, 50),
+        "p10C": _weighted_percentile(values, weights, 10),
+        "p90C": _weighted_percentile(values, weights, 90),
+    }
+
+
+def _exact_soil_scope_distributions(table, sector_meta):
+    scopes = {"region:zennevallei": tuple(sector_meta)}
+    scopes.update({f"sector:{item['sectorId']}": (index,) for index, item in sector_meta.items()})
+    for municipality in MUNICIPALITIES:
+        scopes[f"municipality:{municipality}"] = tuple(
+            index for index, item in sector_meta.items() if item["municipality"] == municipality
+        )
+    result = {}
+    for scope_id, indexes in scopes.items():
+        scope = np.isin(table.sector, indexes)
+        result[scope_id] = {
+            "assignedAreaHa": round(float(np.sum(table.area_m2[scope])) / 10_000, 4),
+            "series": {
+                "class:sealed": _exact_soil_distribution(table, scope & (table.soil == SOIL_SEALED)),
+                "class:unsealed": _exact_soil_distribution(table, scope & (table.soil == SOIL_UNSEALED)),
+            },
+        }
+    return result
+
+
 def prepare_landsat_jaarbak():
     landsat_path = CACHE_ROOT / "landsat-temperature" / "manifest.json"
     jaarbak_path = CACHE_ROOT / "jaarbak" / "manifest.json"
@@ -252,18 +318,10 @@ def prepare_landsat_jaarbak():
         sector_index.astype(np.uint8), np.full_like(region_index, 255, dtype=np.uint8),
     ))
 
-    class_cache = {}
     density_cache = {}
     observations = {}
     for observation_id in selected_ids:
         year = YEAR_BY_OBSERVATION[observation_id]
-        if year not in class_cache:
-            source = CACHE_ROOT / "raw" / "jaarbak" / f"jaarbak-{year}.tif"
-            if not source.exists():
-                raise FileNotFoundError(f"Missing cached JaarBAK source for {year}: {source}")
-            print(f"JaarBAK {year}: aligning the 1 m source to Landsat", flush=True)
-            class_cache[year] = _classify_jaarbak(source, grid)[0]
-        soil_class = class_cache[year]
         if year not in density_cache:
             print(f"JaarBAK {year}: sampling 100 m density on the Landsat grid", flush=True)
             density_cache[year] = _density_on_landsat(year, grid)[0]
@@ -273,9 +331,8 @@ def prepare_landsat_jaarbak():
         temperature, status, _, observation_grid = _read_analysis(analysis)
         if observation_grid != grid:
             raise ValueError(f"{observation_id}: analytical grid is not aligned.")
-        distributions = _scope_distributions(
-            temperature, status, soil_class, sector_index, sector_meta, SERIES,
-        )
+        exact = prepare_exact_mask_table(observation_id, year)
+        distributions = _exact_soil_scope_distributions(exact, sector_meta)
         distribution_path = OUTPUT_ROOT / "distributions" / f"{observation_id}.json"
         distribution_path.parent.mkdir(parents=True, exist_ok=True)
         density_analysis = _density_scope_analysis(
@@ -283,7 +340,7 @@ def prepare_landsat_jaarbak():
             municipality_index, sector_meta, municipality_lookup,
         )
         distribution_path.write_text(json.dumps({
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "observationId": observation_id,
             "secondaryYear": year,
             "secondaryStatus": jaarbak["years"][str(year)]["status"],
@@ -321,7 +378,7 @@ def prepare_landsat_jaarbak():
         }
 
     manifest = {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "comparisonId": "landsat-jaarbak",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "jaarbak",
@@ -329,13 +386,16 @@ def prepare_landsat_jaarbak():
         "maximumSeries": 2,
         "temperatureScale": {"minimum": 15, "maximum": 50, "step": 0.5, "unit": "°C"},
         "binEdges": BIN_EDGES.tolist(),
+        "maskResolutionMeters": 1,
+        "temperatureResolutionMeters": 30,
+        "aggregation": "exact-masked-area",
+        "minimumAnalysedAreaHa": 0.1,
         "classification": {
             "sourceResolutionMetres": 1,
-            "targetResolutionMetres": 30,
-            "minimumValidCoverage": 0.5,
-            "sealedRule": "fraction > 0.5",
-            "unsealedRule": "fraction < 0.5",
-            "ties": "excluded",
+            "temperatureResolutionMetres": 30,
+            "aggregation": "exact-masked-area",
+            "minimumAnalysedAreaHa": 0.1,
+            "areaContributionSquareMetres": 1,
         },
         "yearByObservation": YEAR_BY_OBSERVATION,
         "coordinates": web["coordinates"],

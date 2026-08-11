@@ -86,25 +86,43 @@ function selectedDensity(configuration, offset) {
 }
 
 async function composeTile(configuration, z, x, y, signal) {
-  const [jaarbak, urban] = await Promise.all([
-    decodeTile(configuration.jaarbakUrl, z, x, y, signal),
+  const [jaarbak, urban, urbanClasses] = await Promise.all([
+    configuration.jaarbakUrl ? decodeTile(configuration.jaarbakUrl, z, x, y, signal) : null,
     configuration.urbanMaskUrl ? decodeTile(configuration.urbanMaskUrl, z, x, y, signal) : null,
+    configuration.urbanClassUrl ? decodeTile(configuration.urbanClassUrl, z, x, y, signal) : null,
   ]);
-  if (!jaarbak || (configuration.urbanMaskUrl && !urban)) return transparentTile();
+  if ((configuration.jaarbakUrl && !jaarbak)
+    || (configuration.urbanMaskUrl && !urban)
+    || (configuration.urbanClassUrl && !urbanClasses)) return transparentTile();
+  const selectedUrbanIndexes = new Set(configuration.selectedUrbanIndexes ?? []);
   const canvas = createTileCanvas();
   const context = canvas.getContext("2d");
   const output = context.createImageData(TILE_SIZE, TILE_SIZE);
   for (let row = 0; row < TILE_SIZE; row += 1) {
     for (let column = 0; column < TILE_SIZE; column += 1) {
       const tileOffset = (row * TILE_SIZE + column) * 4;
-      if (!isOfficialSealedPixel(jaarbak.data, tileOffset) || (urban && urban.data[tileOffset + 3] === 0)) continue;
+      if ((jaarbak && !isOfficialSealedPixel(jaarbak.data, tileOffset))
+        || (urban && urban.data[tileOffset + 3] === 0)
+        || (urbanClasses && (!urbanClasses.data[tileOffset + 3]
+          || !selectedUrbanIndexes.has(urbanClasses.data[tileOffset])))) continue;
       if (configuration.mode === "sealed") {
         output.data.set([...SEALED_RGB, 255], tileOffset);
         continue;
       }
       const offset = rasterOffset(configuration, z, x, y, column, row);
       if (offset < 0) continue;
-      if (configuration.mode === "density") {
+      if (configuration.scopeData && configuration.scopeIndex
+        && configuration.scopeData.data[offset + 1] !== configuration.scopeIndex) continue;
+      if (configuration.mode === "density" || configuration.mode === "density-with-status") {
+        if (configuration.mode === "density-with-status") {
+          const status = configuration.temperatureData?.data[offset + 3];
+          if (status === 254) {
+            const light = (row + column) % 8 < 4;
+            output.data.set(light ? [194, 201, 203, 235] : [126, 135, 139, 235], tileOffset);
+            continue;
+          }
+          if (status !== 255) continue;
+        }
         const density = selectedDensity(configuration, offset);
         if (density == null) continue;
         output.data.set([...greenDensityColor(density), 232], tileOffset);
@@ -247,16 +265,32 @@ export function createExactSealedRaster({ id, beforeLayerId, opacity = 1 }) {
       activeSlot = -1;
     },
     async contains(point) {
+      return Boolean(await this.inspectMask(point));
+    },
+    async inspectMask(point) {
       const configuration = configurations.get(activeToken);
-      if (!configuration) return false;
+      if (!configuration) return null;
       const tile = tilePixel(point);
-      const [jaarbak, urban] = await Promise.all([
-        decodeTile(configuration.jaarbakUrl, tile.z, tile.x, tile.y),
+      const [jaarbak, urban, urbanClasses] = await Promise.all([
+        configuration.jaarbakUrl ? decodeTile(configuration.jaarbakUrl, tile.z, tile.x, tile.y) : null,
         configuration.urbanMaskUrl ? decodeTile(configuration.urbanMaskUrl, tile.z, tile.x, tile.y) : null,
+        configuration.urbanClassUrl ? decodeTile(configuration.urbanClassUrl, tile.z, tile.x, tile.y) : null,
       ]);
       const offset = (tile.row * TILE_SIZE + tile.column) * 4;
-      return Boolean(jaarbak && isOfficialSealedPixel(jaarbak.data, offset)
-        && (!configuration.urbanMaskUrl || Boolean(urban && urban.data[offset + 3] > 0)));
+      const selectedUrbanIndexes = new Set(configuration.selectedUrbanIndexes ?? []);
+      const included = Boolean((!configuration.jaarbakUrl || (jaarbak && isOfficialSealedPixel(jaarbak.data, offset)))
+        && (!configuration.urbanMaskUrl || Boolean(urban && urban.data[offset + 3] > 0))
+        && (!configuration.urbanClassUrl || Boolean(urbanClasses && urbanClasses.data[offset + 3] > 0
+          && selectedUrbanIndexes.has(urbanClasses.data[offset]))));
+      if (!included) return null;
+      const dataOffset = rasterOffset(configuration, tile.z, tile.x, tile.y, tile.column, tile.row);
+      if (dataOffset < 0 || (configuration.scopeData && configuration.scopeIndex
+        && configuration.scopeData.data[dataOffset + 1] !== configuration.scopeIndex)) return null;
+      return {
+        urbanClassIndex: urbanClasses?.data[offset] ?? null,
+        sealed: Boolean(jaarbak),
+        dataOffset,
+      };
     },
     layerId: () => activeSlot < 0 ? null : `${id}-${activeSlot}`,
   };

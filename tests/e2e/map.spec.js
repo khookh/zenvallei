@@ -203,6 +203,36 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
 });
 
+test("sizes short desktop result panels to their content and disclosures", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "Compact layouts retain bottom-sheet sizing.");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await showControls(page, { minimiseResults: false });
+  await page.locator('[data-layer="population"]').click();
+  const panel = page.locator("#detail-panel");
+  await expect(panel).toHaveAttribute("aria-hidden", "false");
+  const initial = await panel.boundingBox();
+  expect(initial.height).toBeLessThan(872);
+  expect(initial.y + initial.height).toBeLessThanOrEqual(886);
+
+  await panel.locator('[data-section="population-details"] summary').click();
+  await panel.locator('[data-section="population-methodology"] summary').click();
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const expanded = await panel.boundingBox();
+  expect(expanded.height).toBeGreaterThanOrEqual(initial.height - 1);
+  expect(expanded.height).toBeLessThanOrEqual(872);
+
+  await panel.locator('[data-section="population-details"] summary').click();
+  await panel.locator('[data-section="population-methodology"] summary').click();
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const collapsed = await panel.boundingBox();
+  expect(collapsed.height).toBeLessThanOrEqual(expanded.height + 1);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const medium = await panel.boundingBox();
+  expect(medium.height).toBeLessThanOrEqual(740);
+});
+
 test("introduces the personal V0.1 project on every load", async ({ page }) => {
   await page.reload();
   const dialog = page.locator("#project-intro");
@@ -212,9 +242,10 @@ test("introduces the personal V0.1 project on every load", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("#project-intro-language")).toHaveText("NL");
   await expect(dialog).toContainText("Heat Resilience");
-  await expect(dialog).toContainText("urban heat-island effect");
-  await expect(dialog).toContainText("Department of Care, Government of Flanders");
-  await expect(dialog).toContainText("large language models (LLMs)");
+  await expect(dialog).toContainText("This is a personal, open project for exploring heat vulnerability, its spatial distribution and contributing factors.");
+  await expect(dialog).toContainText("It is currently limited to Zennevallei. Feedback and collaboration are welcome.");
+  await expect(dialog).toContainText("No cookies, analytics, accounts or persistent map choices are used.");
+  await expect(dialog).not.toContainText("large language models (LLMs)");
   await expect(dialog.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
   await expect(dialog.locator('a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("Send feedback");
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
@@ -229,8 +260,10 @@ test("introduces the personal V0.1 project on every load", async ({ page }) => {
   await page.locator("#project-intro-language").click();
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
   await expect(dialog).toContainText("Heat Resilience");
-  await expect(dialog).toContainText("stedelijk hitte-eilandeffect");
-  await expect(dialog).toContainText("grote taalmodellen (LLM’s)");
+  await expect(dialog).toContainText("Dit is een persoonlijk, open project om hittekwetsbaarheid, de ruimtelijke spreiding ervan en bijdragende factoren te verkennen.");
+  await expect(dialog).toContainText("Het project is momenteel beperkt tot de Zennevallei. Feedback en samenwerking zijn welkom.");
+  await expect(dialog).toContainText("Er worden geen cookies, analytics, accounts of blijvende kaartkeuzes gebruikt.");
+  await expect(dialog).not.toContainText("grote taalmodellen (LLM’s)");
   await dialog.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(page.locator("#about-button")).toBeFocused();
@@ -558,7 +591,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(panel.locator(".summary-card").filter({ hasText: "Kwetsbaarheid" })).toContainText("8");
   await expect(panel).toContainText("Relatieve rangschikking van het gemiddelde aantal hittegolfgraaddagen");
   await expect(panel).toContainText("geen eenvoudig gemiddelde");
-  await expect(panel).toContainText("Officieel broncijfer");
+  await expect(panel).toContainText("Officiële broncijfers van het Departement Zorg");
   await panel.getByText("Bekijk alle kwetsbaarheidsindicatoren").click();
   await expect(panel).toContainText("3,75");
   await expect(panel).toContainText("gewicht 2");
@@ -719,7 +752,7 @@ test("switches the complete interface to English without resetting exploration s
   await expect(page.locator("#layer-context-meta")).toHaveText("Official source values · 154 Statbel sectors · 2026");
   await expect(page.locator("#layer-context-copy")).toContainText("we display them without recalculation");
   await expect(page.locator("#layer-context-sources")).toContainText("Department of Care, Government of Flanders");
-  await expect(panel).toContainText("Scores: Department of Care, Government of Flanders (2026)");
+  await expect(panel).toContainText("Official scores published by the Department of Care, Government of Flanders");
   await expect(page.locator(".maplibregl-ctrl-zoom-in")).toHaveAttribute("aria-label", "Zoom in");
   await expect(page.locator("#selection-announcement")).toContainText("Details opened");
   await expect(panel).toHaveAttribute("aria-hidden", "false");
@@ -746,7 +779,7 @@ test("switches the complete interface to English without resetting exploration s
   await expect(page.locator("#language-toggle")).toHaveText("NL");
 });
 
-test("loads Urban Atlas lazily and presents green and artificialisation statistics", async ({ page }) => {
+test("loads Urban Atlas lazily and presents seven exhaustive category groups", async ({ page }) => {
   const search = page.locator("#sector-search");
   await search.fill("23003A001");
   await search.press("Enter");
@@ -764,7 +797,7 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await expect(page.locator("#legend-title")).toHaveText("Urban Atlas-landbedekking 2021");
   await expect(page.locator("#layer-context-meta")).toContainText("geïnterpreteerde polygonen · 2021");
   await expect(page.locator("#layer-context-copy")).toContainText("landbedekking en landgebruik");
-  await expect(page.locator("#layer-context-copy")).toContainText("Wij berekenen groenbedekking");
+  await expect(page.locator("#layer-context-copy")).toContainText("zeven presentatiegroepen");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Urban Atlas 2021 in de Zennevallei");
   await expect(page.locator("#legend-content")).toContainText("Kunstmatige oppervlakken");
   await expect(page.locator("#legend-content")).toContainText("Kruidachtige vegetatie");
@@ -779,18 +812,18 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await showControls(page);
   await search.fill("23003A001");
   await search.press("Enter");
-  await expect(panel).toContainText("Dominante Urban Atlas-klasse");
+  await expect(panel).toContainText("Grootste presentatiegroep");
   await expect(panel).toContainText("Bossen");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Groenbedekking" })).toContainText("40%");
-  await expect(panel.locator(".summary-card").filter({ hasText: "Artificialisering" })).toContainText("40%");
+  await expect(panel).toContainText("Categorieverdeling Urban Atlas");
+  await expect(panel).toContainText("Stedelijk weefsel");
+  await expect(panel).toContainText("Groen en halfnatuurlijk land");
   await expect(panel).toContainText("Kruidachtige vegetatie");
   await expect(panel).toContainText("Weilanden");
   await expect(panel).toContainText("publieke toegang");
   await expect(panel).toContainText("private toegang");
   await expect(panel).toContainText("toegang onbekend");
   await expect(panel).toContainText("Bouwterreinen");
-  await expect(panel).toContainText("Berekend door deze toepassing");
-  await expect(panel.locator('[data-section="urban-atlas-other"]')).not.toHaveAttribute("open", "");
+  await expect(panel.locator('[data-section="urban-atlas-details"]')).not.toHaveAttribute("open", "");
   const subsequentSwitch = await page.evaluate(async () => {
     await window.__heatMap.setLayer("heat");
     const started = performance.now();
@@ -802,12 +835,12 @@ test("loads Urban Atlas lazily and presents green and artificialisation statisti
   await page.locator("#language-toggle").click();
   await expect(atlasButton).toHaveText("Urban Atlas 2021");
   await expect(page.locator("#legend-title")).toHaveText("Urban Atlas land cover 2021");
-  await expect(panel).toContainText("Green coverage");
+  await expect(panel).toContainText("Urban Atlas category breakdown");
   await expect(panel).toContainText("Herbaceous vegetation");
   await expect(panel).toContainText("Pastures");
   await expect(panel).toContainText("not yet validated");
 
-  await expect(panel.locator('[data-section="urban-atlas-green"]')).toHaveAttribute("open", "");
+  await expect(panel.locator('[data-section="urban-atlas-details"]')).not.toHaveAttribute("open", "");
 
   await page.locator("#language-toggle").click();
   const municipalityCounts = {
@@ -836,8 +869,8 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await page.locator('[data-layer="urban-atlas"]').click();
   await expect(panel).toHaveAttribute("aria-hidden", "false");
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
-  await expect(panel).toContainText("Groenbedekking");
-  await expect(panel).toContainText("40%");
+  await expect(panel).toContainText("Categorieverdeling Urban Atlas");
+  await expect(panel).toContainText("Stedelijk weefsel");
   expect(await page.evaluate(() => window.__heatMap.map.getFilter("urban-atlas-fill"))).toEqual(["==", ["get", "municipality"], "Beersel"]);
 
   await showControls(page);
@@ -869,7 +902,7 @@ test("closes stale results on layer changes and opens meaningful Zennevallei sum
   await expect(panel).toHaveAttribute("aria-hidden", "false");
 
   const summaries = [
-    ["urban-atlas", "Groenbedekking"],
+    ["urban-atlas", "Categorieverdeling Urban Atlas"],
     ["jaarbak", "Afgedekte oppervlakte"],
     ["groenkaart", "Hoog groen"],
     ["landgebruik", "Grootste klasse"],
@@ -1006,19 +1039,18 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   await expect(panel).toContainText("How to use the map");
   await expect(panel).toContainText("What each layer tells you");
   await expect(panel).toContainText("Land use");
-  await expect(panel).toContainText("Why 154 sectors?");
-  await expect(panel).toContainText("Statbel defines their codes and boundaries");
-  await expect(panel).toContainText("Official producer");
-  await expect(panel).toContainText("What we add");
-  await expect(panel).toContainText("OpenStreetMap is only the background map");
+  await expect(panel).toContainText("154 statistical sectors in seven Zennevallei municipalities");
+  await expect(panel.locator(".about-layer-row")).toHaveCount(8);
   await expect(panel).toContainText("A personal and open V0.1 project");
-  await expect(panel).toContainText("large language models (LLMs)");
   await expect(panel.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
-  await expect(panel).toContainText("This application uses no cookies, analytics, accounts or persistent identifiers");
-  await expect(panel).toContainText("GitHub Pages records visitors' IP addresses");
-  await expect(panel).toContainText("OpenStreetMap receives ordinary request information");
-  await expect(panel.locator('.about-privacy a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("stefanodonne@gmail.com");
-  await expect(panel).toContainText("Sources and reference dates");
+  await expect(panel).toContainText("No cookies, analytics, accounts or persistent map choices are used");
+  await expect(panel.locator('a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("Send feedback");
+  const sourceAction = panel.getByRole("button", { name: "Map and data sources" });
+  await sourceAction.click();
+  await expect(page.locator(".map-source-dialog")).toBeVisible();
+  await expect(page.locator(".map-source-dialog")).toContainText("OpenStreetMap");
+  await page.keyboard.press("Escape");
+  await expect(sourceAction).toBeFocused();
   await panel.press("Escape");
   await expect(page.locator("#about-button")).toBeFocused();
 });

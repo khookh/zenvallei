@@ -1,28 +1,30 @@
 import { formatNumber, t } from "../i18n.js";
 import { authorityLink } from "../source-authorities.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
+import { hideComparisonVeil, showComparisonVeil } from "./map-veil.js";
 import {
   comparisonAreaRecord, comparisonPixelOffset, GREEN_DENSITY_COLORS, GREEN_DENSITY_GRADIENT,
-  GREEN_DENSITY_STOPS, greenClassSelector, hideIncomeSymbols, incomeLegend,
+  GREEN_DENSITY_STOPS, greenClassSelector, hasUrbanSurfaceContract, hideIncomeSymbols, incomeLegend,
   loadImageData, mountIncomeSymbols, ordinaryLeastSquares, safeAsset,
-  SEALED_URBAN_SOURCE_URLS, sectorPointLabel, selectedDensity, surroundingAreaHa,
+  SEALED_URBAN_SOURCE_URLS, sectorPointLabel, selectedUrbanClassIndexes, surroundingAreaHa,
+  urbanSurfaceSelector,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "groenkaart-income-density";
 const SYMBOL_LAYER_ID = "sealed-urban-income-symbols-green";
 const BEFORE_LAYER = "heat-sectors-hit-area";
-const scopeId = (record) => record.scope === "region" ? "region:zennevallei"
-  : record.scope === "municipality" ? `municipality:${record.municipality}` : `sector:${record.sectorId}`;
-
 export function validateGroenkaartIncomeManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 2 || manifest.comparisonId !== "groenkaart-income"
+  if (!manifest || manifest.schemaVersion !== 4 || manifest.comparisonId !== "groenkaart-income"
     || manifest.primaryLayerId !== "groenkaart" || manifest.secondaryLayerId !== "income"
     || manifest.greenMapYear !== 2021 || manifest.urbanAtlasYear !== 2021
     || manifest.jaarbakYear !== 2021 || manifest.incomeYear !== 2023
     || manifest.analysisResolutionMeters !== 10
     || !manifest.scopeIndexUrl || !manifest.densityNonGreenUrl || !manifest.municipalityIndexes
-    || !manifest.urbanFabricMaskUrl || manifest.statisticWeighting !== "exact-sealed-urban-area"
-    || JSON.stringify(manifest.urbanFabricCodes) !== JSON.stringify(["11100", "11210", "11220", "11230", "11240"])) {
+    || !manifest.urbanAtlasClassMaskUrl || !manifest.urbanAtlasClassIndexes
+    || !hasUrbanSurfaceContract(manifest)
+    || manifest.statisticWeighting !== "exact-sealed-urban-area"
+    || manifest.maskResolutionMeters !== 1 || manifest.aggregation !== "exact-masked-area"
+    || manifest.minimumAnalysedAreaHa !== .1) {
     throw new TypeError("Unsupported Green Map-income comparison manifest.");
   }
   return manifest;
@@ -39,8 +41,9 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
   let highlightedSectorId = "";
   let previousYear = 2021;
   let selectedGreen = new Set([1, 2]);
+  let selectedUrban = new Set(["residential", "employmentInstitutional"]);
   let generation = 0;
-  const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .91 });
+  const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .96 });
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
 
@@ -53,7 +56,7 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     manifest.densityNonGreenUrl = safeAsset(descriptor.assetRoot, manifest.densityNonGreenUrl, ".png");
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
     manifest.statisticsUrl = safeAsset(descriptor.assetRoot, manifest.statisticsUrl, ".json");
-    manifest.urbanFabricMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanFabricMaskUrl, ".pmtiles");
+    manifest.urbanAtlasClassMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanAtlasClassMaskUrl, ".pmtiles");
     const [statsResponse, loadedGrid, loadedNonGreenGrid] = await Promise.all([
       fetch(manifest.statisticsUrl),
       loadImageData(manifest.densityGridUrl, manifest.imageSize),
@@ -64,6 +67,7 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     grid = loadedGrid;
     nonGreenGrid = loadedNonGreenGrid;
     selectedGreen = new Set(manifest.defaultGreenClasses);
+    selectedUrban = new Set(manifest.defaultUrbanSurfaceGroups);
   };
 
   const render = async () => {
@@ -72,24 +76,38 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     const jaarbakUrl = await jaarbakLayer.resolveArchive(2021, municipality);
     if (!jaarbakUrl) throw new Error("The exact JaarBAK archive is unavailable.");
     const shown = await exactRaster.show(map, {
-      mode: "density", jaarbakUrl, urbanMaskUrl: manifest.urbanFabricMaskUrl,
+      mode: "density", jaarbakUrl, urbanClassUrl: manifest.urbanAtlasClassMaskUrl,
+      selectedUrbanIndexes: selectedUrbanClassIndexes(manifest, selectedUrban),
       densityData: grid, nonGreenData: nonGreenGrid, selectedClasses: [...selectedGreen],
       dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
     });
     return active && request === generation && shown;
   };
 
-  const points = () => Object.values(statistics?.sectorStats ?? {}).flatMap((record) => {
-    const density = selectedDensity(record, selectedGreen);
-    if (record.analysedAreaHa < manifest.minimumEligibleAreaHa || !Number.isFinite(record.income) || !Number.isFinite(density)
+  const combinedRecord = (record) => {
+    const groups = [...selectedUrban].map((id) => record.urbanSurfaceGroups?.[id]).filter(Boolean);
+    const analysedAreaHa = groups.reduce((sum, group) => sum + Number(group.analysedAreaHa ?? 0), 0);
+    const meanDensityByGreenClass = {};
+    manifest.greenClasses.forEach(({ value }) => {
+      const key = String(value);
+      const weighted = groups.reduce((sum, group) => Number.isFinite(group.meanDensityByGreenClass?.[key])
+        ? sum + group.meanDensityByGreenClass[key] * group.analysedAreaHa : sum, 0);
+      meanDensityByGreenClass[key] = analysedAreaHa > 0 ? weighted / analysedAreaHa : null;
+    });
+    const density = [...selectedGreen].reduce((sum, code) => sum + Number(meanDensityByGreenClass[String(code)] ?? 0), 0);
+    return { ...record, analysedAreaHa, meanDensityByGreenClass, density };
+  };
+  const points = () => Object.values(statistics?.sectorStats ?? {}).map(combinedRecord).flatMap((record) => {
+    if (record.analysedAreaHa < manifest.minimumEligibleAreaHa || !Number.isFinite(record.income) || !Number.isFinite(record.density)
       || (municipality && record.municipality !== municipality)) return [];
-    return [{ ...record, density }];
+    return [record];
   }).sort((left, right) => left.income - right.income || left.sectorId.localeCompare(right.sectorId));
 
   return {
     id: "groenkaart-income",
     primaryLayerId: "groenkaart",
     secondaryLayerId: "income",
+    suppressSecondaryControl: true,
     isPanelPersistent: true,
     panelScope: "area",
     isActive: () => active,
@@ -102,6 +120,7 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
       groenkaartLayer.setOption(map, "year", 2021);
       groenkaartLayer.setVisible(map, false);
       incomeLayer.setVisible(map, false);
+      showComparisonVeil(map, BEFORE_LAYER);
       active = true;
       await render();
       mountIncomeSymbols(map, { id: SYMBOL_LAYER_ID, sectorStats: statistics.sectorStats, municipality });
@@ -113,6 +132,7 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
       generation += 1;
       highlightedSectorId = "";
       exactRaster.remove();
+      hideComparisonVeil(map);
       hideIncomeSymbols(map, SYMBOL_LAYER_ID);
       incomeLayer.setVisible(map, false);
       groenkaartLayer.setOption(map, "year", previousYear);
@@ -139,6 +159,16 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
       notify();
       return { changed: true };
     },
+    toggleSeries(key) {
+      if (!manifest?.urbanSurfaceGroups.some(({ id }) => id === key)) return { changed: false };
+      if (selectedUrban.has(key)) {
+        if (selectedUrban.size === 1) return { changed: false, minimum: true };
+        selectedUrban.delete(key);
+      } else selectedUrban.add(key);
+      render().then(notify).catch(console.error);
+      notify();
+      return { changed: true };
+    },
     getLabel: () => t("greenIncome.title"),
     getActiveNote: () => t("greenIncome.activeNote", { area: municipality || t("controls.allMunicipalities") }),
     getContext: () => ({
@@ -159,6 +189,7 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
         accessibleLabel: t("greenIncome.continuousLegendLabel"),
       },
       densitySelector: greenClassSelector(manifest, selectedGreen),
+      surfaceSelector: urbanSurfaceSelector(manifest, selectedUrban),
       comparisonLegend: incomeLegend(),
       footnote: t("greenIncome.legendFootnote"),
     }),
@@ -190,18 +221,18 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     },
     getPanelModel(record) {
       const current = points();
-      const combination = [...selectedGreen].sort((a, b) => a - b).join("+");
       const areaRecord = comparisonAreaRecord(record, municipality);
       return {
         template: "sealed-urban-scatter", comparisonId: "groenkaart-income", record: areaRecord,
         title: t("greenIncome.chartTitle"), definition: t("greenIncome.definition"),
         xLabel: t("sealedUrban.axisIncome"), yLabel: t("sealedUrban.axisGreenDensity"),
         xKey: "income", yKey: "density", points: current,
-        regression: statistics.regressions?.[combination]?.[scopeId(areaRecord)]
-          ?? ordinaryLeastSquares(current, "income", "density"),
+        regression: ordinaryLeastSquares(current, "income", "density"),
         slopeScale: 10_000, slopeUnit: t("greenIncome.slopeUnit"),
         highlightedSectorId, selectedClasses: [...selectedGreen],
         selectedClassLabels: greenClassSelector(manifest, selectedGreen).items.filter((item) => item.selected).map((item) => item.label),
+        selectedSurfaceLabels: manifest.urbanSurfaceGroups.filter(({ id }) => selectedUrban.has(id))
+          .map(({ id }) => t(`sealedUrban.surface.${id}`)),
         methodology: t("greenIncome.methodology"), caveat: t("sealedUrban.regressionCaveat"),
       };
     },

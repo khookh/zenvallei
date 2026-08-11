@@ -19,6 +19,7 @@ export function createDetailPanel({
   onOpen,
   onPresentationRequest,
   onClose,
+  onOpenSources,
   isPersistentView = () => false,
   onSectorHover,
 }) {
@@ -80,6 +81,7 @@ export function createDetailPanel({
       hadExpandedSection: openSectionIds.size > 0,
       focusKey: content.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null,
       expandedChartOpen: Boolean(expandedChart),
+      expandedChartId: expandedChart?.dataset.chartDialogId ?? null,
       expandedChartScrollTop: expandedChart?.querySelector(".comparison-chart-dialog-content")?.scrollTop ?? 0,
     };
   };
@@ -91,6 +93,7 @@ export function createDetailPanel({
       hadExpandedSection: false,
       focusKey: null,
       expandedChartOpen: false,
+      expandedChartId: null,
       expandedChartScrollTop: 0,
     };
     if (currentView.type === "about") {
@@ -125,7 +128,11 @@ export function createDetailPanel({
     // Comparison data can finish loading while its expanded chart is open. Reopen
     // the newly rendered dialog so an asynchronous panel refresh never dismisses it.
     if (renderState.expandedChartOpen) {
-      const expandedChart = content.querySelector("[data-comparison-chart-dialog]");
+      // Some comparisons expose two independent charts. Restore the chart that
+      // was actually open rather than falling back to the first dialog.
+      const expandedChart = renderState.expandedChartId
+        ? content.querySelector(`[data-chart-dialog-id="${CSS.escape(renderState.expandedChartId)}"]`)
+        : content.querySelector("[data-comparison-chart-dialog]");
       if (expandedChart && !expandedChart.open) {
         expandedChart.showModal();
         const body = expandedChart.querySelector(".comparison-chart-dialog-content");
@@ -216,6 +223,11 @@ export function createDetailPanel({
     if (event.key === "Escape" && !content.querySelector("dialog[open]")) close();
   });
   content.addEventListener("click", (event) => {
+    const sourceButton = event.target.closest("[data-open-map-sources]");
+    if (sourceButton) {
+      onOpenSources?.(sourceButton);
+      return;
+    }
     const expand = event.target.closest("[data-expand-comparison-chart]");
     if (expand) {
       const target = expand.dataset.dialogTarget;
@@ -279,6 +291,19 @@ export function createDetailPanel({
       bars[nextIndex]?.focus();
       return;
     }
+    const populationGroup = event.target.closest("[data-green-population-group]");
+    if (populationGroup && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const groups = [...populationGroup.closest("[data-green-population-chart]")
+        .querySelectorAll("[data-green-population-group]")];
+      const currentIndex = groups.indexOf(populationGroup);
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? groups.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + groups.length) % groups.length;
+      groups.forEach((group, index) => group.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
+      groups[nextIndex]?.focus();
+      return;
+    }
     const histogramBin = event.target.closest("[data-histogram-bin]");
     if (histogramBin && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
       event.preventDefault();
@@ -331,6 +356,44 @@ export function createDetailPanel({
   };
   content.addEventListener("focusin", updatePopulationBar);
   content.addEventListener("pointerover", updatePopulationBar);
+  const updateGreenPopulationGroup = (event) => {
+    const group = event.target.closest?.("[data-green-population-group]");
+    if (!group) return;
+    const output = group.closest("[data-green-population-chart]")?.querySelector("[data-green-population-output]");
+    if (output) output.textContent = group.dataset.boxLabel;
+    const guide = group.closest("[data-green-population-chart]")?.querySelector("[data-population-temperature-guide]");
+    if (guide && group.dataset.guideX) {
+      guide.hidden = false;
+      guide.setAttribute("x1", group.dataset.guideX);
+      guide.setAttribute("x2", group.dataset.guideX);
+    }
+  };
+  content.addEventListener("focusin", updateGreenPopulationGroup);
+  content.addEventListener("pointerover", updateGreenPopulationGroup);
+  content.addEventListener("pointermove", (event) => {
+    const chart = event.target.closest?.("[data-green-population-chart]");
+    const svg = chart?.querySelector("[data-cumulative-population-plot]");
+    if (!svg) return;
+    const bounds = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+    const pointerX = (event.clientX - bounds.left) / Math.max(1, bounds.width) * viewBox.width;
+    const left = Number(svg.dataset.plotLeft);
+    const right = Number(svg.dataset.plotRight);
+    if (pointerX < left || pointerX > right) return;
+    const groups = [...svg.querySelectorAll("[data-green-population-group]")];
+    const selected = groups.find((group) => {
+      const start = Number(group.getAttribute("x"));
+      return pointerX >= start && pointerX <= start + Number(group.getAttribute("width"));
+    }) ?? groups.at(-1);
+    const output = chart.querySelector("[data-green-population-output]");
+    if (output && selected) output.textContent = selected.dataset.boxLabel;
+    const guide = svg.querySelector("[data-population-temperature-guide]");
+    if (guide) {
+      guide.hidden = false;
+      guide.setAttribute("x1", pointerX);
+      guide.setAttribute("x2", pointerX);
+    }
+  });
   content.addEventListener("pointerout", (event) => {
     if (!event.target.closest?.("[data-scatter-sector]") || event.relatedTarget?.closest?.("[data-scatter-sector]")) return;
     onSectorHover?.("");

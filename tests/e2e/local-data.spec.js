@@ -65,7 +65,7 @@ async function rasterVisibility(page) {
   });
 }
 
-async function activateComparison(page, fromLayer, targetLayer) {
+async function activateComparison(page, fromLayer, targetLayer, readySelector = "#detail-panel .sealed-urban-scatter:not(.is-expanded)") {
   await expandControls(page);
   await page.locator(`[data-layer="${fromLayer}"]`).click();
   await expect(page.locator(`[data-layer="${fromLayer}"]`)).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
@@ -75,7 +75,7 @@ async function activateComparison(page, fromLayer, targetLayer) {
   await expect(page.locator(`[data-layer="${targetLayer}"]`)).toHaveClass(/is-comparison-target/);
   await page.locator(`[data-layer="${targetLayer}"]`).click();
   await expect(page.locator("#active-layer-title")).toContainText("×", { timeout: 20_000 });
-  await expect(page.locator("#detail-panel .sealed-urban-scatter:not(.is-expanded)")).toHaveCount(1, { timeout: 20_000 });
+  await expect(page.locator(readySelector)).toHaveCount(1, { timeout: 20_000 });
   const panel = page.locator("#detail-panel");
   if (await panel.evaluate((element) => element.classList.contains("is-peek"))) {
     if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
@@ -155,16 +155,13 @@ test("compares heat vulnerability with authoritative sector population", async (
   await firstBar.press("End");
   await expect(inlineBars.locator("[data-population-bar-output]")).toContainText("Score 10");
 
-  await page.getByRole("button", { name: "Expand charts", exact: true }).click();
-  const dialog = page.locator("[data-comparison-chart-dialog]:visible");
+  await inlineBox.locator('[data-dialog-target="heat-population-boxes"]').click();
+  const dialog = page.locator('[data-chart-dialog-id="heat-population-boxes"]:visible');
   await expect(dialog).toContainText("Heat vulnerability and population in Entire Zennevallei");
   await expect(dialog.locator("[data-heat-population-box-chart].is-expanded")).toBeVisible();
-  await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded")).toBeVisible();
+  await expect(dialog.locator("[data-heat-population-bar-chart]")).toHaveCount(0);
   if (RUN_VISUAL_REGRESSION) {
     await expect(dialog.locator("[data-heat-population-box-chart].is-expanded svg")).toHaveScreenshot("heat-population-expanded.png", {
-      animations: "disabled", maxDiffPixelRatio: .001,
-    });
-    await expect(dialog.locator("[data-heat-population-bar-chart].is-expanded svg")).toHaveScreenshot("heat-population-bars-expanded.png", {
       animations: "disabled", maxDiffPixelRatio: .001,
     });
   }
@@ -174,6 +171,12 @@ test("compares heat vulnerability with authoritative sector population", async (
   const residentsDialog = page.locator('[data-chart-dialog-id="heat-population-bars"]:visible');
   await expect(residentsDialog).toContainText("Residents by heat-vulnerability score");
   await expect(residentsDialog.locator("[data-population-score-bar]")).toHaveCount(11);
+  await expect(residentsDialog.locator("[data-heat-population-box-chart]")).toHaveCount(0);
+  if (RUN_VISUAL_REGRESSION) {
+    await expect(residentsDialog.locator("[data-heat-population-bar-chart].is-expanded svg")).toHaveScreenshot("heat-population-bars-expanded.png", {
+      animations: "disabled", maxDiffPixelRatio: .001,
+    });
+  }
   await residentsDialog.locator("[data-close-comparison-chart]").click();
 
   const accessibility = await new AxeBuilder({ page })
@@ -270,6 +273,7 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
     ["landsat-temperature", "income", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature-"],
     ["income", "landsat-temperature", "Mean land-surface temperature versus median taxable income", "landsat-income-temperature-"],
   ];
+  let checkedLandsatGreenControls = false;
   for (const [fromLayer, targetLayer, chartTitle, mapLayer] of cases) {
     await activateComparison(page, fromLayer, targetLayer);
     await expect(page.locator("#detail-panel")).toContainText(chartTitle, { timeout: 20_000 });
@@ -291,10 +295,36 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
       await expandControls(page);
       await page.locator("#sector-search").fill("23027A00-");
       await page.locator("#sector-search").press("Enter");
-      await expect(page.locator("#detail-panel")).toContainText("4 eligible clear Landsat observations are plotted.");
+      await expect(page.locator("#detail-panel")).toContainText("5 eligible clear Landsat observations are plotted.");
       await expandControls(page);
       await page.locator("#reset-view").click();
-      await expect(page.locator("#detail-panel")).toContainText("1,960 eligible clear Landsat observations are plotted.");
+      await expect(page.locator("#detail-panel")).toContainText("770 eligible clear Landsat observations are plotted.");
+    }
+    if (!checkedLandsatGreenControls && [fromLayer, targetLayer].includes("landsat-temperature")
+      && [fromLayer, targetLayer].includes("groenkaart")) {
+      await expandComparisonLegend(page);
+      await expect(page.locator('[data-comparison-series="residential"]'))
+        .toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator('[data-comparison-series="employmentInstitutional"]'))
+        .toHaveAttribute("aria-pressed", "true");
+      await page.locator('[data-comparison-series="employmentInstitutional"]').click();
+      await expect(page.locator('[data-comparison-series="employmentInstitutional"]'))
+        .toHaveAttribute("aria-pressed", "false");
+      await page.locator('[data-comparison-series="residential"]').click();
+      await expect(page.locator('[data-comparison-series="residential"]'))
+        .toHaveAttribute("aria-pressed", "true");
+      await page.locator('[data-comparison-series="employmentInstitutional"]').click();
+      await expect(page.locator('[data-comparison-series="employmentInstitutional"]'))
+        .toHaveAttribute("aria-pressed", "true");
+      await expandControls(page);
+      await expect(page.locator("#map-mode-action")).toHaveText("Show vegetation cover");
+      await page.locator("#map-mode-action").click();
+      await expect(page.locator("#map-mode-action")).toHaveText("Show temperature");
+      await expect(page.locator("#legend-content .legend-continuous-scale"))
+        .toHaveAttribute("aria-label", /vegetation-cover scale/i);
+      await page.locator("#map-mode-action").click();
+      await expect(page.locator("#map-mode-action")).toHaveText("Show vegetation cover");
+      checkedLandsatGreenControls = true;
     }
     if ([fromLayer, targetLayer].includes("groenkaart") && [fromLayer, targetLayer].includes("income")) {
       const ramp = page.locator("#legend-content .legend-continuous-scale");
@@ -314,8 +344,8 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
     expect(bounds.right).toBeLessThanOrEqual(bounds.parentRight + 1);
     if (!await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
       await page.locator("[data-expand-comparison-chart]").first().click();
-      await expect(page.locator("[data-comparison-chart-dialog]")).toBeVisible();
-      await page.locator("[data-close-comparison-chart]").click();
+      await expect(page.locator("[data-comparison-chart-dialog]:visible")).toBeVisible();
+      await page.locator("[data-comparison-chart-dialog]:visible [data-close-comparison-chart]").click();
     }
     await expandControls(page);
     await page.locator("#analysis-pair-remove").click();
@@ -323,6 +353,80 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
     await expect.poll(() => page.evaluate(() => window.__heatMap.getActiveLayer())).toBe(fromLayer);
     await expect(page.locator(`[data-layer="${fromLayer}"]`)).toHaveAttribute("aria-pressed", "true");
   }
+});
+
+test("compares Green Map vegetation cover with the uniform 2019 population model", async ({ page }) => {
+  await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
+    status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
+  }));
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
+  await page.locator("#project-intro-primary").click();
+
+  await activateComparison(page, "population", "groenkaart", "#detail-panel [data-green-population-chart]:not(.is-expanded)");
+  await expect(page.locator('[data-layer="groenkaart"]')).toHaveClass(/is-linked-comparison/);
+  await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-linked-comparison/);
+  await expect(page.locator("#secondary-control")).toBeHidden();
+  await expect(page.locator("#detail-panel")).toContainText("Vegetation cover across the modelled population");
+  await expect(page.locator("[data-green-population-chart]:not(.is-expanded) [data-green-population-group]").first())
+    .toBeVisible();
+  await expect(page.locator("#legend-content .legend-continuous-scale"))
+    .toHaveAttribute("aria-label", /continuous vegetation cover within 100 m/i);
+  await expect(page.locator("#legend-content .legend-comparison-section"))
+    .toContainText("Population density model, 2019");
+
+  await expandControls(page);
+  await page.locator("#municipality-select").selectOption("Halle");
+  await expect(page.locator("#detail-panel")).toContainText("Halle");
+  await expect(page.locator("[data-green-population-chart]:not(.is-expanded) [data-green-population-group]").first())
+    .toBeVisible();
+
+  await page.locator("[data-green-population-chart]:not(.is-expanded) [data-expand-comparison-chart]").click();
+  await expect(page.locator("[data-comparison-chart-dialog] [data-green-population-chart].is-expanded"))
+    .toBeVisible();
+  await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
+
+  await expandControls(page);
+  await page.locator("#analysis-pair-remove").click();
+  await expect.poll(() => page.evaluate(() => window.__heatMap.getActiveLayer())).toBe("population");
+  await expect(page.locator("#secondary-control")).toContainText("Current grid · 2025");
+});
+
+test("profiles selected sealed-surface Landsat temperature across the 2019 modelled population", async ({ page }) => {
+  await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
+    status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
+  }));
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
+  await page.locator("#project-intro-primary").click();
+
+  await activateComparison(page, "population", "landsat-temperature", "#detail-panel [data-green-population-chart]:not(.is-expanded) .population-temperature-step");
+  await expect(page.locator('[data-layer="landsat-temperature"]')).toHaveClass(/is-linked-comparison/);
+  await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-linked-comparison/);
+  await expect(page.locator("#detail-panel")).toContainText("Cumulative residents by land-surface temperature");
+  await expect(page.locator("#detail-panel")).toContainText("Distribution of modelled residents by temperature");
+  await expect(page.locator("[data-green-population-chart]:not(.is-expanded)")).toHaveCount(2);
+  await expect(page.locator("[data-green-population-chart]:not(.is-expanded) .population-temperature-step")).toBeVisible();
+  await expect(page.locator("[data-green-population-chart]:not(.is-expanded) .population-temperature-bars")).toBeVisible();
+  await expect(page.locator("#legend-content .legend-comparison-section"))
+    .toContainText("Modelled inhabitants per hectare, 2019");
+
+  await expandControls(page);
+  await page.locator("#municipality-select").selectOption("Halle");
+  await expect(page.locator("#detail-panel")).toContainText("Halle");
+  await expect(page.locator("[data-green-population-chart]:not(.is-expanded)")).toHaveCount(2);
+
+  for (const target of ["landsat-population-cumulative", "landsat-population-histogram"]) {
+    await page.locator(`[data-dialog-target="${target}"]`).click();
+    await expect(page.locator(`[data-chart-dialog-id="${target}"] [data-green-population-chart].is-expanded`))
+      .toBeVisible();
+    await page.locator(`[data-chart-dialog-id="${target}"] [data-close-comparison-chart]`).click();
+  }
+
+  await expandControls(page);
+  await page.locator("#analysis-pair-remove").click();
+  await expect.poll(() => page.evaluate(() => window.__heatMap.getActiveLayer())).toBe("population");
+  await expect(page.locator("#secondary-control")).toContainText("Current grid · 2025");
 });
 
 test("serves all eight layers from the prepared working catalogue in local-data mode", async ({ page }, testInfo) => {
@@ -442,11 +546,12 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(page.locator('[data-layer="landsat-temperature"]')).toHaveClass(/is-comparison-primary/);
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveClass(/is-comparison-target/);
   await expect(page.locator('[data-layer="jaarbak"]')).toHaveClass(/is-comparison-target/);
-  for (const target of ["landgebruik", "population", "heat"]) {
+  for (const target of ["landgebruik", "heat"]) {
     await expect(page.locator(`[data-layer="${target}"]`)).not.toHaveClass(/is-comparison-target/);
   }
   await expect(page.locator('[data-layer="groenkaart"]')).toHaveClass(/is-comparison-target/);
   await expect(page.locator('[data-layer="income"]')).toHaveClass(/is-comparison-target/);
+  await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-comparison-target/);
   await page.locator('[data-layer="urban-atlas"]').click();
   await expect(page.locator("#analysis-pair-label")).toContainText("Urban Atlas 2021");
   await expect(page.locator("#legend-title")).toHaveText("Temperature by Urban Atlas surface");
@@ -490,7 +595,7 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await page.locator("[data-expand-comparison-chart]").click();
   await expect(page.locator("[data-comparison-chart-dialog]")).toBeVisible();
   await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("Land-surface temperature by Urban Atlas surface");
-  await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("ha represented area");
+  await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("ha · 100 Landsat observations");
   await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("0.5°C bins");
   if (RUN_VISUAL_REGRESSION) {
     await expect(page.locator("[data-comparison-chart-dialog]")).toHaveScreenshot("landsat-urban-atlas-expanded.png", { animations: "disabled" });
@@ -510,17 +615,25 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   const soilChartsDialog = page.locator("[data-comparison-chart-dialog]:visible");
   await expect(soilChartsDialog).toBeVisible();
   await expect(soilChartsDialog).toContainText("Land-surface temperature on sealed and unsealed surfaces");
-  await expect(soilChartsDialog).toContainText("JaarBAK");
+  await expect(soilChartsDialog).toContainText("soil-sealing classification");
   await soilChartsDialog.locator("[data-close-comparison-chart]").click();
   const densitySection = page.locator('[aria-labelledby="soil-density-analysis-title"]');
   await densitySection.locator("[data-expand-comparison-chart]").click();
   const densityDialog = page.locator("[data-comparison-chart-dialog]:visible");
   await expect(densityDialog).toContainText("Land-surface temperature and surrounding soil sealing");
   await expect(densityDialog).toContainText("Sealed surface within 100 m (%)");
-  await expect(densityDialog.locator("[data-pixel-scatter-hit]")).toBeVisible();
-  await densityDialog.locator("[data-pixel-scatter-hit]").focus();
-  await densityDialog.locator("[data-pixel-scatter-hit]").press("ArrowRight");
-  await expect(densityDialog.locator("[data-scatter-output]")).toContainText("3.1416 ha");
+  const densityHitArea = densityDialog.locator("[data-pixel-scatter-hit]");
+  await expect(densityHitArea).toBeVisible();
+  // Address and inspect the active chart in one browser task. The comparison
+  // can refresh its SVG once as source readiness settles, so retaining a DOM
+  // handle across focus and key dispatch would make this assertion flaky.
+  await expect.poll(() => densityDialog.evaluate((dialog) => {
+    const hitArea = dialog.querySelector("[data-pixel-scatter-hit]");
+    if (!hitArea) return "";
+    hitArea.focus();
+    hitArea.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    return dialog.querySelector("[data-scatter-output]")?.textContent ?? "";
+  })).toContain("3.1416 ha");
   await densityDialog.locator("[data-close-comparison-chart]").click();
   await expect(page.locator("[data-comparison-series]")).toHaveCount(0);
   expect(localRequests.some((url) => url.includes("/landsat-jaarbak/manifest.json"))).toBe(true);
@@ -533,6 +646,11 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   if (isMobile) await expandControls(page);
   await page.locator("#analysis-pair-change").click();
   await page.locator('[data-layer="urban-atlas"]').click();
+  // Comparison activation renders the adaptive result sheet asynchronously.
+  // Wait for that canonical state before reopening mobile controls; otherwise
+  // the completed transition can legitimately collapse controls mid-click.
+  await expect(page.locator("#active-layer-title")).toContainText("Urban Atlas 2021", { timeout: 20_000 });
+  await expect(page.locator("#detail-panel")).toContainText("Temperature distribution by surface", { timeout: 20_000 });
   if (isMobile) await expandControls(page);
   await page.locator("#temporal-previous").click();
   await expect(page.locator("#temporal-output")).toContainText("Heatwave observation");
@@ -543,10 +661,11 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   }
   await expect(page.locator(".timeline-marker.is-heatwave")).toHaveCount(2);
   await expect(page.locator(".timeline-marker.is-reference")).toHaveCount(0);
-  await expect(page.locator("#legend-note")).toContainText(/12:|12\./);
+  await expect(page.locator("#temporal-output")).toContainText(/12:|12\./);
+  await expect(page.locator("#legend-note")).toContainText("exact selected Urban Atlas polygons");
   await expect(page.locator("#layer-context-note")).toContainText("28 June to 2 July 2025");
   await expect(page.locator("#detail-panel")).toContainText("not air temperature");
-  await expect(page.locator("#detail-panel")).toContainText("Clear Landsat pixels");
+  await expect(page.locator("#detail-panel")).toContainText("Landsat observations");
   await expect(page.locator("#detail-panel")).toContainText("P10 to P90");
   const inspectedPixel = await page.evaluate(async () => (await fetch(
     "/__local-data-query__/landsat-temperature?observation=landsat-2026-06-22&lng=4.29&lat=50.73",

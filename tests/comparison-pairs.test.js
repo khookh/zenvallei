@@ -4,8 +4,8 @@ import {
 } from "../src/comparison-pairs.js";
 
 describe("comparison pair contract", () => {
-  it("discovers all seven comparisons from both participating layers", () => {
-    expect(COMPARISON_PAIRS).toHaveLength(7);
+  it("discovers all nine comparisons from both participating layers", () => {
+    expect(COMPARISON_PAIRS).toHaveLength(9);
     for (const pair of COMPARISON_PAIRS) {
       const [first, second] = pair.layers;
       expect(comparisonForLayers(first, second)?.id).toBe(pair.id);
@@ -20,12 +20,15 @@ describe("comparison pair contract", () => {
     expect(comparisonForLayers("jaarbak", "landsat-temperature")?.canonicalLayerId).toBe("landsat-temperature");
     expect(comparisonForLayers("income", "groenkaart")?.canonicalLayerId).toBe("groenkaart");
     expect(comparisonForLayers("groenkaart", "landsat-temperature")?.canonicalLayerId).toBe("landsat-temperature");
+    expect(comparisonForLayers("population", "groenkaart")?.canonicalLayerId).toBe("groenkaart");
+    expect(comparisonForLayers("population", "landsat-temperature")?.canonicalLayerId).toBe("landsat-temperature");
   });
 
   it("offers only registered functional targets", () => {
     expect(comparisonTargets("urban-atlas")).toEqual(["landsat-temperature"]);
     expect(comparisonTargets("jaarbak")).toEqual(["landsat-temperature"]);
-    expect(comparisonTargets("groenkaart").sort()).toEqual(["income", "landsat-temperature"]);
+    expect(comparisonTargets("groenkaart").sort()).toEqual(["income", "landsat-temperature", "population"]);
+    expect(comparisonTargets("population").sort()).toEqual(["groenkaart", "heat", "landsat-temperature"]);
     expect(comparisonTargets("income").sort()).toEqual(["groenkaart", "heat", "landsat-temperature"]);
     expect(comparisonTargets("landgebruik")).toEqual([]);
   });

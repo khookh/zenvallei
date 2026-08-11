@@ -25,6 +25,8 @@
     "landsat-urban-atlas:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-urban-atlas",
     "landsat-soil-sealing:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-jaarbak",
     "sealed-urban:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset sealed-urban-comparisons",
+    "green-population:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset groenkaart-population",
+    "landsat-population:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-population",
     "landgebruik:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landgebruik",
     "official-layers:publish": "node scripts/publish-official-layer-assets.mjs",
     "local-data:test": "node scripts/run-local-layer-python.mjs -m pytest processing/local-layers/tests",

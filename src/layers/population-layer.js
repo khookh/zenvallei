@@ -116,6 +116,20 @@ export function createPopulationLayer({ population: input }) {
     }
     return rasterAnalysisPromise;
   };
+  const inspectModelPoint = async (point) => {
+    const { image, proj4 } = await openRasterAnalysis();
+    const [x, y] = proj4("EPSG:4326", "+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs", [point.lng, point.lat]);
+    const [minX, minY, maxX, maxY] = image.getBoundingBox();
+    if (x < minX || x >= maxX || y < minY || y >= maxY) return { datasetId: DATASETS[1], unavailable: true };
+    const [resolutionX, resolutionYRaw] = image.getResolution();
+    const column = Math.floor((x - minX) / resolutionX);
+    const row = Math.floor((maxY - y) / Math.abs(resolutionYRaw));
+    const [values] = await image.readRasters({ window: [column, row, column + 1, row + 1] });
+    const value = Number(values[0]);
+    return value >= 0
+      ? { datasetId: DATASETS[1], population: value, densityPerHa: value, sideM: 100, row, column }
+      : { datasetId: DATASETS[1], unavailable: true, row, column };
+  };
 
   return defineLayer({
     id: "population",
@@ -207,6 +221,11 @@ export function createPopulationLayer({ population: input }) {
       visible = nextVisible;
       syncVisibility(map);
     },
+    setComparisonOpacity(map, value = .78, beforeLayerId = null) {
+      ensureRasterLayer(map, beforeLayer ?? beforeLayerId);
+      map.setPaintProperty(RASTER_LAYER_ID, "raster-opacity", value);
+      if (beforeLayerId) map.moveLayer(RASTER_LAYER_ID, beforeLayerId);
+    },
     applyFilter(map, filter) {
       activeMunicipality = filter?.[2] ?? "";
       if (map.getLayer(GRID_LAYER_ID)) map.setFilter(GRID_LAYER_ID, filter);
@@ -221,6 +240,10 @@ export function createPopulationLayer({ population: input }) {
       return true;
     },
     getOption: (name) => name === "dataset" ? activeDatasetId : null,
+    getDataset: (datasetId) => population.datasets[datasetId] ?? null,
+    inspectDatasetPoint: (datasetId, point) => datasetId === DATASETS[1]
+      ? inspectModelPoint(point)
+      : Promise.resolve({ datasetId, unavailable: true }),
     isPointInspectionActive: () => true,
     async inspectPoint(point) {
       if (activeDatasetId === DATASETS[0]) {
@@ -233,18 +256,7 @@ export function createPopulationLayer({ population: input }) {
           sideM: Number(properties.sideM),
         } : { datasetId: activeDatasetId, unavailable: true };
       }
-      const { image, proj4 } = await openRasterAnalysis();
-      const [x, y] = proj4("EPSG:4326", "+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs", [point.lng, point.lat]);
-      const [minX, minY, maxX, maxY] = image.getBoundingBox();
-      if (x < minX || x >= maxX || y < minY || y >= maxY) return { datasetId: activeDatasetId, unavailable: true };
-      const [resolutionX, resolutionYRaw] = image.getResolution();
-      const column = Math.floor((x - minX) / resolutionX);
-      const row = Math.floor((maxY - y) / Math.abs(resolutionYRaw));
-      const [values] = await image.readRasters({ window: [column, row, column + 1, row + 1] });
-      const value = Number(values[0]);
-      return value >= 0
-        ? { datasetId: activeDatasetId, population: value, densityPerHa: value, sideM: 100 }
-        : { datasetId: activeDatasetId, unavailable: true };
+      return inspectModelPoint(point);
     },
     getPointPopupModel(result) {
       if (!result || result.unavailable) {

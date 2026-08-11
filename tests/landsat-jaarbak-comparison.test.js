@@ -3,15 +3,23 @@ import { validateLandsatJaarbakManifest } from "../src/comparisons/landsat-jaarb
 import { comparisonLegendItems, thermalColor } from "../src/comparisons/thermal-palette.js";
 
 const manifest = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   comparisonId: "landsat-jaarbak",
   primaryLayerId: "landsat-temperature",
   secondaryLayerId: "jaarbak",
+  maskResolutionMeters: 1,
+  temperatureResolutionMeters: 30,
+  aggregation: "exact-masked-area",
+  minimumAnalysedAreaHa: 0.1,
   maximumSeries: 2,
   series: [{ key: "class:sealed" }, { key: "class:unsealed" }],
   coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]],
   analysisImageSize: [10, 10],
   analysisScopeIndexUrl: "analysis-scope-index.png",
+  classification: {
+    sourceResolutionMetres: 1, temperatureResolutionMetres: 30,
+    aggregation: "exact-masked-area", minimumAnalysedAreaHa: 0.1,
+  },
   densityAnalysis: { radiusMeters: 100, validCoverageThreshold: 95, sampling: "none" },
   observations: { test: {} },
 };

@@ -50,12 +50,14 @@ pnpm local-data:prepare -- --dataset groenkaart
 pnpm landgebruik:prepare
 pnpm landsat-heat:prepare
 pnpm landsat-urban-atlas:prepare  # Landsat x Urban Atlas comparison
-pnpm landsat-soil-sealing:prepare # Landsat x JaarBAK comparison
+pnpm landsat-soil-sealing:prepare # Landsat x Soil sealing comparison
 pnpm sealed-urban:prepare         # Green, temperature and income in sealed urban fabric
+pnpm green-population:prepare     # Green Map x uniform 2019 population model
+pnpm landsat-population:prepare  # Landsat x uniform 2019 population model
 pnpm dev:local-data
 ```
 
-Raw downloads and analytical caches stay below `.cache/local-layers`. To refresh the validated browser derivatives, including all prepared comparisons, run `pnpm official-layers:publish` after preparation. Seven published comparisons can be opened from either participating layer. Three of them analyse Green Map density, Landsat temperature and Statbel income only where Urban Atlas identifies urban fabric and JaarBAK identifies sealed surface. See [Official raster layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md), [Landsat surface temperature](docs/landsat-surface-temperature.md) and [Demography data](docs/demography-data.md).
+Raw downloads and analytical caches stay below `.cache/local-layers`. To refresh the validated browser derivatives, including all prepared comparisons, run `pnpm official-layers:publish` after preparation. Nine published comparisons can be opened from either participating layer. Green Map and population comparisons distinguish exact 1 m sealed display footprints, 10 m surrounding-cover calculations, 30 m Landsat observations and 100 m population-model cells. See [Official raster layers](docs/local-official-layers.md), [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md), [Landsat surface temperature](docs/landsat-surface-temperature.md), [Demography data](docs/demography-data.md) and [privacy-conscious visit monitoring](docs/analytics-monitoring.md).
 
 Soil sealing and Flanders Green Map also provide a **Show density** mode. It calculates the source-class share within a fixed 100 m radius; preparation creates the density derivatives alongside their ordinary classifications.
 

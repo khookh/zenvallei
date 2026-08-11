@@ -11,6 +11,7 @@ maplibregl.setWorkerUrl(mapLibreWorkerUrl);
 const SECTOR_SOURCE_ID = "heat-sectors";
 const COMMON_LAYER_IDS = Object.freeze({
   hit: "heat-sectors-hit-area",
+  outlineCasing: "heat-sectors-outline-casing",
   outline: "heat-sectors-outline",
   selected: "heat-sector-selected",
   inspectionRadius: "point-inspection-radius",
@@ -198,7 +199,7 @@ export function createMapController({
 
   const applyLayerFilter = () => {
     const filter = activeFilter();
-    [COMMON_LAYER_IDS.hit, COMMON_LAYER_IDS.outline].forEach((layerId) => {
+    [COMMON_LAYER_IDS.hit, COMMON_LAYER_IDS.outlineCasing, COMMON_LAYER_IDS.outline].forEach((layerId) => {
       if (map.getLayer(layerId)) map.setFilter(layerId, filter);
     });
     layers.forEach((layer) => layer.applyFilter(map, filter, { municipality: activeMunicipality }));
@@ -219,6 +220,15 @@ export function createMapController({
         initialLayer.setVisible(map, true);
 
         map.addLayer({
+          id: COMMON_LAYER_IDS.outlineCasing,
+          type: "line",
+          source: SECTOR_SOURCE_ID,
+          paint: {
+            "line-color": "rgba(7,34,42,0.72)",
+            "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.8, 14, 3.2],
+          },
+        });
+        map.addLayer({
           id: COMMON_LAYER_IDS.outline,
           type: "line",
           source: SECTOR_SOURCE_ID,
@@ -235,7 +245,7 @@ export function createMapController({
             "fill-color": "#ffffff",
             "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.12, 0],
           },
-        }, COMMON_LAYER_IDS.outline);
+        }, COMMON_LAYER_IDS.outlineCasing);
         map.addLayer({
           id: COMMON_LAYER_IDS.selected,
           type: "line",
@@ -380,6 +390,7 @@ export function createMapController({
   return {
     map,
     ready,
+    openSourceDialog(triggerElement = null) { sourceDialog.open(triggerElement); },
     setMunicipality(municipality) {
       activeMunicipality = municipality;
       applyLayerFilter();

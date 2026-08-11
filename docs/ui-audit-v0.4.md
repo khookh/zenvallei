@@ -23,7 +23,7 @@ The factual map, metric, denominator, chart and limitation inventory now lives i
 | Result body | Short interpretation and the useful measurements or charts | Source history |
 | Details | Supporting metrics and how to read unfamiliar charts | Every source link |
 | Methodology | Formula, denominator, exclusions, uncertainty and provenance | First-glance instructions |
-| About | Dataset comparison and institutional responsibilities | Sector-specific results |
+| About | Purpose, scope, three usage steps and a compact eight-layer index | Methodologies, source lists or sector-specific results |
 
 ## Findings and applied corrections
 
@@ -35,17 +35,23 @@ The factual map, metric, denominator, chart and limitation inventory now lives i
 | Medium | Repeating a human symbol as text would depend on the platform font and could be mistaken for decoration | Population comparison symbols use deterministic map sprites, repeated visual icons in the legend and complete textual labels |
 | Medium | Heat-population charts can imply the same weighting | The box plots state that every sector counts once; the second chart states that residents are summed |
 | Medium | Comparison explanations could repeat the same caveat in context, legend and panel | Context explains the comparison, the legend only decodes it, Details explains chart reading and Methodology contains limitations |
-| Medium | Directional comparison controls made the same analysis discoverable from only one participant | One explicit seven-pair table now discovers every functional comparison from either linked layer and restores the initiating state |
+| Medium | Directional comparison controls made the same analysis discoverable from only one participant | One explicit nine-pair table now discovers every functional comparison from either linked layer and restores the initiating state |
 | Medium | About and the expanded MapLibre attribution strip competed with map controls | About is now a permanent header action; a bilingual modal source view replaces the overlapping attribution strip while retaining every link |
 | Medium | Green, temperature and income could be compared over unlike surfaces | The three new scatter comparisons share one explicit sealed urban-fabric eligibility rule and disclose its spatial and temporal limits |
+| Medium | Result panels repeated the mapped quantity, interpretation and provenance around the same chart or composition | The Landsat hierarchy is now shared: hero, every existing chart, Details for supporting values, and Methodology for calculations and provenance |
+| Medium | About repeated layer cards, methods and complete source lists | About is now an orientation page with eight compact rows; the source dialog is the only complete external-source index |
 
 ## Layer and comparison checklist
 
 Every active legend was checked for a descriptive title, units or class meaning, selected year and explicit missing state. Long Urban Atlas controls remain interactive but contain no source narrative. Density legends identify their radius and selected classes. Landsat comparisons distinguish surface temperature from air temperature and keep cloud and no-data states separate.
 
-Every result panel was checked for one useful first result, natural English and Belgian Dutch, complete-area denominators where applicable, closed Methodology and safe source attribution. Persistent comparison panels can be minimised, retain chart state and return after About closes.
+Every result panel was checked for one useful first result, natural English and Belgian Dutch, complete-area denominators where applicable, closed Details and Methodology disclosures and safe source attribution. No chart, plot, composition, distribution or Expand action was removed or moved behind a disclosure. Persistent comparison panels can be minimised, retain chart state and return after About closes.
+
+The standalone Urban Atlas result no longer labels mixed official classes as green coverage or artificialisation. Its visible composition uses seven mutually exclusive presentation groups and keeps every official class in Details. These groups are an orientation aid, not measurements of sealing, permeability or vegetation quantity.
 
 Comparison legends use a visual divider between the primary map scale and secondary symbols or selectors. Green Map keeps **Show density** and **Compare** as peer actions. Sealed-urban scatter plots state their analytical unit, eligible surface, source years, sample size and descriptive OLS result without repeating the full method in the first view.
+
+Regression charts now keep only n and an interpretable scaled slope inline. Expanded Details defines Pearson r, tie-aware Spearman ρ and R², identifies the observation unit and exclusions, and retains the non-causal warning. Population-profile charts use resident-weighted bars with readable cumulative-population bands rather than unstable box plots of small groups.
 
 The heat-population comparison adds two complementary views:
 

@@ -1,31 +1,34 @@
 import { formatNumber, t } from "../i18n.js";
 import { authorityLink } from "../source-authorities.js";
 import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette.js";
+import { fetchJsonAsset } from "./compressed-json.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
+import { hideComparisonVeil, showComparisonVeil } from "./map-veil.js";
 import {
-  comparisonPixelOffset, greenClassSelector, loadImageData, safeAsset, SEALED_URBAN_SOURCE_URLS,
-  surroundingAreaHa,
+  comparisonPixelOffset, GREEN_DENSITY_GRADIENT, GREEN_DENSITY_STOPS,
+  greenClassSelector, hasUrbanSurfaceContract, loadImageData, ordinaryLeastSquares, safeAsset, SEALED_URBAN_SOURCE_URLS,
+  selectedUrbanClassIndexes, surroundingAreaHa, urbanSurfaceSelector,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "landsat-groenkaart-temperature";
 const BEFORE_LAYER = "heat-sectors-hit-area";
 
 export function validateLandsatGroenkaartManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 3 || manifest.comparisonId !== "landsat-groenkaart"
+  if (!manifest || manifest.schemaVersion !== 6 || manifest.comparisonId !== "landsat-groenkaart"
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "groenkaart"
     || manifest.greenMapYear !== 2021 || manifest.urbanAtlasYear !== 2021
-    || manifest.analysisResolutionMeters !== 30 || manifest.minimumGreenCoverage !== 0.8
+    || manifest.analysisResolutionMeters !== 30 || manifest.maskResolutionMeters !== 1
+    || manifest.temperatureResolutionMeters !== 30 || manifest.aggregation !== "exact-masked-area"
+    || manifest.minimumAnalysedAreaHa !== 0.1 || manifest.minimumPixelMaskedAreaM2 !== 1
     || !manifest.observations || !Object.values(manifest.observations).every((item) => item.displayDataUrl && item.pointDataUrl)
     || !Array.isArray(manifest.greenClasses) || !manifest.densityNonGreenUrl
-    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes || !manifest.urbanFabricMaskUrl) {
+    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes || !manifest.urbanFabricMaskUrl
+    || !manifest.urbanAtlasClassMaskUrl || !manifest.urbanAtlasClassIndexes
+    || !hasUrbanSurfaceContract(manifest)) {
     throw new TypeError("Unsupported Landsat-Green Map comparison manifest.");
   }
   return manifest;
 }
-
-const scopeId = (record) => record.scope === "region" ? "region:zennevallei"
-  : record.scope === "municipality" ? `municipality:${record.municipality}`
-    : `sector:${record.sectorId}`;
 
 export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, groenkaartLayer, jaarbakLayer }) {
   let manifest;
@@ -33,15 +36,16 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
   let densityNonGreenData;
   let pointData;
   let displayData;
-  let statistics;
   let loadedObservation = "";
   let map;
   let active = false;
   let municipality = "";
   let previousYear = 2021;
   let selectedGreen = new Set([1, 2]);
+  let selectedUrban = new Set(["residential", "employmentInstitutional"]);
+  let displayMode = "temperature";
   let generation = 0;
-  const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .95 });
+  const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .96 });
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
   const observationId = () => landsatLayer.getOption("observation");
@@ -57,9 +61,10 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     manifest.densityNonGreenUrl = safeAsset(descriptor.assetRoot, manifest.densityNonGreenUrl, ".png");
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
     manifest.urbanFabricMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanFabricMaskUrl, ".pmtiles");
+    manifest.urbanAtlasClassMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanAtlasClassMaskUrl, ".pmtiles");
     Object.values(manifest.observations).forEach((item) => {
       item.displayDataUrl = safeAsset(descriptor.assetRoot, item.displayDataUrl, ".png");
-      item.pointDataUrl = safeAsset(descriptor.assetRoot, item.pointDataUrl, ".png");
+      item.pointDataUrl = safeAsset(descriptor.assetRoot, item.pointDataUrl, ".json.gz");
       item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json");
     });
     [densityData, densityNonGreenData] = await Promise.all([
@@ -67,6 +72,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       loadImageData(manifest.densityNonGreenUrl, manifest.imageSize),
     ]);
     selectedGreen = new Set(manifest.defaultGreenClasses);
+    selectedUrban = new Set(manifest.defaultUrbanSurfaceGroups);
     sectorIdByIndex = new Map(Object.entries(manifest.sectorIndexes).map(([id, index]) => [Number(index), id]));
   };
 
@@ -75,14 +81,12 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     const id = observationId();
     if (loadedObservation === id) return;
     const item = manifest.observations[id];
-    const [display, pixels, statsResponse] = await Promise.all([
+    const [display, points] = await Promise.all([
       loadImageData(item.displayDataUrl, manifest.imageSize),
-      loadImageData(item.pointDataUrl, manifest.imageSize), fetch(item.statisticsUrl),
+      fetchJsonAsset(item.pointDataUrl, "Exact comparison points"),
     ]);
-    if (!statsResponse.ok) throw new Error(`Comparison statistics HTTP ${statsResponse.status}.`);
     displayData = display;
-    pointData = pixels;
-    statistics = await statsResponse.json();
+    pointData = points;
     loadedObservation = id;
   };
 
@@ -99,14 +103,6 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     return !selectedMunicipality || manifest.sectorMunicipalities[sectorId] === selectedMunicipality;
   };
 
-  const densityAt = (offset) => {
-    let value = 0;
-    selectedGreen.forEach((code) => {
-      value += (code === 4 ? densityNonGreenData.data[offset] : densityData.data[offset + code - 1]) / 2.55;
-    });
-    return Math.max(0, Math.min(100, value));
-  };
-
   const temperatureAt = (data, offset) => {
     const code = data.data[offset] * 256 + data.data[offset + 1];
     return code ? code / 100 - 100 : null;
@@ -117,20 +113,38 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     const request = ++generation;
     const item = manifest.observations[observationId()];
     const jaarbakUrl = await jaarbakLayer.resolveArchive(item.jaarbakYear, municipality);
+    const selectedUrbanIndexes = selectedUrbanClassIndexes(manifest, selectedUrban);
     const shown = await exactRaster.show(map, {
-      mode: "temperature", jaarbakUrl, urbanMaskUrl: manifest.urbanFabricMaskUrl,
+      mode: displayMode === "temperature" ? "temperature" : "density-with-status",
+      jaarbakUrl, urbanClassUrl: manifest.urbanAtlasClassMaskUrl, selectedUrbanIndexes,
       temperatureData: displayData, dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
+      densityData, nonGreenData: densityNonGreenData, selectedClasses: [...selectedGreen],
     });
     return active && request === generation && shown;
   };
 
   const pixelPoints = (record) => {
-    const output = [];
-    for (let offset = 0; offset < pointData.data.length; offset += 4) {
-      if (pointData.data[offset + 3] !== 255 || !allowedIndex(pointData.data[offset + 2], record)) continue;
-      output.push([densityAt(offset), temperatureAt(pointData, offset)]);
-    }
-    return output;
+    const byObservation = new Map();
+    (pointData?.records ?? []).forEach((item) => {
+      const [sectorIndex, landsatIndex, groupIndex, maskedAreaM2, ...rest] = item;
+      const group = manifest.urbanSurfaceGroups[groupIndex - 1];
+      if (!group || !selectedUrban.has(group.id) || !allowedIndex(sectorIndex, record)) return;
+      const greenSums = rest.slice(0, 4);
+      const temperature = rest[4];
+      const combined = byObservation.get(landsatIndex)
+        ?? { maskedAreaM2: 0, greenSums: [0, 0, 0, 0], temperature };
+      combined.maskedAreaM2 += maskedAreaM2;
+      greenSums.forEach((value, index) => { combined.greenSums[index] += value; });
+      byObservation.set(landsatIndex, combined);
+    });
+    const points = [...byObservation.values()].flatMap((item) => {
+      if (!item.maskedAreaM2) return [];
+      const density = [...selectedGreen].reduce((sum, code) => sum + item.greenSums[code - 1], 0)
+        / item.maskedAreaM2;
+      return [[density, item.temperature, item.maskedAreaM2]];
+    });
+    return points.reduce((sum, point) => sum + point[2], 0) >= manifest.minimumAnalysedAreaHa * 10_000
+      ? points : [];
   };
 
   const refresh = async () => {
@@ -156,6 +170,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       groenkaartLayer.setOption(map, "year", 2021);
       groenkaartLayer.setVisible(map, false);
       landsatLayer.setVisible(map, false);
+      showComparisonVeil(map, BEFORE_LAYER);
       active = true;
       await refresh();
       return true;
@@ -164,6 +179,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       active = false;
       generation += 1;
       exactRaster.remove();
+      hideComparisonVeil(map);
       groenkaartLayer.setOption(map, "year", previousYear);
       groenkaartLayer.setVisible(map, false);
       landsatLayer.setVisible(map, true);
@@ -181,6 +197,26 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       notify();
       return { changed: true };
     },
+    toggleSeries(key) {
+      if (!manifest?.urbanSurfaceGroups.some(({ id }) => id === key)) return { changed: false };
+      if (selectedUrban.has(key)) {
+        if (selectedUrban.size === 1) return { changed: false, minimum: true };
+        selectedUrban.delete(key);
+      } else selectedUrban.add(key);
+      render().then(notify).catch(console.error);
+      notify();
+      return { changed: true };
+    },
+    getMapModeAction: () => ({
+      active: displayMode === "vegetation",
+      label: t(displayMode === "temperature" ? "landsatGreen.showVegetation" : "landsatGreen.showTemperature"),
+    }),
+    async toggleMapMode() {
+      displayMode = displayMode === "temperature" ? "vegetation" : "temperature";
+      await render();
+      notify();
+      return true;
+    },
     getLabel: () => t("landsatGreen.title"),
     getActiveNote: () => t("landsatGreen.activeNote"),
     getContext: () => ({
@@ -192,19 +228,35 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
         authorityLink("copernicusClms", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
       ],
     }),
-    getLegendModel: () => ({
-      title: t("landsatGreen.legendTitle"), layout: "scale", groups: [{ items: comparisonLegendItems() }],
-      gradient: comparisonHeatGradient(), observation: observation(),
-      densitySelector: greenClassSelector(manifest, selectedGreen),
-      note: t("landsatGreen.legendNote"),
-    }),
+    getLegendModel: () => {
+      const vegetation = displayMode === "vegetation";
+      return {
+        title: t(vegetation ? "landsatGreen.vegetationLegendTitle" : "landsatGreen.legendTitle"),
+        layout: "scale",
+        groups: [
+          { items: vegetation ? [] : comparisonLegendItems() },
+          { items: [{ label: t("landsat.cloudLegend"), color: "repeating-linear-gradient(45deg,#7e878b 0 3px,#c2c9cb 3px 6px)" }] },
+        ],
+        gradient: vegetation ? null : comparisonHeatGradient(),
+        continuousScale: vegetation ? {
+          gradient: GREEN_DENSITY_GRADIENT,
+          ticks: GREEN_DENSITY_STOPS.map(({ value }) => value), unit: "%",
+          accessibleLabel: t("landsatGreen.vegetationScaleLabel"),
+        } : null,
+        observation: observation(),
+        densitySelector: greenClassSelector(manifest, selectedGreen),
+        surfaceSelector: { ...urbanSurfaceSelector(manifest, selectedUrban), maximum: 2 },
+        note: t(vegetation ? "landsatGreen.vegetationLegendNote" : "landsatGreen.legendNote"),
+      };
+    },
     getPopupModel(_feature, record) {
-      const stats = statistics?.sectorStats?.[record.sectorId];
-      const density = [...selectedGreen].reduce((sum, code) => sum + Number(stats?.meanDensityByGreenClass?.[code] ?? 0), 0);
-      return { title: record.sectorName, subtitle: t("landsatGreen.popupSubtitle"), lines: stats?.clearPixelCount
+      const points = pixelPoints(record);
+      const density = points.length ? points.reduce((sum, point) => sum + point[0], 0) / points.length : null;
+      const temperature = points.length ? points.reduce((sum, point) => sum + point[1], 0) / points.length : null;
+      return { title: record.sectorName, subtitle: t("landsatGreen.popupSubtitle"), lines: points.length
         ? [t("landsatGreen.popupValues", {
           density: formatNumber(density, 1), area: formatNumber(surroundingAreaHa(density), 2),
-          temperature: formatNumber(stats.meanTemperatureC, 1),
+          temperature: formatNumber(temperature, 1),
         })]
         : [t("sealedUrban.noComparableValue")] };
     },
@@ -214,9 +266,17 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       if (offset < 0 || displayData?.data[offset + 3] !== 255) {
         return { unavailable: true };
       }
-      const comparable = pointData?.data[offset + 3] === 255 && allowedIndex(pointData.data[offset + 2]);
+      const landsatIndex = Math.floor(offset / 4) + 1;
+      const comparablePoints = (pointData?.records ?? []).filter((item) => {
+        const group = manifest.urbanSurfaceGroups[item[2] - 1];
+        return item[1] === landsatIndex && group && selectedUrban.has(group.id) && allowedIndex(item[0]);
+      });
+      const maskedAreaM2 = comparablePoints.reduce((sum, item) => sum + item[3], 0);
+      const densitySum = comparablePoints.reduce((sum, item) => sum
+        + [...selectedGreen].reduce((subtotal, code) => subtotal + item[3 + code], 0), 0);
       return {
-        density: comparable ? densityAt(offset) : null,
+        density: maskedAreaM2 ? densitySum / maskedAreaM2 : null,
+        maskedAreaM2,
         temperature: temperatureAt(displayData, offset),
         acquiredAt: observation()?.acquiredAt,
       };
@@ -228,26 +288,33 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
         title: t("landsatGreen.popupSubtitle"),
         subtitle: landsatLayer.getPointPopupModel?.({ acquiredAt: result.acquiredAt, status: "clear", temperatureC: result.temperature })?.subtitle,
         lines: [Number.isFinite(result.density)
-          ? t("landsatGreen.popupValues", {
+          ? `${t("landsatGreen.popupValues", {
             density: formatNumber(result.density, 1),
             area: formatNumber(surroundingAreaHa(result.density), 2),
             temperature: formatNumber(result.temperature, 1),
-          })
+          })} ${t("landsatGreen.maskedArea", { area: formatNumber(result.maskedAreaM2 / 10_000, 4) })}`
           : t("landsatGreen.popupTemperatureOnly", { temperature: formatNumber(result.temperature, 1) })],
       };
     },
     getPanelModel(record) {
-      const key = [...selectedGreen].sort((a, b) => a - b).join("+");
       const selector = greenClassSelector(manifest, selectedGreen);
+      const points = pixelPoints(record);
+      const regression = ordinaryLeastSquares(
+        points.map(([density, temperature]) => ({ density, temperature })), "density", "temperature",
+      );
+      if (regression) regression.analysedAreaHa = points.reduce((sum, point) => sum + point[2], 0) / 10_000;
       return {
         template: "sealed-urban-scatter", comparisonId: "landsat-groenkaart", record,
         title: t("landsatGreen.chartTitle"), definition: t("landsatGreen.definition"),
         xLabel: t("sealedUrban.axisVegetationCover100m"), yLabel: t("sealedUrban.axisTemperature"),
-        xKey: "density", yKey: "temperature", pixelPoints: pixelPoints(record),
-        regression: statistics?.regressions?.[scopeId(record)]?.[key] ?? null,
+        xKey: "density", yKey: "temperature", pixelPoints: points,
+        regression,
+        areaLabelKey: "sealedUrban.exactArea",
         slopeScale: 10, slopeUnit: t("landsatGreen.slopeUnit"), observation: observation(),
         selectedClasses: [...selectedGreen],
         selectedClassLabels: selector.items.filter((item) => item.selected).map((item) => item.label),
+        selectedSurfaceLabels: manifest.urbanSurfaceGroups.filter(({ id }) => selectedUrban.has(id))
+          .map(({ id }) => t(`sealedUrban.surface.${id}`)),
         methodology: t("landsatGreen.methodology"), caveat: t("sealedUrban.pixelRegressionCaveat"),
       };
     },

@@ -28,6 +28,8 @@ def main(argv=None):
         choices=(
             "all", "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
             "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
+            "groenkaart-population",
+            "landsat-population",
         ),
         default="all",
     )
@@ -39,6 +41,8 @@ def main(argv=None):
     datasets = (
         "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
         "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
+        "groenkaart-population",
+        "landsat-population",
     ) if arguments.dataset == "all" else (arguments.dataset,)
     for dataset_id in datasets:
         print(f"Preparing {dataset_id}…", flush=True)
@@ -62,6 +66,16 @@ def main(argv=None):
                 parser.error("The sealed-urban comparisons reuse prepared data and accept no source override.")
             from .sealed_urban_comparisons import prepare_sealed_urban_comparisons
             prepare_sealed_urban_comparisons()
+        elif dataset_id == "groenkaart-population":
+            if sources:
+                parser.error("The Green Map-population comparison reuses prepared data and accepts no source override.")
+            from .groenkaart_population import prepare_groenkaart_population
+            prepare_groenkaart_population()
+        elif dataset_id == "landsat-population":
+            if sources:
+                parser.error("The Landsat-population comparison reuses prepared data and accepts no source override.")
+            from .landsat_population import prepare_landsat_population
+            prepare_landsat_population()
         elif dataset_id == "landgebruik":
             from .landgebruik import prepare_landgebruik
             prepare_landgebruik(sources)

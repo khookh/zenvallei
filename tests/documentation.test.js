@@ -42,12 +42,12 @@ describe("active documentation", () => {
     }
   });
 
-  it("documents both Landsat comparisons as public lazy-loaded features", async () => {
+  it("documents Landsat comparisons as public lazy-loaded features", async () => {
     const landsat = await fs.readFile(path.join(projectRoot, "docs", "landsat-surface-temperature.md"), "utf8");
     expect(landsat).toContain("used by local and GitHub Pages builds");
     expect(landsat).not.toMatch(/comparisons?.{0,80}(?:local-only|available only through)/i);
     expect(landsat).toContain("Urban Atlas 2021");
-    expect(landsat).toContain("JaarBAK soil sealing");
+    expect(landsat).toContain("Soil sealing (official product: JaarBAK)");
   });
 
   it("documents population sources without presenting partial language indicators as residents", async () => {
@@ -58,15 +58,25 @@ describe("active documentation", () => {
     expect(guide).toContain("cannot represent the Dutch, French or other-language distribution of all residents");
   });
 
-  it("keeps one factual contract and one priority for all fifteen active views", async () => {
+  it("keeps one factual contract and one priority for all seventeen active views", async () => {
     const audit = await fs.readFile(path.join(projectRoot, "docs", "layer-and-comparison-audit.md"), "utf8");
     const numberedViews = audit.match(/^### \d+\. /gm) ?? [];
     const priorities = audit.match(/^- \*\*Prioritised improvement:\*\*/gm) ?? [];
-    expect(numberedViews).toHaveLength(15);
-    expect(priorities).toHaveLength(15);
+    expect(numberedViews).toHaveLength(17);
+    expect(priorities).toHaveLength(17);
     expect(audit).toContain("exact 1 m display masks");
     expect(audit).toContain("10 m focal-density calculations");
     expect(audit).toContain("30 m Landsat");
     expect(audit).not.toMatch(/pixel green density/i);
+  });
+
+  it("documents privacy-preserving analytics options without claiming that tracking is enabled", async () => {
+    const guide = await fs.readFile(path.join(projectRoot, "docs", "analytics-monitoring.md"), "utf8");
+    expect(guide).toContain("does not provide a documented visitor analytics dashboard");
+    expect(guide).toContain("daily rotating HMAC");
+    expect(guide).toContain("never store the raw IP");
+    expect(guide).toContain("at most 48 hours");
+    expect(guide).toContain("IP address is personal data");
+    expect(guide).toContain("No analytics code is enabled");
   });
 });

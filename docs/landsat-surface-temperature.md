@@ -62,34 +62,34 @@ Both comparisons reuse the prepared Landsat analytical rasters and download no s
 
 ### Urban Atlas 2021
 
-Run `pnpm landsat-urban-atlas:prepare` after preparing Landsat. It reuses the cached analytical rasters and `public/data/urban-atlas.geojson`; it downloads nothing. For every 30 m Landsat pixel, a 6 by 6 grid of 5 m sample points is evaluated. A pixel receives one Urban Atlas class only when a unique class covers at least 18 of the 36 points. Ties and mixed pixels without a majority are excluded.
+Run `pnpm landsat-urban-atlas:prepare` after preparing Landsat. It reuses the cached analytical rasters and `public/data/urban-atlas.geojson`; it downloads nothing. Urban Atlas polygons are rasterised on an aligned 1 m accounting grid in EPSG:31370. Every intersecting square metre inherits the unchanged temperature of its parent 30 m Landsat observation. A parent observation crossing several classes therefore contributes its exact intersecting area to each class rather than being assigned wholly to one class.
 
-The preparation files stay below `.cache/local-layers/landsat-urban-atlas`. The comparison manifest defines fixed 0.5 degree Celsius bins from 15 to 50 degrees Celsius. Per-observation files contain distributions for 154 sectors, seven municipalities and the complete Zennevallei, plus lossless browser-selection PNGs. The browser uses these PNGs only for display; all metrics come from the aligned EPSG:32631 analytical grid.
+The preparation files stay below `.cache/local-layers/landsat-urban-atlas`. The comparison manifest defines fixed 0.5 degree Celsius bins from 15 to 50 degrees Celsius. Per-observation files contain exact-area-weighted distributions for 154 sectors, seven municipalities and the complete Zennevallei, plus lossless temperature/status PNGs. An indexed PMTiles mask retains the original polygon geometry for display.
 
 Choose Landsat surface temperature, select **Compare**, then **Urban Atlas 2021**. The default curves compare pooled green urban areas with continuous urban fabric. Up to four analysis families or individual classes can be shown. The families are artificial surfaces; green urban areas; agriculture; forest and semi-natural vegetation; sports and leisure; wetlands; and water. Family and child selections are mutually exclusive.
 
-Only selected Urban Atlas surfaces are drawn. Their fill uses 18% opacity and their outline 62%; the thermal raster is drawn above them at 96%. Curves show the percentage of each surface's clear pixels per temperature bin and are normalised independently. One clear Landsat pixel is one recording, and 100% means all clear pixels assigned to that curve's surface. The comparison is descriptive, uses the fixed 2021 Urban Atlas classification for every Landsat year and does not treat spatially neighbouring pixels as independent observations.
+Only selected Urban Atlas surfaces are drawn. Thermal colours and cloud hatching are clipped to the exact selected polygons, with restrained outlines. Curves show the percentage of each surface's clear observed area per temperature bin and are normalised independently. A partial parent Landsat observation contributes only its intersecting area while keeping its native temperature. The comparison is descriptive, uses the fixed 2021 Urban Atlas classification for every Landsat year and does not treat spatially neighbouring observations as independent.
 
-The expanded chart identifies the KMI heatwave, Brussels-local acquisition time, selected geography and matched surface source. It reports both clear-pixel counts and nominal represented area, using 0.09 ha per 30 m pixel. Values outside the fixed 15-50 degree Celsius display range are reported separately rather than silently discarded.
+The expanded chart identifies the KMI heatwave, Brussels-local acquisition time, selected geography and matched surface source. It reports exact clear observed hectares and the number of contributing native Landsat observations. Exact areas outside the fixed 15-50 degree Celsius display range are reported separately rather than silently discarded.
 
-### JaarBAK soil sealing
+### Soil sealing (official product: JaarBAK)
 
-Run `pnpm landsat-soil-sealing:prepare` after JaarBAK and Landsat are prepared. The output is stored under `.cache/local-layers/landsat-jaarbak`. Each Landsat observation is paired with the closest available JaarBAK edition:
+Run `pnpm landsat-soil-sealing:prepare` after Soil sealing and Landsat are prepared. The output is stored under `.cache/local-layers/landsat-jaarbak`. Each Landsat observation is paired with the closest available soil-sealing edition:
 
-| Landsat observation | JaarBAK edition |
+| Landsat observation | Soil-sealing edition |
 | --- | --- |
 | 7 August 2020 | 2020 |
 | 14 August 2022 | 2022 |
 | 13 June and 9 September 2023 | 2023 |
 | 13 August 2025 and 22 June 2026 | 2024 |
 
-The map reuses the matched official JaarBAK PMTiles directly. It decodes the original bright-red `#e8292f` sealed class, makes unsealed pixels transparent and draws that exact 1 m footprint below the complete Landsat observation. The Landsat raster remains visible at 72% opacity, including temperature pixels whose 30 m analytical class is unsealed. This makes the comparison footprint identical to the standalone Soil sealing layer for the same year and municipality.
+The map reuses the matched official Soil sealing PMTiles directly. It decodes the original bright-red `#e8292f` sealed class, makes unsealed pixels transparent and draws that exact 1 m footprint below the complete Landsat observation. The Landsat raster remains visible at 72% opacity, including temperature pixels whose 30 m analytical class is unsealed. This makes the comparison footprint identical to the standalone Soil sealing layer for the same year and municipality.
 
-The histogram retains a separate analytical question. Native binary 1 m JaarBAK values are area-averaged into each 30 m Landsat pixel. At least 50% valid JaarBAK coverage is required. More than 50% sealed becomes **Sealed**, less than 50% becomes **Unsealed**, and exact ties are excluded from the two independently normalised distributions.
+The histogram intersects the native binary 1 m Soil sealing surface with clear 30 m Landsat observations. Every retained square metre keeps its sealed or unsealed class and inherits its parent Landsat temperature. A mixed parent observation may therefore contribute proportionally to both independently normalised distributions. The chart reports exact clear observed hectares and contributing native Landsat observations rather than nominal full-pixel area.
 
-A second scatter plot relates every clear, finite Landsat record with valid JaarBAK density to the sealed share within 100 m of its pixel centre. It includes the complete 0-100% range, including 0% sealed surface, and uses the existing circular focal density derived from native 1 m values. At least 95% of the 100 m circle must have valid source coverage. Every eligible pixel is plotted without sampling. The chart reports an ordinary unweighted OLS line, R², pixel count, nominal analysed area and the matched JaarBAK year. It is descriptive: neighbouring pixels are spatially dependent, so no p-value or causal claim is shown.
+A second scatter plot relates every clear, finite Landsat record with valid soil-sealing density to the sealed share within 100 m of its pixel centre. It includes the complete 0-100% range, including 0% sealed surface, and uses the existing circular focal density derived from native 1 m values. At least 95% of the 100 m circle must have valid source coverage. Every eligible pixel is plotted without sampling. Inline presentation keeps only the observation count and slope; expanded Details add the intercept, Pearson r, tie-aware Spearman rho and R² with its definition. It is descriptive: neighbouring pixels are spatially dependent, so no p-value or causal claim is shown.
 
-The UI discloses that the JaarBAK method changed in 2023 and that the 2024 edition is provisional. The 2024 mask is the closest available reference for the 2025 and 2026 Landsat observations.
+The UI discloses that the official product's method changed in 2023 and that the 2024 edition is provisional. The 2024 mask is the closest available reference for the 2025 and 2026 Landsat observations.
 
 ### Sealed urban-fabric scatter comparisons
 
@@ -97,11 +97,15 @@ Run `pnpm sealed-urban:prepare` after Landsat, Green Map, JaarBAK and Urban Atla
 
 - Green Map × Landsat: one point per eligible clear 30 m pixel, with selected Green Map density on X and temperature on Y.
 - Green Map × income: one point per eligible sector, with Statbel 2023 median taxable income on X and mean Green Map density on Y.
-- Landsat × income: one point per sector with at least ten eligible clear pixels, with income on X and mean temperature on Y.
+- Landsat × income: one point per sector with at least 0.10 ha of clear eligible surface, with income on X and exact-area mean temperature on Y.
 
-Eligibility is intentionally narrow. Urban Atlas must identify `11100`, `11210`, `11220`, `11230` or `11240`; isolated structures `11300` are excluded. The two Green Map comparison maps intersect the exact 1 m sealed JaarBAK footprint with a binary Urban Atlas PMTiles mask. Green Map × income colours that footprint with the selected 100 m density combination. Its sector mean is weighted by exact eligible 1 m area inside each parent 10 m density cell and requires at least 0.10 ha. Green Map × Landsat clips the visual temperature raster to exact sealed subpixels, while each graph observation deliberately remains one analytically eligible 30 m Landsat pixel under the established majority rules.
+All five sealed-surface comparisons let users combine the residential group (`11100`, `11210`, `11220`, `11230`, `11240`) and official class `12100`, which cannot be separated into its industrial, commercial, public, military and private components. Both groups are selected initially; isolated structures `11300` are excluded. Urban Atlas polygons, native 1 m Soil sealing and clear native 30 m Landsat observations are intersected in EPSG:31370. Each retained square metre inherits its parent Landsat temperature; this is exact area accounting, not a synthetic 1 m temperature measurement. Green Map × Landsat keeps one unweighted regression point per contributing native 30 m observation. Sector and population-cell means instead divide temperature-area sums by exact retained area and require at least 0.10 ha.
 
-The displayed lines are ordinary unweighted OLS summaries with R². They describe association within the selected scope and do not establish causation; no p-values are reported because pixels are spatially correlated and sector summaries are ecological observations.
+The displayed lines are ordinary unweighted OLS summaries. Expanded Details report Pearson r for linear association, tie-aware Spearman rho for monotonic rank association and R² as the share of observed Y variation described by the fitted line in the current sample. They do not establish causation; no p-values are reported because pixels are spatially correlated and sector summaries are ecological observations.
+
+Landsat × income also groups sector-average temperatures into the three income-symbol categories used on the map. The Tukey boxes give every comparable sector equal weight and retain sector dots plus an arithmetic-mean marker. Categories with fewer than five comparable sectors are suppressed. The expanded dialog keeps this same sector-level analytical unit and adds the detailed regression statistics.
+
+Landsat × population density uses the Government of Flanders uniform 100 m model from 2019. Within each 1 ha population cell, temperature-area sums over the exact eligible surface are divided by that surface; at least 0.10 ha is required. One chart orders cells from hottest to coolest and traces cumulative modelled residents; a second sums represented residents into fixed 0.5°C intervals. The cell's population describes its complete modelled hectare, while its temperature describes only the eligible masked portion. The comparison differs from the registered 2025 population total because it uses an older model and excludes cells without sufficient clear eligible surface. It is an area-level descriptive comparison, not an individual exposure estimate or a population-change estimate.
 
 ### Comparison palette and interpretation
 

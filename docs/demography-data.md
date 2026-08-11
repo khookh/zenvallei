@@ -8,6 +8,20 @@ Heat vulnerability can also be compared with population. It uses Statbel's autho
 
 Both comparisons keep the selected heat metric on the map. Income or population symbols form a separate legend section and sector selection highlights the matching graph observation without replacing the area-scoped analysis.
 
+## Green Map and the uniform population model
+
+The Green Map × population-density comparison deliberately uses the Government of Flanders **100 m model · 2019**, not Statbel's privacy-adjusted variable 2025 grid. One observation is one eligible 100 m population cell. Its X value is modelled inhabitants per hectare; its vegetation value is the exact-sealed-area-weighted mean of selected 100 m surrounding Green Map cover at positions within the selected Urban Atlas groups. A cell needs at least 0.10 ha of exact 2021 sealed surface and valid Green Map density.
+
+Eligible cells are sorted by modelled inhabitants per hectare and grouped into successive shares of the selected scope's residents. Identical density values remain together and adjacent groups merge until at least five cells remain. Bar heights are resident-weighted mean vegetation cover. Zero-population cells are excluded from the cumulative denominator; fewer than ten positive-population cells produce only the exact resident-weighted mean. Because the population model is from 2019 and Green Map is from 2021, the chart is descriptive and cannot establish individual exposure or causation.
+
+## Landsat and the uniform population model
+
+Landsat × population density uses the same Government of Flanders **100 m model · 2019**. Exact Urban Atlas polygons and native 1 m Soil sealing cells are intersected with clear native 30 m Landsat observations. Every retained square metre inherits its parent temperature, so partial Landsat observations contribute in proportion to their exact retained surface. A population-cell mean requires at least 0.10 ha of clear eligible surface.
+
+Two charts retain the cell's complete modelled resident count. The first sorts cells from hottest to coolest and traces cumulative residents; the second sums represented residents into fixed 0.5°C intervals. Hover values distinguish residents and shares at or above the selected temperature, residents and shares in cooler cells, and residents in the corresponding interval. The represented population differs from the standalone registered 2025 total because this comparison uses a modelled 2019 raster and includes only cells with at least 0.10 ha of clear eligible surface. Neither difference estimates population change, and this area-level daytime surface-temperature profile is not an individual exposure measurement.
+
+All five sealed-surface comparisons offer two Urban Atlas groups: residential urban fabric (`11100`, `11210`, `11220`, `11230`, `11240`) and industrial, commercial, public, military and private units (`12100`). Both are selected initially; at least one remains active. Isolated structures (`11300`) are excluded.
+
 ## Population density
 
 The default **Current grid · 2025** view uses [Statbel's variable population grid](https://statbel.fgov.be/en/themes/datalab/variable-cell-grid). Cells are 125, 250, 500 or 1,000 m wide. Their size and the geographical displacement of some residents protect confidentiality. The map calculates inhabitants per hectare from each cell's published population and area. Exact sector, municipality and Zennevallei totals come from [Statbel's compatible 2025 sector table](https://statbel.fgov.be/sites/default/files/files/opendata/bevolking/sectoren/OPENDATA_SECTOREN_2025_OLD.xlsx), not from summing displaced cells.

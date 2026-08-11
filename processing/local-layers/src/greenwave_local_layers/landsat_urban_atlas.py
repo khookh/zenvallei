@@ -1,12 +1,13 @@
 """Prepare the Landsat surface-temperature x Urban Atlas comparison.
 
-Scientific distributions are calculated on the aligned 30 m Landsat grid.
-The PNG files are compact, lossless browser derivatives used only to update a
-MapLibre canvas; they are never used to calculate statistics.
+Scientific distributions use exact 1 m Urban Atlas area within each native
+30 m Landsat observation. The PNG files are compact, lossless browser
+derivatives used only to update a MapLibre canvas; they never supply statistics.
 """
 
 from __future__ import annotations
 
+import gzip
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,17 +25,29 @@ from .landsat import (
     EXPECTED_SELECTED_OBSERVATIONS, TEMPERATURE_MAXIMUM, TEMPERATURE_MINIMUM,
     _read_analysis,
 )
+from .exact_landsat_mask import prepare_exact_mask_table
 from .pipeline import file_hash, update_index
 
 URBAN_ATLAS_GEOJSON = PROJECT_ROOT / "public" / "data" / "urban-atlas.geojson"
 URBAN_ATLAS_MANIFEST = PROJECT_ROOT / "public" / "data" / "urban-atlas.json"
 OUTPUT_ROOT = CACHE_ROOT / "landsat-urban-atlas"
+# The year selects an aligned native 1 m accounting grid only. Soil values are
+# ignored by this comparison. Matching the observation's Soil-sealing edition
+# lets all exact-area comparison products reuse the same cached intersections.
+MASK_GRID_YEAR_BY_OBSERVATION = {
+    "landsat-2020-08-07": 2020,
+    "landsat-2022-08-14": 2022,
+    "landsat-2023-06-13": 2023,
+    "landsat-2023-09-09": 2023,
+    "landsat-2025-08-13": 2024,
+    "landsat-2026-06-22": 2024,
+}
 BIN_EDGES = np.arange(TEMPERATURE_MINIMUM, TEMPERATURE_MAXIMUM + 0.5, 0.5)
 MINIMUM_MAJORITY = 18
 
 # Analysis families are deliberately broader than the product legend groups.
 # Each Urban Atlas class belongs to exactly one family so pooled distributions
-# cannot double-count a Landsat pixel.
+# cannot double-count exact contributing surface.
 FAMILIES = (
     {
         "id": "artificialSurfaces",
@@ -90,53 +103,72 @@ def _subpixel_majority(shapes, grid, minimum=MINIMUM_MAJORITY):
     return majority_from_subpixels(samples, minimum).reshape(grid["height"], grid["width"])
 
 
-def _percentile(values, percentile):
-    return None if not len(values) else round(float(np.percentile(values, percentile)), 3)
+def _weighted_percentile(values, weights, percentile):
+    if not len(values):
+        return None
+    order = np.argsort(values, kind="stable")
+    values, weights = values[order], weights[order]
+    threshold = np.sum(weights) * percentile / 100
+    return round(float(values[np.searchsorted(np.cumsum(weights), threshold, side="left")]), 3)
 
 
-def _distribution(temperature, status, selected):
+def _exact_distribution_values(temperature, status, landsat, area_m2, selected):
+    """Summarise a pre-scoped exact table without rescanning other scopes."""
     clear = selected & (status == 1) & np.isfinite(temperature)
     cloud = selected & (status == 2)
     missing = selected & (status == 0)
     values = temperature[clear]
-    inside = values[(values >= BIN_EDGES[0]) & (values <= BIN_EDGES[-1])]
-    counts, _ = np.histogram(inside, bins=BIN_EDGES)
+    weights = area_m2[clear].astype(np.float64)
+    inside = (values >= BIN_EDGES[0]) & (values <= BIN_EDGES[-1])
+    bins, _ = np.histogram(values[inside], bins=BIN_EDGES, weights=weights[inside])
+    area = float(np.sum(weights))
     return {
-        "clearPixelCount": int(len(values)),
-        "cloudPixelCount": int(np.count_nonzero(cloud)),
-        "otherMissingPixelCount": int(np.count_nonzero(missing)),
-        "underflowCount": int(np.count_nonzero(values < BIN_EDGES[0])),
-        "overflowCount": int(np.count_nonzero(values > BIN_EDGES[-1])),
-        "binCounts": counts.astype(int).tolist(),
-        "meanC": None if not len(values) else round(float(np.mean(values)), 3),
-        "medianC": _percentile(values, 50),
-        "p10C": _percentile(values, 10),
-        "p90C": _percentile(values, 90),
+        "clearObservedAreaHa": round(area / 10_000, 4),
+        "cloudObservedAreaHa": round(float(np.sum(area_m2[cloud])) / 10_000, 4),
+        "otherMissingAreaHa": round(float(np.sum(area_m2[missing])) / 10_000, 4),
+        "contributingLandsatCount": int(np.unique(landsat[clear]).size),
+        "underflowAreaM2": int(round(float(np.sum(weights[values < BIN_EDGES[0]])))),
+        "overflowAreaM2": int(round(float(np.sum(weights[values > BIN_EDGES[-1]])))),
+        "binAreaM2": np.rint(bins).astype(int).tolist(),
+        "meanC": None if not area else round(float(np.average(values, weights=weights)), 3),
+        "medianC": _weighted_percentile(values, weights, 50),
+        "p10C": _weighted_percentile(values, weights, 10),
+        "p90C": _weighted_percentile(values, weights, 90),
     }
 
 
-def _scope_distributions(temperature, status, class_index, sector_index, sector_meta, series):
-    flat_temperature = temperature.ravel()
-    flat_status = status.ravel()
-    flat_class = class_index.ravel()
-    flat_sector = sector_index.ravel()
-    scopes = {"region:zennevallei": np.flatnonzero(flat_sector > 0)}
-    for index, metadata in sector_meta.items():
-        scopes[f"sector:{metadata['sectorId']}"] = np.flatnonzero(flat_sector == index)
-    for municipality in MUNICIPALITIES:
-        indexes = [index for index, metadata in sector_meta.items() if metadata["municipality"] == municipality]
-        scopes[f"municipality:{municipality}"] = np.flatnonzero(np.isin(flat_sector, indexes))
+def _exact_distribution(table, selected):
+    return _exact_distribution_values(
+        table.temperature[table.landsat - 1], table.status, table.landsat,
+        table.area_m2, selected,
+    )
 
+
+def _exact_scope_distributions(table, sector_meta, series):
+    class_lookup = {code: index + 1 for index, code in enumerate(table.urban_codes)}
+    scopes = {"region:zennevallei": tuple(sector_meta)}
+    scopes.update({f"sector:{item['sectorId']}": (index,) for index, item in sector_meta.items()})
+    for municipality in MUNICIPALITIES:
+        scopes[f"municipality:{municipality}"] = tuple(
+            index for index, item in sector_meta.items() if item["municipality"] == municipality
+        )
     output = {}
-    for scope_id, indexes in scopes.items():
-        local_class = flat_class[indexes]
+    for scope_id, sector_indexes in scopes.items():
+        scope = np.isin(table.sector, sector_indexes)
+        scoped_urban = table.urban_class[scope]
+        scoped_landsat = table.landsat[scope]
+        scoped_status = table.status[scope]
+        scoped_area = table.area_m2[scope]
+        scoped_temperature = table.temperature[scoped_landsat - 1]
         output[scope_id] = {
-            "assignedPixelCount": int(len(indexes)),
+            "assignedAreaHa": round(float(np.sum(scoped_area)) / 10_000, 4),
             "series": {
-                item["key"]: _distribution(
-                    flat_temperature[indexes], flat_status[indexes], np.isin(local_class, item["classIndexes"]),
-                )
-                for item in series
+                item["key"]: _exact_distribution_values(
+                    scoped_temperature, scoped_status, scoped_landsat, scoped_area,
+                    np.isin(scoped_urban, [
+                        class_lookup[code] for code in item.get("codes", (item.get("code"),)) if code in class_lookup
+                    ]),
+                ) for item in series
             },
         }
     return output
@@ -165,15 +197,20 @@ def _reproject_byte(values, grid, web):
     return output
 
 
-def _write_png(path: Path, bands):
+def _write_png(path: Path, bands, alpha=None):
     path.parent.mkdir(parents=True, exist_ok=True)
-    rgba = np.dstack([*bands, np.full_like(bands[0], 255, dtype=np.uint8)])
+    rgba = np.dstack([*bands, np.full_like(bands[0], 255, dtype=np.uint8) if alpha is None else alpha])
     temporary = path.with_suffix(".partial.png")
     Image.fromarray(rgba, mode="RGBA").save(temporary, optimize=True)
     temporary.replace(path)
 
 
 def prepare_landsat_urban_atlas():
+    # Imported lazily to avoid a module cycle: the shared preparation module
+    # reuses the 30 m majority helper defined above.
+    from .sealed_urban_comparisons import _prepare_urban_atlas_class_mask
+
+    class_mask = _prepare_urban_atlas_class_mask()
     landsat_manifest_path = CACHE_ROOT / "landsat-temperature" / "manifest.json"
     if not landsat_manifest_path.exists():
         raise FileNotFoundError("Prepare Landsat surface temperature before preparing the comparison.")
@@ -187,10 +224,6 @@ def prepare_landsat_urban_atlas():
     class_lookup = {item["code"]: index + 1 for index, item in enumerate(classes)}
     first_analysis = CACHE_ROOT / "landsat-temperature" / "analysis" / f"{selected_ids[0]}.tif"
     _, _, _, grid = _read_analysis(first_analysis)
-
-    ua = gpd.read_file(URBAN_ATLAS_GEOJSON).to_crs(grid["crs"])
-    ua_shapes = ((geometry, class_lookup.get(str(code), 0)) for geometry, code in zip(ua.geometry, ua["classCode"]))
-    class_index = _subpixel_majority(ua_shapes, grid)
 
     sectors = gpd.read_file(SECTORS_PATH).to_crs(grid["crs"])
     sector_meta = {
@@ -219,7 +252,6 @@ def prepare_landsat_urban_atlas():
 
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     web = _web_grid(grid)
-    web_class = _reproject_byte(class_index.astype(np.uint8), grid, web)
     web_sector = _reproject_byte(sector_index.astype(np.uint8), grid, web)
     web_municipality = _reproject_byte(municipality_index, grid, web)
     scope_path = OUTPUT_ROOT / "scope-index.png"
@@ -231,34 +263,37 @@ def prepare_landsat_urban_atlas():
         temperature, status, _, observation_grid = _read_analysis(analysis)
         if observation_grid != grid:
             raise ValueError(f"{observation_id}: analytical grid is not aligned.")
-        distributions = _scope_distributions(
-            temperature, status, class_index, sector_index, sector_meta, series,
+        exact = prepare_exact_mask_table(
+            observation_id, MASK_GRID_YEAR_BY_OBSERVATION[observation_id],
         )
-        distribution_path = OUTPUT_ROOT / "distributions" / f"{observation_id}.json"
+        distributions = _exact_scope_distributions(exact, sector_meta, series)
+        distribution_path = OUTPUT_ROOT / "distributions" / f"{observation_id}.json.gz"
         distribution_path.parent.mkdir(parents=True, exist_ok=True)
-        distribution_path.write_text(json.dumps({
-            "schemaVersion": 1, "observationId": observation_id, "scopes": distributions,
-        }, separators=(",", ":")), encoding="utf-8")
+        distribution_payload = json.dumps({
+            "schemaVersion": 2, "observationId": observation_id, "scopes": distributions,
+        }, separators=(",", ":")).encode("utf-8")
+        distribution_path.write_bytes(gzip.compress(distribution_payload, compresslevel=9, mtime=0))
 
-        encoded_temperature = np.zeros(temperature.shape, dtype=np.uint8)
         clear = (status == 1) & np.isfinite(temperature)
-        encoded_temperature[clear] = np.round(
-            np.clip((temperature[clear] - TEMPERATURE_MINIMUM)
-                    / (TEMPERATURE_MAXIMUM - TEMPERATURE_MINIMUM), 0, 1) * 255,
-        ).astype(np.uint8)
-        web_temperature = _reproject_byte(encoded_temperature, grid, web)
-        web_status = _reproject_byte(status.astype(np.uint8), grid, web)
-        data_path = OUTPUT_ROOT / "pixels" / f"{observation_id}.png"
-        _write_png(data_path, (web_temperature, web_class, web_status))
+        temperature_code = np.zeros(temperature.shape, dtype=np.uint16)
+        temperature_code[clear] = np.rint(np.clip((temperature[clear] + 100) * 100, 1, 65535)).astype(np.uint16)
+        web_high = _reproject_byte((temperature_code >> 8).astype(np.uint8), grid, web)
+        web_low = _reproject_byte((temperature_code & 255).astype(np.uint8), grid, web)
+        display_status = np.full(status.shape, 253, dtype=np.uint8)
+        display_status[clear] = 255
+        display_status[status == 2] = 254
+        web_display_status = _reproject_byte(display_status, grid, web)
+        display_path = OUTPUT_ROOT / "display" / f"{observation_id}.png"
+        _write_png(display_path, (web_high, web_low, np.zeros_like(web_high)), alpha=web_display_status)
         observation_records[observation_id] = {
-            "pixelDataUrl": f"landsat-urban-atlas/pixels/{observation_id}.png",
-            "distributionUrl": f"landsat-urban-atlas/distributions/{observation_id}.json",
-            "pixelDataSha256": file_hash(data_path),
+            "displayDataUrl": f"landsat-urban-atlas/display/{observation_id}.png",
+            "distributionUrl": f"landsat-urban-atlas/distributions/{observation_id}.json.gz",
+            "displayDataSha256": file_hash(display_path),
             "distributionSha256": file_hash(distribution_path),
         }
 
     manifest = {
-        "schemaVersion": 1,
+        "schemaVersion": 3,
         "comparisonId": "landsat-urban-atlas",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "urban-atlas",
@@ -266,12 +301,18 @@ def prepare_landsat_urban_atlas():
         "maximumSeries": 4,
         "temperatureScale": {"minimum": 15, "maximum": 50, "step": 0.5, "unit": "°C"},
         "binEdges": BIN_EDGES.tolist(),
-        "pixelAssignment": {"subpixels": 36, "subpixelSizeMetres": 5, "minimumMajority": 18, "ties": "excluded"},
+        "maskResolutionMeters": 1,
+        "temperatureResolutionMeters": 30,
+        "aggregation": "exact-masked-area",
+        "minimumAnalysedAreaHa": 0.1,
         "urbanAtlasYear": 2021,
         "coordinates": web["coordinates"],
         "imageSize": [web["width"], web["height"]],
         "scopeIndexUrl": "landsat-urban-atlas/scope-index.png",
         "scopeIndexSha256": file_hash(scope_path),
+        "urbanAtlasClassMaskUrl": class_mask["url"],
+        "urbanAtlasClassMaskSha256": class_mask["sha256"],
+        "urbanAtlasClassIndexes": class_mask["classIndexes"],
         "municipalityIndexes": municipality_lookup,
         "sectorIndexes": {metadata["sectorId"]: index for index, metadata in sector_meta.items()},
         "classes": [{key: value for key, value in item.items() if key != "classIndexes"} for item in class_records],

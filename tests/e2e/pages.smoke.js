@@ -1,5 +1,25 @@
 import { expect, test } from "@playwright/test";
 
+// Product-level regression inventory: content simplification may remove prose,
+// but every established analytical chart and Expand action remains first-class.
+const COMPARISON_CHART_INVENTORY = {
+  "heat-income": { selectors: ["[data-heat-income-chart]:not(.is-expanded)"], expandActions: 1 },
+  "heat-population": { selectors: ["[data-heat-population-box-chart]:not(.is-expanded)", "[data-heat-population-bar-chart]:not(.is-expanded)"], expandActions: 2 },
+  "landsat-urban-atlas": { selectors: ["[data-comparison-chart]:not(.is-expanded)"], expandActions: 1 },
+  "landsat-jaarbak": { selectors: ["[data-comparison-chart]:not(.is-expanded)", ".sealed-urban-scatter:not(.is-expanded)"], expandActions: 2 },
+  "landsat-groenkaart": { selectors: [".sealed-urban-scatter:not(.is-expanded)"], expandActions: 1 },
+  "groenkaart-income": { selectors: [".sealed-urban-scatter:not(.is-expanded)"], expandActions: 1 },
+  "landsat-income": { selectors: [".sealed-urban-scatter:not(.is-expanded)", ".income-temperature-box-chart:not(.is-expanded)"], expandActions: 2 },
+  "groenkaart-population": { selectors: ["[data-green-population-chart]:not(.is-expanded)"], expandActions: 1 },
+  "landsat-population": {
+    selectors: [
+      "[data-green-population-chart]:not(.is-expanded) .population-temperature-step",
+      "[data-green-population-chart]:not(.is-expanded) .population-temperature-bars",
+    ],
+    expandActions: 2,
+  },
+};
+
 async function showControls(page) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const panel = page.locator("#detail-panel");
@@ -269,11 +289,18 @@ test("opens every public comparison from either participant and restores the ini
     ["income", "groenkaart", "groenkaart-income"],
     ["landsat-temperature", "income", "landsat-income"],
     ["income", "landsat-temperature", "landsat-income"],
+    ["groenkaart", "population", "groenkaart-population"],
+    ["population", "groenkaart", "groenkaart-population"],
+    ["landsat-temperature", "population", "landsat-population"],
+    ["population", "landsat-temperature", "landsat-population"],
   ];
 
   for (const [fromLayer, targetLayer, comparisonId] of cases) {
     await activateComparison(page, fromLayer, targetLayer, testInfo);
     if (testInfo.project.name.includes("mobile")) await showResults(page);
+    const inventory = COMPARISON_CHART_INVENTORY[comparisonId];
+    for (const selector of inventory.selectors) await expect(page.locator(`#detail-panel ${selector}`).first()).toBeVisible();
+    await expect(page.locator("#detail-panel [data-expand-comparison-chart]")).toHaveCount(inventory.expandActions);
     if (comparisonId === "heat-income") {
       await expect(page.locator("[data-heat-income-chart]:not(.is-expanded)")).toBeVisible();
     } else if (comparisonId === "heat-population") {
@@ -283,8 +310,11 @@ test("opens every public comparison from either participant and restores the ini
       await expect(chart).toBeVisible();
       if (comparisonId === "landsat-groenkaart") {
         await expect(chart.locator("canvas[data-pixel-scatter-canvas]")).toBeVisible();
-        await expect(page.locator("#detail-panel")).toContainText(/eligible clear Landsat observations are plotted/);
-        await expect(page.locator("#detail-panel")).not.toContainText("0 eligible clear Landsat observations are plotted");
+        const scatterOutput = chart.locator("[data-scatter-output]");
+        await expect(scatterOutput).toContainText(/eligible clear Landsat observations are plotted/);
+        const plottedCount = Number((await scatterOutput.textContent())
+          ?.match(/^([\d,]+) eligible clear Landsat observations/)?.[1].replaceAll(",", ""));
+        expect(plottedCount).toBeGreaterThan(0);
       } else {
         await expect(chart.locator("[data-scatter-sector]").first()).toBeVisible();
       }
@@ -292,8 +322,57 @@ test("opens every public comparison from either participant and restores the ini
         await expect(page.locator("[data-density-class]")).toHaveCount(4);
       }
       await chart.locator("[data-expand-comparison-chart]").click();
-      await expect(page.locator("[data-comparison-chart-dialog] .sealed-urban-scatter.is-expanded")).toBeVisible();
+      const expandedDialog = page.locator("[data-comparison-chart-dialog][open]");
+      await expect(expandedDialog.locator(".sealed-urban-scatter.is-expanded")).toBeVisible();
+      if (comparisonId === "landsat-income") {
+        await expect(expandedDialog.locator(".income-temperature-box-chart.is-expanded")).toHaveCount(0);
+      }
+      await expandedDialog.locator("[data-close-comparison-chart]").click();
+      if (comparisonId === "landsat-income") {
+        await page.locator('[data-dialog-target="landsat-income-sector-boxes"]').click();
+        const boxDialog = page.locator('[data-chart-dialog-id="landsat-income-sector-boxes"][open]');
+        await expect(boxDialog.locator(".income-temperature-box-chart.is-expanded")).toHaveCount(1);
+        await expect(boxDialog.locator(".sealed-urban-scatter.is-expanded")).toHaveCount(0);
+        await expect(boxDialog).not.toContainText("Clear-pixel temperatures by income category");
+        await boxDialog.locator("[data-close-comparison-chart]").click();
+      }
+    } else if (comparisonId === "groenkaart-population") {
+      await expect(page.locator("#secondary-control")).toBeHidden();
+      const chart = page.locator("[data-green-population-chart]:not(.is-expanded)");
+      await expect(chart).toBeVisible();
+      await expect(chart.locator("[data-green-population-group]").first()).toBeVisible();
+      await expect(page.locator("#legend-content .legend-continuous-scale").first())
+        .toHaveAttribute("aria-label", /vegetation cover within 100 m/i);
+      await expect(page.locator("#legend-content .legend-comparison-section"))
+        .toContainText(/Population density|Modelled inhabitants per hectare/);
+      await chart.locator("[data-expand-comparison-chart]").click();
+      await expect(page.locator("[data-comparison-chart-dialog] [data-green-population-chart].is-expanded"))
+        .toBeVisible();
       await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
+    } else if (comparisonId === "landsat-population") {
+      await expect(page.locator("#secondary-control")).toBeHidden();
+      const charts = page.locator("[data-green-population-chart]:not(.is-expanded)");
+      await expect(charts).toHaveCount(2);
+      await expect(charts.nth(0).locator(".population-temperature-step")).toBeVisible();
+      await expect(charts.nth(1).locator(".population-temperature-bars")).toBeVisible();
+      const thermalStops = page.locator("#legend-content .legend-scale .legend-score");
+      await expect(thermalStops).toHaveCount(9);
+      await expect(thermalStops.first()).toHaveText("15");
+      await expect(thermalStops.last()).toHaveText("50");
+      await expect(page.locator("#legend-content .legend-comparison-section"))
+        .toContainText(/Population density|Modelled inhabitants per hectare/);
+      for (const target of ["landsat-population-cumulative", "landsat-population-histogram"]) {
+        await page.locator(`[data-dialog-target="${target}"]`).click();
+        const openDialog = page.locator(`[data-chart-dialog-id="${target}"][open]`);
+        await expect(openDialog.locator("[data-green-population-chart].is-expanded"))
+          .toBeVisible();
+        // Close the currently mounted dialog atomically. A late comparison
+        // source refresh can replace the panel DOM after the visibility check.
+        await page.evaluate((dialogId) => {
+          document.querySelector(`[data-chart-dialog-id="${dialogId}"][open]`)?.close();
+        }, target);
+        await expect(openDialog).not.toBeVisible();
+      }
     } else {
       await expect(page.locator("[data-expand-comparison-chart]").first()).toBeVisible();
     }

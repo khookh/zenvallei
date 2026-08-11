@@ -4,14 +4,19 @@ import {
 } from "../src/comparisons/landsat-urban-atlas.js";
 
 const manifest = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   comparisonId: "landsat-urban-atlas",
   primaryLayerId: "landsat-temperature",
   secondaryLayerId: "urban-atlas",
   defaultSeries: ["family:greenUrbanAreas", "class:11100"],
   maximumSeries: 4,
+  maskResolutionMeters: 1,
+  temperatureResolutionMeters: 30,
+  aggregation: "exact-masked-area",
   coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]],
-  observations: { test: {} },
+  observations: { test: { displayDataUrl: "display.png", distributionUrl: "distribution.json" } },
+  urbanAtlasClassMaskUrl: "shared/urban-atlas-classes-2021.pmtiles",
+  urbanAtlasClassIndexes: { 11100: 1, 11210: 2, 12210: 3, 14110: 4, 14120: 5 },
   families: [{ key: "family:greenUrbanAreas", type: "family", id: "greenUrbanAreas", codes: ["14110", "14120"] }],
   classes: [
     { key: "class:14110", type: "class", code: "14110" },

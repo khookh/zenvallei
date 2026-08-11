@@ -16,6 +16,18 @@ function browserAssetPath(assetUrl) {
   return path.join(publicRoot, assetUrl.replace(/^\//, ""));
 }
 
+function hasExpectedUrbanSurfaceGroups(manifest) {
+  const expected = {
+    residential: ["11100", "11210", "11220", "11230", "11240"],
+    employmentInstitutional: ["12100"],
+  };
+  return JSON.stringify(manifest.defaultUrbanSurfaceGroups) === JSON.stringify(Object.keys(expected))
+    && manifest.urbanSurfaceGroups?.length === 2
+    && Object.entries(expected).every(([id, codes]) => JSON.stringify(
+      manifest.urbanSurfaceGroups.find((group) => group.id === id)?.codes,
+    ) === JSON.stringify(codes));
+}
+
 const [geojson, scorePayload, methodology, provenance, urbanAtlas, income, population] = await Promise.all([
   readJson("sectors.geojson"),
   readJson("scores.json"),
@@ -80,8 +92,8 @@ const officialIndex = JSON.parse(await fs.readFile(path.join(officialRoot, "inde
 const officialIds = Object.keys(officialIndex.datasets ?? {});
 const expectedOfficialIds = ["groenkaart", "jaarbak", "landgebruik", "landsat-temperature"];
 const expectedComparisonIds = [
-  "groenkaart-income", "landsat-groenkaart", "landsat-income",
-  "landsat-jaarbak", "landsat-urban-atlas",
+  "groenkaart-income", "groenkaart-population", "landsat-groenkaart", "landsat-income",
+  "landsat-jaarbak", "landsat-population", "landsat-urban-atlas",
 ];
 const comparisonIds = Object.keys(officialIndex.comparisons ?? {}).sort();
 if (officialIndex.schemaVersion !== 3
@@ -124,11 +136,13 @@ for (const comparisonId of comparisonIds) {
   if (manifest.comparisonId !== comparisonId) throw new Error(`${comparisonId}: published manifest identifier mismatch.`);
   const referencedAssets = [manifest.scopeIndexUrl].filter(Boolean);
   Object.values(manifest.observations ?? {}).forEach((observation) => {
-    if (comparisonId === "landsat-jaarbak") {
+    if (comparisonId === "landsat-urban-atlas") {
+      referencedAssets.push(observation.displayDataUrl, observation.distributionUrl);
+    } else if (comparisonId === "landsat-jaarbak") {
       referencedAssets.push(observation.densityPointDataUrl, observation.densityDataUrl, observation.distributionUrl);
     } else if (comparisonId === "landsat-groenkaart") {
       referencedAssets.push(observation.displayDataUrl, observation.pointDataUrl, observation.statisticsUrl);
-    } else if (comparisonId === "landsat-income") {
+    } else if (["landsat-income", "landsat-population"].includes(comparisonId)) {
       referencedAssets.push(observation.displayDataUrl, observation.statisticsUrl);
     } else {
       referencedAssets.push(observation.pointDataUrl ?? observation.pixelDataUrl,
@@ -137,32 +151,72 @@ for (const comparisonId of comparisonIds) {
   });
   if (comparisonId === "groenkaart-income") {
     referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.statisticsUrl,
-      manifest.urbanFabricMaskUrl);
+      manifest.urbanAtlasClassMaskUrl);
     if (manifest.analysisResolutionMeters !== 10 || manifest.greenMapYear !== 2021
       || manifest.urbanAtlasYear !== 2021 || manifest.jaarbakYear !== 2021
-      || manifest.incomeYear !== 2023 || manifest.schemaVersion !== 2
+      || manifest.incomeYear !== 2023 || manifest.schemaVersion !== 4
       || manifest.statisticWeighting !== "exact-sealed-urban-area") {
       throw new Error(`${comparisonId}: published analytical contract is incompatible.`);
     }
+  } else if (comparisonId === "groenkaart-population") {
+    referencedAssets.push(manifest.statisticsUrl, manifest.urbanAtlasClassMaskUrl);
+    if (manifest.schemaVersion !== 3 || manifest.populationDatasetId !== "flanders-2019"
+      || manifest.populationResolutionMeters !== 100 || manifest.minimumEligibleAreaHa !== .1
+      || manifest.densityRadiusMeters !== 100 || manifest.maskResolutionMeters !== 1
+      || manifest.aggregation !== "exact-masked-area" || !manifest.cellEncoding) {
+      throw new Error(`${comparisonId}: published analytical contract is incompatible.`);
+    }
   } else if (comparisonId === "landsat-groenkaart") {
-    referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.urbanFabricMaskUrl);
-    if (manifest.schemaVersion !== 3 || manifest.displayResolutionMeters !== 1) {
+    referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.urbanFabricMaskUrl,
+      manifest.urbanAtlasClassMaskUrl);
+    if (manifest.schemaVersion !== 6 || manifest.displayResolutionMeters !== 1
+      || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
+      || manifest.aggregation !== "exact-masked-area" || manifest.minimumAnalysedAreaHa !== .1
+      || JSON.stringify(manifest.defaultUrbanSurfaceGroups) !== JSON.stringify(["residential", "employmentInstitutional"])) {
       throw new Error(`${comparisonId}: published display contract is incompatible.`);
     }
   } else if (comparisonId === "landsat-income") {
-    referencedAssets.push(manifest.urbanFabricMaskUrl);
-    if (manifest.schemaVersion !== 2 || manifest.displayResolutionMeters !== 1) {
+    referencedAssets.push(manifest.urbanAtlasClassMaskUrl);
+    if (manifest.schemaVersion !== 4 || manifest.displayResolutionMeters !== 1
+      || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
+      || manifest.aggregation !== "exact-masked-area" || manifest.minimumAnalysedAreaHa !== .1) {
       throw new Error(`${comparisonId}: published display contract is incompatible.`);
+    }
+  } else if (comparisonId === "landsat-population") {
+    referencedAssets.push(manifest.urbanAtlasClassMaskUrl);
+    if (manifest.schemaVersion !== 3 || manifest.populationDatasetId !== "flanders-2019"
+      || manifest.populationResolutionMeters !== 100 || manifest.minimumAnalysedAreaHa !== .1
+      || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
+      || manifest.aggregation !== "exact-masked-area" || manifest.displayResolutionMeters !== 1) {
+      throw new Error(`${comparisonId}: published analytical contract is incompatible.`);
     }
   } else if (comparisonId === "landsat-jaarbak") {
     referencedAssets.push(manifest.analysisScopeIndexUrl);
-    if (manifest.schemaVersion !== 2 || manifest.densityAnalysis?.radiusMeters !== 100
+    if (manifest.schemaVersion !== 3 || manifest.maskResolutionMeters !== 1
+      || manifest.temperatureResolutionMeters !== 30 || manifest.aggregation !== "exact-masked-area"
+      || manifest.minimumAnalysedAreaHa !== .1 || manifest.classification?.sourceResolutionMetres !== 1
+      || manifest.classification?.temperatureResolutionMetres !== 30
+      || manifest.classification?.aggregation !== "exact-masked-area"
+      || manifest.classification?.minimumAnalysedAreaHa !== .1
+      || manifest.densityAnalysis?.radiusMeters !== 100
       || manifest.densityAnalysis?.validCoverageThreshold !== 95
       || manifest.densityAnalysis?.sampling !== "none") {
       throw new Error(`${comparisonId}: published density-analysis contract is incompatible.`);
     }
+  } else if (comparisonId === "landsat-urban-atlas") {
+    referencedAssets.push(manifest.urbanAtlasClassMaskUrl);
+    if (manifest.schemaVersion !== 3 || manifest.maskResolutionMeters !== 1
+      || manifest.temperatureResolutionMeters !== 30 || manifest.aggregation !== "exact-masked-area"
+      || manifest.minimumAnalysedAreaHa !== .1 || !manifest.urbanAtlasClassIndexes
+      || Object.values(manifest.observations).some(({ displayDataUrl }) => !displayDataUrl)) {
+      throw new Error(`${comparisonId}: published exact-mask contract is incompatible.`);
+    }
   }
-  if (["landsat-groenkaart", "landsat-income"].includes(comparisonId)
+  if (["groenkaart-income", "groenkaart-population", "landsat-groenkaart", "landsat-income", "landsat-population"]
+    .includes(comparisonId) && !hasExpectedUrbanSurfaceGroups(manifest)) {
+    throw new Error(`${comparisonId}: Urban Atlas surface groups or defaults are incompatible.`);
+  }
+  if (["landsat-groenkaart", "landsat-income", "landsat-population"].includes(comparisonId)
     && (manifest.analysisResolutionMeters !== 30 || manifest.urbanAtlasYear !== 2021)) {
     throw new Error(`${comparisonId}: published Landsat contract is incompatible.`);
   }
@@ -174,7 +228,7 @@ for (const comparisonId of comparisonIds) {
     for (const observation of Object.values(manifest.observations)) {
       const statistics = JSON.parse(await fs.readFile(path.join(officialRoot, observation.statisticsUrl), "utf8"));
       const sectors = Object.values(statistics.sectorStats ?? {});
-      if (!sectors.some(({ clearPixelCount }) => clearPixelCount >= manifest.minimumSectorPixels)
+      if (!sectors.some(({ analysedAreaHa }) => analysedAreaHa >= manifest.minimumAnalysedAreaHa)
         || sectors.some((record) => Object.hasOwn(record, "meanDensityByGreenClass"))) {
         throw new Error("landsat-income: sector temperatures must not depend on Green Map coverage.");
       }

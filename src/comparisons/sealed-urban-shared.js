@@ -17,6 +17,22 @@ export const GREEN_DENSITY_GRADIENT = `linear-gradient(90deg, ${GREEN_DENSITY_ST
   .map(({ value, color }) => `${color} ${value}%`).join(", ")})`;
 export const SURROUNDING_RADIUS_METRES = 100;
 export const SURROUNDING_AREA_HA = Math.PI;
+const EXPECTED_URBAN_SURFACE_GROUPS = Object.freeze({
+  residential: Object.freeze(["11100", "11210", "11220", "11230", "11240"]),
+  employmentInstitutional: Object.freeze(["12100"]),
+});
+
+/** Keep the five comparison manifests on the same explicit two-group contract. */
+export function hasUrbanSurfaceContract(manifest) {
+  if (!Array.isArray(manifest?.urbanSurfaceGroups)
+    || JSON.stringify(manifest.defaultUrbanSurfaceGroups) !== JSON.stringify(Object.keys(EXPECTED_URBAN_SURFACE_GROUPS))) {
+    return false;
+  }
+  return Object.entries(EXPECTED_URBAN_SURFACE_GROUPS).every(([id, codes]) => {
+    const group = manifest.urbanSurfaceGroups.find((candidate) => candidate.id === id);
+    return group && JSON.stringify(group.codes) === JSON.stringify(codes);
+  }) && manifest.urbanSurfaceGroups.length === 2;
+}
 
 const hexRgb = (hex) => [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
 
@@ -117,11 +133,37 @@ export function ordinaryLeastSquares(points, xKey, yKey) {
   const intercept = yMean - slope * xMean;
   const total = valid.reduce((sum, point) => sum + (point[yKey] - yMean) ** 2, 0);
   const residual = valid.reduce((sum, point) => sum + (point[yKey] - (intercept + slope * point[xKey])) ** 2, 0);
+  const correlation = (left, right) => {
+    const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length;
+    const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length;
+    const covariance = left.reduce((sum, value, index) => sum + (value - leftMean) * (right[index] - rightMean), 0);
+    const scale = Math.sqrt(
+      left.reduce((sum, value) => sum + (value - leftMean) ** 2, 0)
+      * right.reduce((sum, value) => sum + (value - rightMean) ** 2, 0),
+    );
+    return scale > 0 ? covariance / scale : null;
+  };
+  const averageRanks = (values) => {
+    const sorted = values.map((value, index) => ({ value, index })).sort((a, b) => a.value - b.value || a.index - b.index);
+    const ranks = new Array(values.length);
+    for (let start = 0; start < sorted.length;) {
+      let end = start + 1;
+      while (end < sorted.length && sorted[end].value === sorted[start].value) end += 1;
+      const rank = (start + 1 + end) / 2;
+      for (let index = start; index < end; index += 1) ranks[sorted[index].index] = rank;
+      start = end;
+    }
+    return ranks;
+  };
+  const xValues = valid.map((point) => point[xKey]);
+  const yValues = valid.map((point) => point[yKey]);
   return {
     count: valid.length,
     slope,
     intercept,
     rSquared: total > 0 ? Math.max(0, Math.min(1, 1 - residual / total)) : null,
+    pearsonR: correlation(xValues, yValues),
+    spearmanRho: correlation(averageRanks(xValues), averageRanks(yValues)),
   };
 }
 
@@ -191,4 +233,61 @@ export function greenClassSelector(manifest, selected) {
       selected: selected.has(Number(item.value)),
     })),
   };
+}
+
+/** Build the same two-group Urban Atlas selector for every sealed-urban comparison. */
+export function urbanSurfaceSelector(manifest, selected) {
+  return {
+    title: t("sealedUrban.surfaceSelectorTitle"),
+    help: t("sealedUrban.surfaceSelectorHelp"),
+    selected: [...selected],
+    groups: manifest.urbanSurfaceGroups.map((group) => ({
+      id: group.id,
+      title: t(`sealedUrban.surface.${group.id}`),
+      expanded: false,
+      items: [],
+      family: {
+        key: group.id,
+        color: group.color,
+        selected: selected.has(group.id),
+      },
+    })),
+  };
+}
+
+export function selectedUrbanClassIndexes(manifest, selected) {
+  return manifest.urbanSurfaceGroups
+    .filter(({ id }) => selected.has(id))
+    .flatMap(({ codes }) => codes.map((code) => manifest.urbanAtlasClassIndexes[String(code)]))
+    .filter(Number.isFinite);
+}
+
+/** Combine group-specific sums without averaging group means twice. */
+export function combineUrbanGroupStats(record, selected, { valueKeys = [] } = {}) {
+  const groups = [...selected].map((id) => record?.urbanSurfaceGroups?.[id]).filter(Boolean);
+  const analysedAreaHa = groups.reduce((sum, group) => sum + Number(group.analysedAreaHa ?? 0), 0);
+  const clearPixelCount = groups.reduce((sum, group) => sum + Number(group.clearPixelCount ?? 0), 0);
+  const contributingIds = new Set(groups.flatMap((group) => group.landsatIndexes ?? []));
+  const contributingLandsatCount = contributingIds.size || groups.reduce(
+    (sum, group) => sum + Number(group.contributingLandsatCount ?? 0), 0,
+  );
+  const temperatureAreaSum = groups.reduce(
+    (sum, group) => sum + Number(group.temperatureAreaSum ?? 0), 0,
+  );
+  const output = { analysedAreaHa, clearPixelCount, contributingLandsatCount, temperatureAreaSum };
+  valueKeys.forEach((key) => {
+    if (key === "meanTemperatureC" && groups.some((group) => Number.isFinite(group.temperatureAreaSum))) {
+      output[key] = analysedAreaHa > 0 ? temperatureAreaSum / (analysedAreaHa * 10_000) : null;
+      return;
+    }
+    const denominator = key === "meanTemperatureC" ? clearPixelCount : analysedAreaHa;
+    const weighted = groups.reduce((sum, group) => {
+      const weight = key === "meanTemperatureC"
+        ? Number(group.clearPixelCount ?? 0)
+        : Number(group.analysedAreaHa ?? 0);
+      return Number.isFinite(group[key]) ? sum + group[key] * weight : sum;
+    }, 0);
+    output[key] = denominator > 0 ? weighted / denominator : null;
+  });
+  return output;
 }

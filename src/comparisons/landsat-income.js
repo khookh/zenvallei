@@ -4,7 +4,8 @@ import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import {
   comparisonAreaRecord, comparisonPixelOffset, hideIncomeSymbols, incomeLegend, loadImageData, mountIncomeSymbols,
-  ordinaryLeastSquares, safeAsset, SEALED_URBAN_SOURCE_URLS, sectorPointLabel,
+  combineUrbanGroupStats, hasUrbanSurfaceContract, ordinaryLeastSquares, safeAsset, SEALED_URBAN_SOURCE_URLS,
+  sectorPointLabel, selectedUrbanClassIndexes, urbanSurfaceSelector,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "landsat-income-temperature";
@@ -14,12 +15,15 @@ const scopeId = (record) => record.scope === "region" ? "region:zennevallei"
   : record.scope === "municipality" ? `municipality:${record.municipality}` : `sector:${record.sectorId}`;
 
 export function validateLandsatIncomeManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 2 || manifest.comparisonId !== "landsat-income"
+  if (!manifest || manifest.schemaVersion !== 4 || manifest.comparisonId !== "landsat-income"
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "income"
     || manifest.incomeYear !== 2023 || manifest.analysisResolutionMeters !== 30
-    || manifest.minimumSectorPixels !== 10 || !manifest.observations
+    || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
+    || manifest.aggregation !== "exact-masked-area" || manifest.minimumAnalysedAreaHa !== 0.1
+    || !manifest.observations
     || !Object.values(manifest.observations).every((item) => item.displayDataUrl)
-    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes || !manifest.urbanFabricMaskUrl
+    || !manifest.scopeIndexUrl || !manifest.municipalityIndexes || !manifest.urbanAtlasClassMaskUrl
+    || !manifest.urbanAtlasClassIndexes || !hasUrbanSurfaceContract(manifest)
     || manifest.displayResolutionMeters !== 1) {
     throw new TypeError("Unsupported Landsat-income comparison manifest.");
   }
@@ -36,6 +40,7 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
   let statistics;
   let loadedObservation = "";
   let generation = 0;
+  let selectedUrban = new Set(["residential", "employmentInstitutional"]);
   const exactRaster = createExactSealedRaster({ id: RASTER_LAYER_ID, beforeLayerId: BEFORE_LAYER, opacity: .95 });
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
@@ -48,7 +53,8 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     if (!response.ok) throw new Error(`Comparison manifest HTTP ${response.status}.`);
     manifest = validateLandsatIncomeManifest(await response.json());
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
-    manifest.urbanFabricMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanFabricMaskUrl, ".pmtiles");
+    manifest.urbanAtlasClassMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanAtlasClassMaskUrl, ".pmtiles");
+    selectedUrban = new Set(manifest.defaultUrbanSurfaceGroups);
     Object.values(manifest.observations).forEach((item) => {
       item.displayDataUrl = safeAsset(descriptor.assetRoot, item.displayDataUrl, ".png");
       item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json");
@@ -76,7 +82,8 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     const item = manifest.observations[observationId()];
     const jaarbakUrl = await jaarbakLayer.resolveArchive(item.jaarbakYear, municipality);
     const shown = await exactRaster.show(map, {
-      mode: "temperature", jaarbakUrl, urbanMaskUrl: manifest.urbanFabricMaskUrl,
+      mode: "temperature", jaarbakUrl, urbanClassUrl: manifest.urbanAtlasClassMaskUrl,
+      selectedUrbanIndexes: selectedUrbanClassIndexes(manifest, selectedUrban),
       temperatureData: displayData,
       dataBounds: boundsFromCoordinates(manifest.coordinates), dataSize: manifest.imageSize,
     });
@@ -84,9 +91,10 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
   };
 
   const points = () => Object.values(statistics?.sectorStats ?? {}).flatMap((record) => {
-    if (record.clearPixelCount < manifest.minimumSectorPixels || !Number.isFinite(record.income)
-      || !Number.isFinite(record.meanTemperatureC) || (municipality && record.municipality !== municipality)) return [];
-    return [{ ...record, temperature: record.meanTemperatureC }];
+    const combined = combineUrbanGroupStats(record, selectedUrban, { valueKeys: ["meanTemperatureC"] });
+    if (combined.analysedAreaHa < manifest.minimumAnalysedAreaHa || !Number.isFinite(record.income)
+      || !Number.isFinite(combined.meanTemperatureC) || (municipality && record.municipality !== municipality)) return [];
+    return [{ ...record, ...combined, temperature: combined.meanTemperatureC }];
   }).sort((left, right) => left.income - right.income || left.sectorId.localeCompare(right.sectorId));
 
   const refresh = async () => {
@@ -136,6 +144,16 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
       return true;
     },
     setHighlightedSector(value = "") { highlightedSectorId = value; if (active) notify(); },
+    toggleSeries(key) {
+      if (!manifest?.urbanSurfaceGroups.some(({ id }) => id === key)) return { changed: false };
+      if (selectedUrban.has(key)) {
+        if (selectedUrban.size === 1) return { changed: false, minimum: true };
+        selectedUrban.delete(key);
+      } else selectedUrban.add(key);
+      render().then(notify).catch(console.error);
+      notify();
+      return { changed: true };
+    },
     getLabel: () => t("landsatIncome.title"),
     getActiveNote: () => t("landsatIncome.activeNote", { area: municipality || t("controls.allMunicipalities") }),
     getContext: () => ({
@@ -150,6 +168,7 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     getLegendModel: () => ({
       title: t("landsatIncome.legendTitle"), layout: "scale", groups: [{ items: comparisonLegendItems() }],
       gradient: comparisonHeatGradient(), comparisonLegend: incomeLegend(),
+      surfaceSelector: urbanSurfaceSelector(manifest, selectedUrban),
       note: t("landsatIncome.legendNote"), observation: observation(),
     }),
     getPopupModel(_feature, record) {
@@ -177,15 +196,28 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     getPanelModel(record) {
       const current = points();
       const areaRecord = comparisonAreaRecord(record, municipality);
+      const surfaceKey = manifest.urbanSurfaceGroups.filter(({ id }) => selectedUrban.has(id))
+        .map(({ id }) => id).join("+");
+      const regression = statistics.regressionsBySurface?.[surfaceKey]?.[scopeId(areaRecord)]
+        ?? ordinaryLeastSquares(current, "income", "temperature");
+      if (regression) {
+        regression.analysedAreaHa = current.reduce((sum, item) => sum + item.analysedAreaHa, 0);
+        regression.contributingLandsatCount = current.reduce(
+          (sum, item) => sum + item.contributingLandsatCount, 0,
+        );
+      }
       return {
         template: "sealed-urban-scatter", comparisonId: "landsat-income", record: areaRecord,
         title: t("landsatIncome.chartTitle"), definition: t("landsatIncome.definition"),
         xLabel: t("sealedUrban.axisIncome"), yLabel: t("sealedUrban.axisTemperature"),
         xKey: "income", yKey: "temperature", points: current,
-        regression: statistics.regressions?.[scopeId(areaRecord)]
-          ?? ordinaryLeastSquares(current, "income", "temperature"),
+        regression,
+        incomeCategories: statistics.incomeCategoriesBySurface?.[surfaceKey]?.[scopeId(areaRecord)]
+          ?? statistics.incomeCategories?.[scopeId(areaRecord)] ?? { sectors: {}, pixels: {} },
         slopeScale: 10_000, slopeUnit: t("landsatIncome.slopeUnit"),
         highlightedSectorId, observation: observation(),
+        selectedSurfaceLabels: manifest.urbanSurfaceGroups.filter(({ id }) => selectedUrban.has(id))
+          .map(({ id }) => t(`sealedUrban.surface.${id}`)),
         methodology: t("landsatIncome.methodology"), caveat: t("sealedUrban.regressionCaveat"),
       };
     },

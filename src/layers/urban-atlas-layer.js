@@ -3,6 +3,7 @@ import { formatNumber, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
 import { authorityLink } from "../source-authorities.js";
+import { dominantUrbanAtlasCategory } from "../urban-atlas-categories.js";
 
 const MAP_LAYER_ID = "urban-atlas-fill";
 const SOURCE_ID = "urban-atlas";
@@ -47,11 +48,12 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
     },
     getPopupModel: (feature) => {
       const stats = urbanAtlas?.sectorStats?.[feature.properties.sectorId];
+      const category = dominantUrbanAtlasCategory(stats);
       return {
         title: feature.properties.sectorName,
         subtitle: feature.properties.municipality,
-        lines: [stats
-          ? `${t("urbanAtlas.greenCoverage")}: ${t("unit.percentage", { value: formatNumber(stats.green.percentage) })} · ${t("urbanAtlas.artificialisation")}: ${t("unit.percentage", { value: formatNumber(stats.artificial.percentage) })}`
+        lines: [category
+          ? `${t("urbanAtlas.categoryLargest")}: ${t(`urbanAtlas.category.${category.id}`)} (${t("unit.percentage", { value: formatNumber(category.percentage) })})`
           : t("urbanAtlas.noData")],
       };
     },

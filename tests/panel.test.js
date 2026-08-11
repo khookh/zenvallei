@@ -81,6 +81,7 @@ function fixture(options = {}) {
     <button id="trigger">open</button>
     <aside id="panel" aria-hidden="true" tabindex="-1"><button id="close">sluit</button><div id="content"></div></aside>`;
   const onClose = vi.fn();
+  const onOpenSources = vi.fn();
   const api = createDetailPanel({
     panel: document.querySelector("#panel"),
     content: document.querySelector("#content"),
@@ -99,9 +100,10 @@ function fixture(options = {}) {
       urbanAtlas: options.urbanAtlas,
       provenance: options.provenance,
     }),
+    onOpenSources,
     onClose,
   });
-  return { api, onClose };
+  return { api, onClose, onOpenSources };
 }
 
 describe("progressive detail panel", () => {
@@ -128,7 +130,6 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("Relatieve rangschikking van het gemiddelde aantal hittegolfgraaddagen");
     expect(panel.textContent).toContain("bevolking, kwetsbare voorzieningen, SES");
     expect(panel.textContent).toContain("geen eenvoudig gemiddelde");
-    expect(panel.textContent).toContain("Officieel broncijfer");
     expect(panel.textContent).toContain("zonder ze opnieuw te berekenen");
     expect(panel.textContent).toContain("3,75");
     expect(panel.textContent).toContain("gewicht 2");
@@ -220,16 +221,17 @@ describe("progressive detail panel", () => {
     api.open(records["23003A001"], document.querySelector("#trigger"), "heat");
     document.querySelector('[data-section="indicators"]').open = true;
     api.setActiveLayer("urban-atlas");
-    expect(document.querySelector("#panel").textContent).toContain("Groenbedekking");
-    expect(document.querySelector("#panel").textContent).toContain("40%");
+    expect(document.querySelector("#panel").textContent).toContain("Categorieverdeling Urban Atlas");
+    expect(document.querySelector("#panel").textContent).toContain("Stedelijk weefsel");
+    expect(document.querySelector("#panel").textContent).toContain("16%");
     expect(document.querySelector("#panel").textContent).toContain("Kruidachtige vegetatie");
     expect(document.querySelector("#panel").textContent).toContain("Weilanden");
-    expect(document.querySelector("#panel").textContent).toContain("Artificialisering");
-    expect(document.querySelector("#panel").textContent).toContain("40%");
-    expect(document.querySelector("#panel").textContent).toContain("polygonen en klassen zijn afkomstig van Copernicus");
+    expect(document.querySelector("#panel").textContent).toContain("Groen en halfnatuurlijk land");
+    expect(document.querySelector("#panel").textContent).toContain("35%");
+    expect(document.querySelector("#panel").textContent).toContain("zeven elkaar uitsluitende groepen");
   });
 
-  it("shows all six green categories and translated Urban Atlas methodology", () => {
+  it("shows every official class under the seven translated Urban Atlas presentation groups", () => {
     const { api } = fixture({ urbanAtlas });
     api.open(records["23003A001"], document.querySelector("#trigger"), "urban-atlas");
     const panel = document.querySelector("#panel");
@@ -240,52 +242,61 @@ describe("progressive detail panel", () => {
     expect(panel.textContent).toContain("private toegang");
     expect(panel.textContent).toContain("toegang onbekend");
     expect(panel.textContent).toContain("Bouwterreinen");
-    expect(panel.textContent).toContain("Andere landbedekking");
+    expect(panel.textContent).toContain("Transport, bouw en ontginning");
+    expect(panel.textContent).toContain("Sport en recreatie");
+    expect(panel.textContent).toContain("Wetlands en water");
     document.querySelector('[data-section="urban-atlas-methodology"]').open = true;
     setLanguage("en");
     api.setLanguage();
-    expect(panel.textContent).toContain("Green coverage");
+    expect(panel.textContent).toContain("Urban Atlas category breakdown");
     expect(panel.textContent).toContain("Herbaceous vegetation");
     expect(panel.textContent).toContain("Pastures");
     expect(panel.textContent).toContain("not yet validated");
     expect(document.querySelector('[data-section="urban-atlas-methodology"]').open).toBe(true);
   });
 
-  it("explains the active layers, Statbel sectors and calculation responsibility", () => {
+  it("translates the Zennevallei region title in Urban Atlas summaries", () => {
+    setLanguage("nl");
+    const html = renderSectorPanelModel({
+      template: "urban-atlas",
+      record: { scope: "region", sectorName: "Entire Zennevallei", sectorCount: 154 },
+      urbanAtlas: { ...urbanAtlas, regionStats: urbanAtlas.sectorStats["23003A001"] },
+    });
+    expect(html).toContain('<h2 id="panel-title">Hele Zennevallei</h2>');
+  });
+
+  it("provides a compact eight-layer orientation and routes sources to the source dialog", () => {
     const provenance = {
       output: {
         sectorCount: 154,
         municipalityCounts: { Beersel: 39, Drogenbos: 7, Halle: 41, Linkebeek: 7, Pepingen: 15, "Sint-Genesius-Rode": 22, "Sint-Pieters-Leeuw": 23 },
       },
     };
-    const { api } = fixture({ urbanAtlas, provenance });
+    const { api, onOpenSources } = fixture({ urbanAtlas, provenance });
     api.openAbout(document.querySelector("#trigger"));
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Wat elke laag vertelt");
     expect(panel.textContent).toContain("Landgebruik");
-    expect(panel.textContent).toContain("visuele interpretatie");
-    expect(panel.textContent).toContain("Waarom 154 sectoren?");
-    expect(panel.textContent).toContain("Statbel bepaalt hun codes en grenzen");
-    expect(panel.textContent).toContain("Officiële producent");
-    expect(panel.textContent).toContain("Wat wij toevoegen");
-    expect(panel.textContent).toContain("OpenStreetMap is alleen de achtergrondkaart");
+    expect(panel.querySelectorAll(".about-layer-row")).toHaveLength(8);
+    expect(panel.textContent).toContain("154 statistische sectoren in zeven Zennevallei-gemeenten");
+    expect(panel.querySelectorAll(".about-method")).toHaveLength(0);
+    expect(panel.querySelector("[data-open-map-sources]")?.textContent).toBe("Kaart- en databronnen");
+    panel.querySelector("[data-open-map-sources]").click();
+    expect(onOpenSources).toHaveBeenCalledTimes(1);
     expect(panel.textContent).toContain("Een persoonlijk en open V0.1-project");
-    expect(panel.textContent).toContain("grote taalmodellen (LLM’s)");
     expect(panel.querySelector('a[href="https://github.com/khookh/zenvallei"]')?.getAttribute("rel")).toBe("noopener noreferrer");
-    expect(panel.textContent).toContain("Deze toepassing gebruikt geen cookies, analytics, accounts of blijvende identificatoren");
-    expect(panel.querySelector('.about-privacy a[href="mailto:stefanodonne@gmail.com"]')?.textContent).toBe("stefanodonne@gmail.com");
+    expect(panel.textContent).toContain("geen cookies, analytics, accounts of blijvende kaartkeuzes");
+    expect(panel.querySelector('.about-actions a[href="mailto:stefanodonne@gmail.com"]')).not.toBeNull();
 
     setLanguage("en");
     api.setLanguage();
     expect(panel.textContent).toContain("What each layer tells you");
     expect(panel.textContent).toContain("Land use");
-    expect(panel.textContent).toContain("Why 154 sectors?");
-    expect(panel.textContent).toContain("Statbel defines their codes and boundaries");
-    expect(panel.textContent).toContain("Official producer");
-    expect(panel.textContent).toContain("What we add");
+    expect(panel.querySelectorAll(".about-layer-row")).toHaveLength(8);
+    expect(panel.textContent).toContain("154 statistical sectors in seven Zennevallei municipalities");
     expect(panel.textContent).toContain("A personal and open V0.1 project");
-    expect(panel.textContent).toContain("large language models (LLMs)");
-    expect(panel.textContent).toContain("This application uses no cookies, analytics, accounts or persistent identifiers");
+    expect(panel.textContent).toContain("No cookies, analytics, accounts or persistent map choices");
+    expect(panel.querySelector("[data-open-map-sources]")?.textContent).toBe("Map and data sources");
   });
 
   it("presents Landsat temperature as an overpass measurement with clear coverage", () => {
@@ -331,6 +342,84 @@ describe("progressive detail panel", () => {
     expect(dutch).toContain("geen luchttemperatuur");
   });
 
+  it("keeps only sector-level income-category boxes in Landsat-income views", () => {
+    setLanguage("en");
+    const category = (mean) => ({
+      count: 5, mean, median: mean, q1: mean - 1, q3: mean + 1,
+      whiskerLow: mean - 2, whiskerHigh: mean + 2,
+    });
+    const points = [
+      ...Array.from({ length: 5 }, (_, index) => ({ income: 25_000, temperature: 31 + index / 10, sectorId: `low-${index}`, sectorName: `Low ${index}` })),
+      ...Array.from({ length: 5 }, (_, index) => ({ income: 35_000, temperature: 33 + index / 10, sectorId: `mid-${index}`, sectorName: `Middle ${index}` })),
+      ...Array.from({ length: 5 }, (_, index) => ({ income: 45_000, temperature: 35 + index / 10, sectorId: `high-${index}`, sectorName: `High ${index}` })),
+    ];
+    const html = renderSectorPanelModel({
+      template: "sealed-urban-scatter", comparisonId: "landsat-income",
+      record: { scope: "region", sectorName: "Entire Zennevallei" },
+      title: "Mean land-surface temperature versus median taxable income",
+      definition: "One point is one sector.", methodology: "Documented method.", caveat: "Descriptive only.",
+      xLabel: "Median net taxable income", yLabel: "Land-surface temperature (°C)",
+      xKey: "income", yKey: "temperature", points,
+      regression: { n: 15, slope: .0001, intercept: 30, rSquared: .5, pearsonR: .7, spearmanRho: .6 },
+      slopeScale: 10_000, slopeUnit: "°C per €10,000",
+      incomeCategories: {
+        sectors: { low: category(31.2), middle: category(33.2), high: category(35.2) },
+        pixels: { low: category(30), middle: category(32), high: category(34) },
+      },
+    });
+    expect(html.match(/income-temperature-box-chart/g)).toHaveLength(2);
+    expect(html.match(/<h4>Sector temperatures by income category<\/h4>/g)).toHaveLength(2);
+    expect(html).not.toContain("Clear-pixel temperatures by income category");
+    expect(html).not.toContain("Expanded clear-pixel statistics");
+    document.querySelector("#content").innerHTML = html;
+    expect(document.querySelectorAll("[data-expand-comparison-chart]")).toHaveLength(2);
+    expect(document.querySelector('[data-dialog-target="landsat-income-scatter"]')).not.toBeNull();
+    expect(document.querySelector('[data-dialog-target="landsat-income-sector-boxes"]')).not.toBeNull();
+    expect(document.querySelector('[data-chart-dialog-id="landsat-income-scatter"] .income-temperature-box-chart')).toBeNull();
+    expect(document.querySelectorAll('[data-chart-dialog-id="landsat-income-sector-boxes"] .income-temperature-box-chart')).toHaveLength(1);
+  });
+
+  it("gives each Landsat-population chart its own expansion and full-width cumulative hit areas", () => {
+    setLanguage("en");
+    const curve = [
+      { temperature: 36, cumulativeResidents: 40, atOrAboveResidents: 40, atOrAboveShare: 40,
+        coolerResidents: 60, coolerShare: 60, intervalLower: 36, intervalUpper: 36.5,
+        intervalResidents: 40, intervalCellCount: 1, contributingCount: 3 },
+      { temperature: 31, cumulativeResidents: 100, atOrAboveResidents: 100, atOrAboveShare: 100,
+        coolerResidents: 0, coolerShare: 0, intervalLower: 31, intervalUpper: 31.5,
+        intervalResidents: 60, intervalCellCount: 1, contributingCount: 4 },
+    ];
+    const bins = [
+      { lower: 31, upper: 31.5, residents: 60, share: 60, cellCount: 1, contributingCount: 4 },
+      { lower: 36, upper: 36.5, residents: 40, share: 40, cellCount: 1, contributingCount: 3 },
+    ];
+    const html = renderSectorPanelModel({
+      template: "landsat-population-comparison", comparisonId: "landsat-population",
+      record: { scope: "region", sectorName: "Entire Zennevallei" },
+      points: [{}, {}], curve, bins, totalResidents: 100, weightedMean: 33,
+      temperatureMinimum: 31, temperatureMaximum: 36, zeroPopulationCount: 0,
+      analysedAreaHa: .25, contributingLandsatCount: 7,
+      observation: { label: "22 June 2026" },
+    });
+    document.querySelector("#content").innerHTML = html;
+    const buttons = [...document.querySelectorAll("[data-expand-comparison-chart]")];
+    expect(buttons).toHaveLength(2);
+    expect(buttons.map((button) => button.textContent.trim())).toEqual(["Expand chart", "Expand chart"]);
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Expand chart: Cumulative residents by land-surface temperature",
+      "Expand chart: Distribution of modelled residents by temperature",
+    ]);
+    const plots = document.querySelectorAll("[data-cumulative-population-plot]");
+    expect(plots).toHaveLength(2);
+    plots.forEach((plot) => {
+      const hitAreas = plot.querySelectorAll(".population-temperature-hit-points rect");
+      expect(hitAreas).toHaveLength(2);
+      expect([...hitAreas].every((item) => Number(item.getAttribute("height")) > 200)).toBe(true);
+    });
+    expect(html).toContain("40 residents (40%) are in eligible cells at or above");
+    expect(html).toContain("60 (60%) are in cooler cells");
+  });
+
   it("renders continuous and categorical local notebook summaries without frontend-specific data", () => {
     const record = records["23003A001"];
     const continuous = renderSectorPanelModel({
@@ -365,7 +454,7 @@ describe("progressive detail panel", () => {
     expect(categorical).toContain("not part of the public dashboard");
   });
 
-  it("renders local official rasters with readable summaries and technical coverage only in Methodology", () => {
+  it("renders local official rasters with readable summaries and separates Details from Methodology", () => {
     const record = records["23003A001"];
     const baseManifest = {
       source: { name: "Official source", url: "https://example.test/source" },
@@ -380,8 +469,11 @@ describe("progressive detail panel", () => {
     expect(soil).toContain("Sealed and unsealed ground");
     expect(soil).toContain("artificial material that is wholly or partly impermeable");
     expect(soil).toContain("The production method changed in 2023");
+    expect(soil).toContain("data-section=\"local-raster-details\"");
     expect(soil).toContain("data-section=\"local-raster-methodology\"");
-    expect(soil.indexOf("Missing coverage")).toBeGreaterThan(soil.indexOf("local-raster-methodology"));
+    expect(soil.indexOf("Missing coverage")).toBeGreaterThan(soil.indexOf("local-raster-details"));
+    expect(soil.indexOf("Missing coverage")).toBeLessThan(soil.indexOf("local-raster-methodology"));
+    expect(soil.match(/<details/g)).toHaveLength(2);
 
     const greenMap = renderSectorPanelModel({
       template: "local-official-raster", datasetId: "groenkaart", record, year: 2021,
@@ -398,6 +490,7 @@ describe("progressive detail panel", () => {
     expect(greenMap).toContain("Vegetation lower than 3 m");
     expect(greenMap).toContain("Agricultural parcels");
     expect(greenMap).not.toContain("--score-color:#ffff00");
+    expect(greenMap.match(/<details/g)).toHaveLength(2);
 
   });
 

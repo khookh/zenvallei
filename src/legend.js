@@ -84,6 +84,8 @@ function surfaceSelector(model) {
     const label = document.createElement("span");
     label.textContent = group.title;
     select.append(swatch, label);
+    header.append(select);
+    if (group.items.length) {
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "comparison-surface-family-toggle";
@@ -92,7 +94,8 @@ function surfaceSelector(model) {
     toggle.setAttribute("aria-controls", `comparison-family-${group.id}`);
     toggle.setAttribute("aria-label", t(group.expanded ? "comparison.collapseFamily" : "comparison.expandFamily", { family: group.title }));
     toggle.textContent = group.expanded ? "−" : "+";
-    header.append(select, toggle);
+    header.append(toggle);
+    }
     const options = document.createElement("div");
     options.className = "comparison-surface-options";
     options.id = `comparison-family-${group.id}`;

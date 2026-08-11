@@ -44,12 +44,26 @@ describe("English–Dutch translations", () => {
     expect(t("authority.meteorologicalInstitute", {}, "en")).toBe("Royal Meteorological Institute of Belgium (RMI)");
     expect(t("layers.groenkaart", { year: 2021 }, "en")).toBe("Flanders Green Map 2021");
     expect(t("layers.landgebruik", {}, "en")).toBe("Flanders land use");
-    expect(t("jaarbak.contextMeta", { year: 2024 }, "nl")).toBe("JaarBAK · binaire classificatie van 1 m · 2024");
+    expect(t("jaarbak.contextMeta", { year: 2024 }, "nl")).toBe("Bodemafdekking · binaire classificatie van 1 m · 2024");
     expect(t("groenkaart.contextMeta", { year: 2021 }, "nl")).toBe("Groenkaart Vlaanderen · vier klassen van 1 m · 2021");
     expect(t("landgebruik.contextMeta", { year: 2025 }, "nl")).toBe("Landgebruik Vlaanderen · classificatie van 10 m · 2025");
-    expect(t("about.heatProducer", {}, "nl")).toBe("Departement Zorg van de Vlaamse overheid");
     ["Flemish Government", "Flemish Department", "Government of Flanders, Department", "ANB and Digital Flanders", "Green Map Flanders", "Land use Flanders"]
       .forEach((obsolete) => expect(english).not.toContain(obsolete));
+  });
+
+  it("reserves JaarBAK for formal product and methodology references", () => {
+    for (const language of ["en", "nl"]) {
+      const keys = Object.entries(TRANSLATIONS[language])
+        .filter(([, value]) => String(value).includes("JaarBAK"))
+        .map(([key]) => key)
+        .sort();
+      expect(keys).toEqual(["jaarbak.methodology", "sources.productJaarbak"]);
+    }
+  });
+
+  it("does not expose the retired Urban Atlas artificialisation terminology", () => {
+    expect(Object.values(TRANSLATIONS.en).join(" ")).not.toMatch(/artificialisation/i);
+    expect(Object.values(TRANSLATIONS.nl).join(" ")).not.toMatch(/artificialisering/i);
   });
 
   it("falls back to English for unsupported languages and unknown keys", () => {
@@ -70,16 +84,24 @@ describe("English–Dutch translations", () => {
     expect(t("heatMetric.final", {}, "en")).toBe("Combined");
   });
 
-  it("provides the complete project introduction in natural Dutch and English", () => {
+  it("uses one concise project and privacy statement in Dutch and English", () => {
     expect(t("intro.title", {}, "nl")).toBe("Over dit project");
-    expect(t("intro.body1", {}, "nl")).toContain("versie 0.1 van mijn persoonlijke project");
-    expect(t("intro.body2", {}, "nl")).toContain("Departement Zorg van de Vlaamse overheid");
-    expect(t("intro.body3", {}, "nl")).toContain("grote taalmodellen (LLM’s)");
+    expect(t("project.summary", {}, "nl")).toContain("persoonlijk, open project");
+    expect(t("project.summary", {}, "nl")).toContain("Zennevallei");
+    expect(t("project.privacy", {}, "nl")).toContain("geen cookies, analytics");
     expect(t("intro.title", {}, "en")).toBe("About this project");
-    expect(t("intro.body1", {}, "en")).toContain("version 0.1 of my personal project");
-    expect(t("intro.body1", {}, "en")).toContain("urban heat-island effect");
-    expect(t("intro.body2", {}, "en")).toContain("Copernicus and other sources");
-    expect(t("intro.body3", {}, "en")).toContain("large language models (LLMs)");
+    expect(t("project.summary", {}, "en")).toContain("personal, open project");
+    expect(t("project.summary", {}, "en")).toContain("currently limited to Zennevallei");
+    expect(t("project.privacy", {}, "en")).toContain("No cookies, analytics");
+  });
+
+  it("uses the approved plain-language questions in About", () => {
+    expect(t("about.heatQuestion", {}, "en")).toBe("Which neighbourhoods are most vulnerable during heatwaves?");
+    expect(t("about.landsatQuestion", {}, "en")).toBe("What was the land-surface temperature during previous heatwaves?");
+    expect(t("about.urbanAtlasQuestion", {}, "en")).toBe("How does Copernicus classify land cover and land use across Zennevallei?");
+    expect(t("about.jaarbakQuestion", {}, "en")).toBe("How much of the ground surface is covered by artificial, sealed surfaces?");
+    expect(t("about.heatQuestion", {}, "nl")).toBe("Welke buurten zijn het kwetsbaarst tijdens hittegolven?");
+    expect(t("about.landsatQuestion", {}, "nl")).toBe("Wat was de landoppervlaktetemperatuur tijdens eerdere hittegolven?");
   });
 
   it("formats fractional scores for the active locale without changing precision", () => {

@@ -9,6 +9,8 @@ const datasetIds = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature
 const comparisonIds = [
   "landsat-urban-atlas", "landsat-jaarbak", "landsat-groenkaart",
   "groenkaart-income", "landsat-income",
+  "groenkaart-population",
+  "landsat-population",
 ];
 const forbiddenText = /(?:Bearer\s+eyJ|client_secret|[A-Z]:\\Users\\|se=\d{4}-\d{2}-\d{2}T)/i;
 
@@ -97,33 +99,43 @@ async function publishComparison(comparisonId, descriptor) {
     await copyAsset(manifest.densityNonGreenUrl, ".png");
     await copyAsset(manifest.scopeIndexUrl, ".png");
     await copyAsset(manifest.statisticsUrl, ".json");
-    await copyAsset(manifest.urbanFabricMaskUrl, ".pmtiles");
+    await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
+  } else if (comparisonId === "groenkaart-population") {
+    await copyAsset(manifest.statisticsUrl, ".json");
+    await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
   } else if (comparisonId === "landsat-groenkaart") {
     await copyAsset(manifest.densityGridUrl, ".png");
     await copyAsset(manifest.densityNonGreenUrl, ".png");
     await copyAsset(manifest.scopeIndexUrl, ".png");
     await copyAsset(manifest.urbanFabricMaskUrl, ".pmtiles");
-  } else if (comparisonId === "landsat-income") {
-    await copyAsset(manifest.urbanFabricMaskUrl, ".pmtiles");
+    await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
+  } else if (["landsat-income", "landsat-population"].includes(comparisonId)) {
+    await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
   } else if (comparisonId === "landsat-jaarbak") {
     await copyAsset(manifest.scopeIndexUrl, ".png");
     await copyAsset(manifest.analysisScopeIndexUrl, ".png");
   } else if (manifest.scopeIndexUrl) {
     await copyAsset(manifest.scopeIndexUrl, ".png");
   }
+  if (comparisonId === "landsat-urban-atlas") {
+    await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
+  }
   for (const observation of Object.values(manifest.observations ?? {})) {
-    if (comparisonId === "landsat-jaarbak") {
+    if (comparisonId === "landsat-urban-atlas") {
+      await copyAsset(observation.displayDataUrl, ".png");
+    } else if (comparisonId === "landsat-jaarbak") {
       await copyAsset(observation.densityPointDataUrl, ".png");
       await copyAsset(observation.densityDataUrl, ".png");
     } else if (comparisonId === "landsat-groenkaart") {
       await copyAsset(observation.displayDataUrl, ".png");
-      await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
-    } else if (comparisonId === "landsat-income") {
+      await copyAsset(observation.pointDataUrl, ".json.gz");
+    } else if (["landsat-income", "landsat-population"].includes(comparisonId)) {
       await copyAsset(observation.displayDataUrl, ".png");
     } else {
       await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
     }
-    await copyAsset(observation.statisticsUrl ?? observation.distributionUrl, ".json");
+    await copyAsset(observation.statisticsUrl ?? observation.distributionUrl,
+      ["landsat-urban-atlas", "landsat-population"].includes(comparisonId) ? ".json.gz" : ".json");
   }
   await writeJson(path.join(outputRoot, comparisonId, "manifest.json"), manifest);
 }
@@ -168,8 +180,11 @@ const comparisonBytes = (await Promise.all(comparisonIds.map(async (comparisonId
   return (await Promise.all(entries.map(async (file) => (await fs.stat(file)).size)))
     .reduce((sum, size) => sum + size, 0);
 }))).reduce((sum, size) => sum + size, 0);
-if (comparisonBytes > 32 * 1024 * 1024) {
-  throw new Error(`Comparison derivatives exceed the 32 MiB budget (${(comparisonBytes / 1024 / 1024).toFixed(1)} MiB).`);
+// Nine public comparisons, including the lossless population-cell indexes,
+// currently require 34.2 MiB. Keep a narrow independent ceiling as well as
+// the stricter 550 MiB complete-bundle ceiling below.
+if (comparisonBytes > 36 * 1024 * 1024) {
+  throw new Error(`Comparison derivatives exceed the 36 MiB budget (${(comparisonBytes / 1024 / 1024).toFixed(1)} MiB).`);
 }
 
 const densityBytes = (await Promise.all(
@@ -195,4 +210,7 @@ async function collect(directory) {
 await collect(outputRoot);
 const bytes = (await Promise.all(files.map(async (file) => (await fs.stat(file)).size)))
   .reduce((sum, size) => sum + size, 0);
+if (bytes > 550 * 1024 * 1024) {
+  throw new Error(`Official browser bundle exceeds the 550 MiB budget (${(bytes / 1024 / 1024).toFixed(1)} MiB).`);
+}
 console.log(`Published ${files.length} browser-ready official-layer assets (${(bytes / 1024 / 1024).toFixed(1)} MiB).`);

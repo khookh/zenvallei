@@ -15,7 +15,9 @@ function resolveAsset(root, value, extension) {
 }
 
 export function validateLandsatJaarbakManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 2 || manifest.comparisonId !== "landsat-jaarbak"
+  if (!manifest || manifest.schemaVersion !== 3 || manifest.comparisonId !== "landsat-jaarbak"
+    || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
+    || manifest.aggregation !== "exact-masked-area" || manifest.minimumAnalysedAreaHa !== .1
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "jaarbak") {
     throw new TypeError("Unsupported Landsat-JaarBAK comparison manifest.");
   }
@@ -24,7 +26,11 @@ export function validateLandsatJaarbakManifest(manifest) {
     || !manifest.analysisScopeIndexUrl || !Array.isArray(manifest.analysisImageSize)
     || manifest.densityAnalysis?.radiusMeters !== 100
     || manifest.densityAnalysis?.validCoverageThreshold !== 95
-    || manifest.densityAnalysis?.sampling !== "none") {
+    || manifest.densityAnalysis?.sampling !== "none"
+    || manifest.classification?.aggregation !== "exact-masked-area"
+    || manifest.classification?.sourceResolutionMetres !== 1
+    || manifest.classification?.temperatureResolutionMetres !== 30
+    || manifest.classification?.minimumAnalysedAreaHa !== .1) {
     throw new TypeError("The Landsat-JaarBAK comparison manifest is incomplete.");
   }
   return manifest;

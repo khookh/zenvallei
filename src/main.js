@@ -276,7 +276,8 @@ function updateAnalysisPairing() {
   const selectedComparison = activeComparison()?.isActive() ? activeComparison() : null;
   const selectedPair = selectedComparison ? comparisonPair(selectedComparison.id) : null;
   const selectedId = selectedPair?.layers.find((id) => id !== selectedPair.canonicalLayerId) ?? "";
-  const mapModeAction = selectedComparison ? null : layer?.getMapModeAction?.() ?? null;
+  const mapModeAction = selectedComparison?.getMapModeAction?.()
+    ?? (!selectedComparison ? layer?.getMapModeAction?.() : null);
   const comparisonFailed = Boolean(selectedComparison?.hasLoadError?.());
   elements.analysisPairing.hidden = targets.length === 0 && !mapModeAction;
   elements.mapModeAction.hidden = !mapModeAction;
@@ -384,7 +385,10 @@ async function removeAnalysisPairing() {
 }
 
 function updateSecondaryControls() {
-  const control = activeLayer()?.getSecondaryControl?.() ?? null;
+  const comparison = activeComparison()?.isActive() ? activeComparison() : null;
+  const control = comparison?.suppressSecondaryControl
+    ? null
+    : comparison?.getSecondaryControl?.() ?? activeLayer()?.getSecondaryControl?.() ?? null;
   const isHeatMetric = control?.id === "heat-metric";
   elements.secondaryControl.hidden = !control;
   elements.secondaryControl.id = isHeatMetric ? "heat-metric-control" : "secondary-control";
@@ -628,6 +632,7 @@ async function start() {
     },
     getAboutModel: () => ({ ...sharedPanelData, provenance: data.provenance }),
     onLayerOptionChange: (name, value) => activateLayerOption(name, value),
+    onOpenSources: (triggerElement) => application.mapController?.openSourceDialog(triggerElement),
     isPersistentView: (view) => view?.type === "record"
       && activeComparison()?.isActive()
       && activeComparison().primaryLayerId === view.layerId
@@ -814,10 +819,29 @@ async function start() {
     });
     application.comparisons.set(comparison.id, comparison);
   }
+  const populationLayer = application.layers.get("population");
+  if (groenkaartLayer && populationLayer && application.layers.has("jaarbak")
+    && data.comparisons?.["groenkaart-population"]) {
+    const { createGroenkaartPopulationComparison } = await import("./comparisons/groenkaart-population.js");
+    const comparison = createGroenkaartPopulationComparison({
+      descriptor: data.comparisons["groenkaart-population"], groenkaartLayer, populationLayer,
+      jaarbakLayer: application.layers.get("jaarbak"),
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
   if (landsatLayer && incomeLayer && application.layers.has("jaarbak") && data.comparisons?.["landsat-income"]) {
     const { createLandsatIncomeComparison } = await import("./comparisons/landsat-income.js");
     const comparison = createLandsatIncomeComparison({
       descriptor: data.comparisons["landsat-income"], landsatLayer, incomeLayer,
+      jaarbakLayer: application.layers.get("jaarbak"),
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
+  if (landsatLayer && populationLayer && application.layers.has("jaarbak")
+    && data.comparisons?.["landsat-population"]) {
+    const { createLandsatPopulationComparison } = await import("./comparisons/landsat-population.js");
+    const comparison = createLandsatPopulationComparison({
+      descriptor: data.comparisons["landsat-population"], landsatLayer, populationLayer,
       jaarbakLayer: application.layers.get("jaarbak"),
     });
     application.comparisons.set(comparison.id, comparison);
@@ -909,6 +933,7 @@ async function start() {
     renderLegend();
     updateLayerContext();
     updateLayerControls();
+    updateSecondaryControls();
     updateAnalysisPairing();
     next.setHighlightedSector?.(selectedSectorId);
     panel.open(
@@ -1032,10 +1057,11 @@ async function start() {
   elements.analysisCompare.addEventListener("click", () => enterAnalysisPickMode(elements.analysisCompare));
   elements.mapModeAction.addEventListener("click", async () => {
     const layer = activeLayer();
-    if (!layer?.toggleMapMode) return;
+    const modeOwner = activeComparison()?.getMapModeAction?.() ? activeComparison() : layer;
+    if (!modeOwner?.toggleMapMode) return;
     elements.mapModeAction.setAttribute("aria-busy", "true");
     try {
-      await layer.toggleMapMode(application.mapController.map);
+      await modeOwner.toggleMapMode(application.mapController.map);
       updateAnalysisPairing();
       updateLayerContext();
       renderLegend();
@@ -1096,7 +1122,11 @@ async function start() {
     const button = event.target.closest("[data-comparison-series]");
     if (!button || !activeComparison()?.isActive() || !activeComparison().toggleSeries) return;
     const result = activeComparison().toggleSeries(button.dataset.comparisonSeries);
-    if (result.limit) {
+    if (result.minimum) {
+      const feedback = elements.legend.querySelector("[data-comparison-feedback]");
+      if (feedback) feedback.textContent = t("density.minimumClass");
+      elements.announcement.textContent = t("density.minimumClass");
+    } else if (result.limit) {
       const feedback = elements.legend.querySelector("[data-comparison-feedback]");
       if (feedback) feedback.textContent = t("comparison.seriesLimit");
       application.announcement = { type: "analysisPairing", key: "comparison.seriesLimit", parameters: {} };

@@ -21,7 +21,9 @@ export const PUBLIC_COMPARISON_IDS = Object.freeze([
   "landsat-jaarbak",
   "landsat-groenkaart",
   "groenkaart-income",
+  "groenkaart-population",
   "landsat-income",
+  "landsat-population",
 ]);
 
 export const LAYER_ACTIONS = Object.freeze({

@@ -61,6 +61,7 @@ export function createMapSourceDialog({ config }) {
   dialog.className = "map-source-dialog";
   document.body.append(dialog);
   let button;
+  let returnFocusElement = null;
 
   const render = () => {
     const article = document.createElement("article");
@@ -100,6 +101,13 @@ export function createMapSourceDialog({ config }) {
     dialog.replaceChildren(article);
   };
 
+  const open = (triggerElement = null) => {
+    returnFocusElement = triggerElement instanceof HTMLElement ? triggerElement : button;
+    render();
+    dialog.showModal();
+    dialog.querySelector(".map-source-dialog-close")?.focus();
+  };
+
   const control = {
     onAdd() {
       const container = document.createElement("div");
@@ -111,11 +119,7 @@ export function createMapSourceDialog({ config }) {
       glyph.setAttribute("aria-hidden", "true");
       glyph.textContent = "i";
       button.append(glyph);
-      button.addEventListener("click", () => {
-        render();
-        dialog.showModal();
-        dialog.querySelector(".map-source-dialog-close")?.focus();
-      });
+      button.addEventListener("click", () => open(button));
       container.append(button);
       this.updateLanguage();
       return container;
@@ -129,6 +133,6 @@ export function createMapSourceDialog({ config }) {
       if (dialog.open) render();
     },
   };
-  dialog.addEventListener("close", () => button?.focus());
-  return { control, updateLanguage: () => control.updateLanguage(), destroy: () => dialog.remove() };
+  dialog.addEventListener("close", () => returnFocusElement?.focus());
+  return { control, open, updateLanguage: () => control.updateLanguage(), destroy: () => dialog.remove() };
 }

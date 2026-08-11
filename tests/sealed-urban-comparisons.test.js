@@ -5,11 +5,11 @@ import { validateLandsatIncomeManifest } from "../src/comparisons/landsat-income
 import { isOfficialSealedPixel } from "../src/comparisons/exact-sealed-raster.js";
 import {
   comparisonPixelOffset, greenDensityColor, incomeLevel, ordinaryLeastSquares, selectedDensity,
-  surroundingAreaHa,
+  surroundingAreaHa, hasUrbanSurfaceContract,
 } from "../src/comparisons/sealed-urban-shared.js";
 
 const commonLandsat = {
-  schemaVersion: 1,
+  schemaVersion: 6,
   urbanAtlasYear: 2021,
   analysisResolutionMeters: 30,
   densityNonGreenUrl: "landsat-groenkaart/green-density-non-green.png",
@@ -17,35 +17,64 @@ const commonLandsat = {
   municipalityIndexes: { Halle: 1 },
   coordinates: [[4, 51], [5, 51], [5, 50], [4, 50]],
   imageSize: [100, 100],
-  observations: { observation: { displayDataUrl: "shared/display.png", pointDataUrl: "points.png" } },
+  maskResolutionMeters: 1,
+  temperatureResolutionMeters: 30,
+  aggregation: "exact-masked-area",
+  minimumAnalysedAreaHa: 0.1,
+  minimumPixelMaskedAreaM2: 1,
+  observations: { observation: { displayDataUrl: "shared/display.png", pointDataUrl: "points.json" } },
+};
+const surfaceContract = {
+  urbanAtlasClassMaskUrl: "shared/urban-atlas-classes-2021.pmtiles",
+  urbanAtlasClassIndexes: { 11100: 1, 12100: 2 },
+  urbanSurfaceGroups: [
+    { id: "residential", codes: ["11100", "11210", "11220", "11230", "11240"] },
+    { id: "employmentInstitutional", codes: ["12100"] },
+  ],
+  defaultUrbanSurfaceGroups: ["residential", "employmentInstitutional"],
 };
 
 describe("sealed urban comparison contracts", () => {
+  it("requires both exact Urban Atlas surface groups by default", () => {
+    expect(hasUrbanSurfaceContract(surfaceContract)).toBe(true);
+    expect(hasUrbanSurfaceContract({
+      ...surfaceContract,
+      defaultUrbanSurfaceGroups: ["residential"],
+    })).toBe(false);
+    expect(hasUrbanSurfaceContract({
+      ...surfaceContract,
+      urbanSurfaceGroups: [{ id: "residential", codes: ["11100"] }],
+    })).toBe(false);
+  });
+
   it("validates the three explicit products", () => {
     expect(validateLandsatGroenkaartManifest({
       ...commonLandsat,
-      schemaVersion: 3,
+      schemaVersion: 6,
       comparisonId: "landsat-groenkaart",
       primaryLayerId: "landsat-temperature",
       secondaryLayerId: "groenkaart",
       greenMapYear: 2021,
-      minimumGreenCoverage: .8,
       greenClasses: [],
       urbanFabricMaskUrl: "shared/urban-fabric-2021.pmtiles",
+      ...surfaceContract,
     }).comparisonId).toBe("landsat-groenkaart");
     expect(validateLandsatIncomeManifest({
       ...commonLandsat,
-      schemaVersion: 2,
+      schemaVersion: 4,
       comparisonId: "landsat-income",
       primaryLayerId: "landsat-temperature",
       secondaryLayerId: "income",
       incomeYear: 2023,
-      minimumSectorPixels: 10,
+      minimumAnalysedAreaHa: 0.1,
+      maskResolutionMeters: 1,
+      temperatureResolutionMeters: 30,
+      aggregation: "exact-masked-area",
       displayResolutionMeters: 1,
-      urbanFabricMaskUrl: "shared/urban-fabric-2021.pmtiles",
+      ...surfaceContract,
     }).comparisonId).toBe("landsat-income");
     expect(validateGroenkaartIncomeManifest({
-      schemaVersion: 2,
+      schemaVersion: 4,
       comparisonId: "groenkaart-income",
       primaryLayerId: "groenkaart",
       secondaryLayerId: "income",
@@ -54,10 +83,13 @@ describe("sealed urban comparison contracts", () => {
       jaarbakYear: 2021,
       incomeYear: 2023,
       analysisResolutionMeters: 10,
+      maskResolutionMeters: 1,
+      aggregation: "exact-masked-area",
+      minimumAnalysedAreaHa: 0.1,
       scopeIndexUrl: "groenkaart-income/scope-index.png",
       densityNonGreenUrl: "groenkaart-income/density-non-green.png",
       municipalityIndexes: { Halle: 1 },
-      urbanFabricMaskUrl: "shared/urban-fabric-2021.pmtiles",
+      ...surfaceContract,
       statisticWeighting: "exact-sealed-urban-area",
       urbanFabricCodes: ["11100", "11210", "11220", "11230", "11240"],
     }).comparisonId).toBe("groenkaart-income");
@@ -65,7 +97,7 @@ describe("sealed urban comparison contracts", () => {
 
   it("rejects isolated structures or incompatible analytical thresholds", () => {
     expect(() => validateGroenkaartIncomeManifest({
-      schemaVersion: 2,
+      schemaVersion: 3,
       comparisonId: "groenkaart-income",
       primaryLayerId: "groenkaart",
       secondaryLayerId: "income",
@@ -86,7 +118,13 @@ describe("sealed urban comparison contracts", () => {
       { income: 20_000, density: 10 },
       { income: 30_000, density: 20 },
       { income: 40_000, density: 30 },
-    ], "income", "density")).toMatchObject({ count: 3, slope: .001, intercept: -10, rSquared: 1 });
+    ], "income", "density")).toMatchObject({
+      count: 3, slope: .001, intercept: -10, rSquared: 1, pearsonR: 1, spearmanRho: 1,
+    });
+    const tied = ordinaryLeastSquares([
+      { x: 1, y: 3 }, { x: 1, y: 2 }, { x: 2, y: 4 }, { x: 3, y: 5 },
+    ], "x", "y");
+    expect(tied.spearmanRho).toBeCloseTo(0.948683298, 6);
     expect(ordinaryLeastSquares([
       { income: 20_000, density: 10 }, { income: 20_000, density: 20 }, { income: 20_000, density: 30 },
     ], "income", "density")).toBeNull();

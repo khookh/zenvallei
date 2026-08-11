@@ -68,7 +68,7 @@ describe("Urban Atlas preparation contract", () => {
     expect(manifest.filter(({ present }) => present).map(({ code }) => code)).toEqual(["11100", "14110", "32000"]);
   });
 
-  it("uses exactly the requested green and artificialisation classes", () => {
+  it("retains the exact legacy analytical code sets used by comparison pipelines", () => {
     expect(GREEN_CODES).toEqual(["14110", "14120", "14130", "23000", "31000", "32000"]);
     expect(ARTIFICIAL_CODES).toEqual([
       "11100", "11210", "11220", "11230", "11240", "11300", "12100",

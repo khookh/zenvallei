@@ -139,9 +139,9 @@ describe("heat-population comparison", () => {
     expect(english).toContain("Heat score by population band");
     expect(english).toContain("Residents by heat-score level");
     expect(english.match(/data-scatter-sector=/g)).toHaveLength(280);
-    // Inline, combined expanded and independently expanded bar charts each
-    // contain the same eleven score bars.
-    expect(english.match(/data-population-score-bar/g)).toHaveLength(33);
+    // The inline bar chart and its own expanded dialog contain the same eleven
+    // bars. The population-band box plot has a separate dialog.
+    expect(english.match(/data-population-score-bar/g)).toHaveLength(22);
     expect(english).toContain("139,939 of 140,122 residents are represented");
     expect(english).toContain("data-expand-comparison-chart");
     expect(english).toContain("At score 0 or above: 139,939 residents, 100%.");
