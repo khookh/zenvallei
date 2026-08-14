@@ -13,6 +13,7 @@ import { validateProductContract } from "./product-contract.js";
 import { createDetailPanel } from "./panel-shell.js";
 import { createProjectIntro } from "./project-intro.js";
 import { safeExternalUrl } from "./security.js";
+import { moveSegmentFocus } from "./controllers/focus-navigation.js";
 import {
   comparisonContains, comparisonForLayers, comparisonPair, comparisonTargets,
 } from "./comparison-pairs.js";
@@ -834,6 +835,9 @@ async function start() {
       updateLayerControls();
     },
   });
+  if (import.meta.env.DEV || import.meta.env.MODE === "test" || import.meta.env.VITE_E2E_DEBUG === "1") {
+    window.__heatMap = application.mapController;
+  }
   const landsatLayer = application.layers.get("landsat-temperature");
   if (landsatLayer && data.comparisons?.["landsat-urban-atlas"]) {
     const { createLandsatUrbanAtlasComparison } = await import("./comparisons/landsat-urban-atlas.js");
@@ -1048,7 +1052,6 @@ async function start() {
   });
   await application.mapController.ready;
   application.mapController.setViewportPadding(application.surfaceLayout.getPadding());
-  if (import.meta.env.DEV || import.meta.env.MODE === "test") window.__heatMap = application.mapController;
   document.documentElement.dataset.appReady = "true";
   performance.mark("heat-map-ready");
   performance.measure("heat-map-initialization", "heat-map-start", "heat-map-ready");
@@ -1329,8 +1332,9 @@ async function start() {
       updateSecondaryControls();
       updateLayerContext();
       renderLegend();
+      let openedScopeSummary = false;
       if (changedLayer) {
-        openCurrentScopeSummary(button);
+        openedScopeSummary = openCurrentScopeSummary(button);
       } else if (selectedSectorId) {
         panel.setActiveLayer(layerId);
       } else if (activeComparison()?.isActive()) {
@@ -1344,7 +1348,16 @@ async function start() {
       }
       application.announcement = { type: "layer", layerId };
       updateAnnouncement();
-      button.focus({ preventScroll: true });
+      if (openedScopeSummary) {
+        // Adaptive layouts collapse the layer controls after opening results.
+        // Move focus into the visible panel only after that layout settles, so
+        // keyboard focus never remains inside a hidden control group.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (panel.isOpen()) elements.detailPanel.focus({ preventScroll: true });
+        }));
+      } else {
+        button.focus({ preventScroll: true });
+      }
     });
     button.addEventListener("keydown", (event) => moveSegmentFocus(
       event,
@@ -1355,14 +1368,6 @@ async function start() {
 
   elements.mapLoading.hidden = true;
   application.datasetState = "ready";
-}
-
-function moveSegmentFocus(event, buttons, currentButton) {
-  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-  event.preventDefault();
-  const currentIndex = buttons.indexOf(currentButton);
-  const direction = event.key === "ArrowRight" ? 1 : -1;
-  buttons[(currentIndex + direction + buttons.length) % buttons.length].focus();
 }
 
 start().catch(showFatalError);

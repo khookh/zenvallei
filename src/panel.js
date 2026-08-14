@@ -21,6 +21,9 @@ import {
   urbanAtlasCategoryBreakdown,
 } from "./urban-atlas-categories.js";
 import { SOURCE_PRODUCTS } from "./source-authorities.js";
+import { renderAboutPanel } from "./panels/about-panel.js";
+import { renderMetricSummaryPanel } from "./panels/metric-summary-panel.js";
+import { scenarioDeltaHistogram } from "./panels/scenario-distribution.js";
 
 const safeHref = (value) => escapeHtml(safeExternalUrl(value));
 
@@ -570,77 +573,6 @@ function renderLandgebruik(model) {
         </details>
       </div>
     </article>`;
-}
-
-function aboutLayerRow(key, label, source = null) {
-  return `<li class="about-layer-row">
-    <strong>${escapeHtml(label)}</strong>
-    <span>${escapeHtml(t(`about.${key}Question`))}</span>
-    <small>${escapeHtml(t(`about.${key}Summary`))}</small>
-    ${source ? `<a href="${safeHref(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.label)}</a>` : ""}
-  </li>`;
-}
-
-function renderAbout(_methodology, urbanAtlas, _income, _population, provenance, officialLayers) {
-  const sectorCount = provenance?.output?.sectorCount ?? 154;
-  return `
-    <div class="panel-hero panel-hero--about">
-      <p class="panel-eyebrow">${escapeHtml(t("about.eyebrow", { count: sectorCount }))}</p>
-      <h2 id="panel-title">${escapeHtml(t("about.title"))}</h2>
-      <p class="about-intro">${escapeHtml(t("about.intro"))}</p>
-      <p class="about-scope">${escapeHtml(t("about.scope", { count: sectorCount }))}</p>
-    </div>
-    <div class="panel-body about-body">
-      <section>
-        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.startKicker"))}</p><h3>${escapeHtml(t("about.howTo"))}</h3></div>
-        <ol class="about-steps">
-          <li><span>1</span><p>${escapeHtml(t("about.step1"))}</p></li>
-          <li><span>2</span><p>${escapeHtml(t("about.step2"))}</p></li>
-          <li><span>3</span><p>${escapeHtml(t("about.step3"))}</p></li>
-        </ol>
-      </section>
-      <section>
-        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.layersKicker"))}</p><h3>${escapeHtml(t("about.layersTitle"))}</h3></div>
-        <div class="about-layer-category">
-          <h4 class="about-category-title">${escapeHtml(t("about.categoryHeat"))}</h4>
-          <ul class="about-layer-index">
-            ${aboutLayerRow("heat", t("layers.heat"))}
-            ${aboutLayerRow("landsat", t("layers.landsatTemperature"))}
-            ${officialLayers?.["land-cover-scenario"] ? aboutLayerRow("scenario", t("layers.landCoverScenario"), {
-              label: t(SOURCE_PRODUCTS.xgboost.labelKey), url: SOURCE_PRODUCTS.xgboost.url,
-            }) : ""}
-          </ul>
-        </div>
-        <div class="about-layer-category">
-          <h4 class="about-category-title">${escapeHtml(t("about.categoryLandGreen"))}</h4>
-          <ul class="about-layer-index">
-            ${aboutLayerRow("urbanAtlas", t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}
-            ${aboutLayerRow("jaarbak", t("layers.jaarbak", { year: officialLayers?.jaarbak?.defaultYear ?? 2024 }))}
-            ${aboutLayerRow("groenkaart", t("layers.groenkaart", { year: officialLayers?.groenkaart?.defaultYear ?? 2021 }))}
-            ${aboutLayerRow("landgebruik", t("layers.landgebruik"))}
-          </ul>
-        </div>
-        <div class="about-layer-category">
-          <h4 class="about-category-title">${escapeHtml(t("about.categoryDemography"))}</h4>
-          <ul class="about-layer-index">
-            ${aboutLayerRow("population", t("layers.population"))}
-            ${aboutLayerRow("income", t("layers.income"))}
-          </ul>
-        </div>
-      </section>
-      <section class="about-note about-project">
-        <p class="section-kicker">${escapeHtml(t("about.projectKicker"))}</p>
-        <h3>${escapeHtml(t("about.projectTitle"))}</h3>
-        <p>${escapeHtml(t("project.summary"))}</p>
-        <p>${escapeHtml(t("project.privacy"))}</p>
-        <div class="about-actions">
-          <a href="https://github.com/khookh/zenvallei" target="_blank" rel="noopener noreferrer">${escapeHtml(t("intro.github"))}</a>
-          <a href="mailto:stefanodonne@gmail.com">${escapeHtml(t("intro.contact"))}</a>
-          <button type="button" data-open-map-sources>${escapeHtml(t("about.openSources"))}</button>
-        </div>
-      </section>
-    </div>`;
-
 }
 
 function landsatDateTime(value) {
@@ -1903,23 +1835,6 @@ function renderLandsatPopulationComparison(model) {
   </div>`;
 }
 
-function renderMetricSummary(model) {
-
-  const value = Number.isFinite(model.value) ? formatNumber(model.value) : t("value.notAvailable");
-  const unit = model.unit ?? "%";
-  const color = model.color ?? "#0b6e69";
-  return `
-    <div class="panel-hero land-cover-hero">
-      <p class="panel-eyebrow">${escapeHtml(model.record.municipality)} · ${escapeHtml(model.record.sectorId)}</p>
-      <h2 id="panel-title">${escapeHtml(model.record.sectorName)}</h2>
-      <div class="score-hero" style="--hero-color:${escapeHtml(color)}">
-        <div class="score-orb"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(unit)}</span></div>
-        <div><span class="score-caption">${escapeHtml(model.title)}</span>${model.description ? `<p>${escapeHtml(model.description)}</p>` : ""}</div>
-      </div>
-    </div>
-    ${model.notes?.length ? `<div class="panel-body methodology-copy">${model.notes.map((note) => `<p>${escapeHtml(note)}</p>`).join("")}</div>` : ""}`;
-}
-
 function signedTemperature(value) {
   if (!Number.isFinite(value)) return t("value.notAvailable");
   const formatted = formatNumber(Math.abs(value), 2);
@@ -1955,62 +1870,6 @@ function scenarioCanopyBars(canopy) {
     const value = Number(canopy?.[`${stage}Ha`]) || 0;
     return `<div class="scenario-composition-row scenario-canopy-row"><strong>${escapeHtml(t(`scenario.${stage}`))}</strong><div class="scenario-canopy-bar"><span style="--share:${value / maximum * 100}%"></span></div><em>${escapeHtml(formatNumber(value, 2))} ha</em></div>`;
   }).join("");
-}
-
-function scenarioDeltaHistogram(stats, { expanded = false } = {}) {
-  const distribution = stats?.deltaDistribution;
-  const bins = distribution?.bins ?? [];
-  if (!bins.length || !distribution?.affectedCellCount) {
-    return `<p class="scenario-distribution-empty">${escapeHtml(t("scenario.distributionEmpty"))}</p>`;
-  }
-  const width = expanded ? 1100 : 440;
-  const height = expanded ? 610 : 330;
-  const plot = expanded
-    ? { left: 105, top: 38, width: 925, height: 440 }
-    : { left: 66, top: 28, width: 342, height: 220 };
-  const [minimum, maximum] = distribution.domainC;
-  const maximumShare = Math.max(...bins.map((bin) => Number(bin.sharePct) || 0), .1);
-  const yMagnitude = 10 ** Math.floor(Math.log10(maximumShare));
-  const yMaximum = Math.ceil(maximumShare / yMagnitude) * yMagnitude;
-  const x = (value) => plot.left + (value - minimum) / Math.max(.000001, maximum - minimum) * plot.width;
-  const y = (value) => plot.top + plot.height - value / yMaximum * plot.height;
-  const prefix = `scenario-delta-distribution-${expanded ? "expanded" : "inline"}`;
-  const xTicks = [minimum, minimum / 2, 0, maximum / 2, maximum]
-    .filter((value, index, values) => !index || Math.abs(value - values[index - 1]) > 1e-9);
-  const yTicks = [0, yMaximum / 2, yMaximum];
-  let interactiveIndex = 0;
-  const bars = bins.map((bin, binIndex) => {
-    const share = Number(bin.sharePct) || 0;
-    const left = x(bin.lowerC);
-    const right = x(bin.upperC);
-    const top = y(share);
-    const midpoint = (bin.lowerC + bin.upperC) / 2;
-    const colour = midpoint < 0 ? "#2166ac" : midpoint > 0 ? "#b2182b" : "#6f7778";
-    if (!bin.count) {
-      return `<rect x="${left}" y="${plot.top + plot.height}" width="${Math.max(1, right - left - .5)}" height="0" fill="${colour}" aria-hidden="true"/>`;
-    }
-    const tabindex = interactiveIndex++ ? "-1" : "0";
-    const label = t("scenario.distributionBinLabel", {
-      lower: signedTemperature(bin.lowerC), upper: signedTemperature(bin.upperC),
-      count: bin.count, share: formatNumber(share, 2),
-    });
-    return `<rect x="${left}" y="${top}" width="${Math.max(1, right - left - .5)}" height="${plot.top + plot.height - top}" fill="${colour}" tabindex="${tabindex}" role="graphics-symbol" data-histogram-bin data-focus-key="${prefix}-bin-${binIndex}" data-histogram-label="${escapeHtml(label)}" data-histogram-x="${(left + right) / 2}" aria-label="${escapeHtml(label)}"/>`;
-  }).join("");
-  return `<div class="scenario-delta-distribution ${expanded ? "is-expanded" : ""}" data-comparison-chart>
-    ${expanded ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart data-dialog-target="scenario-delta-distribution" aria-label="${escapeHtml(t("chart.expandNamed", { chart: t("scenario.distributionTitle") }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="${prefix}-title ${prefix}-description">
-      <title id="${prefix}-title">${escapeHtml(t("scenario.distributionTitle"))}</title>
-      <desc id="${prefix}-description">${escapeHtml(t("scenario.distributionDescription", { count: distribution.affectedCellCount }))}</desc>
-      ${yTicks.map((tick) => `<line class="chart-grid" x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(tick)}" y2="${y(tick)}"/><text class="chart-axis-label" x="${plot.left - 10}" y="${y(tick) + 4}" text-anchor="end">${escapeHtml(formatNumber(tick, tick < 1 ? 1 : 0))}%</text>`).join("")}
-      ${bars}
-      <line class="scenario-distribution-zero" x1="${x(0)}" x2="${x(0)}" y1="${plot.top}" y2="${plot.top + plot.height}"/>
-      <line class="chart-axis" x1="${plot.left}" x2="${plot.left + plot.width}" y1="${plot.top + plot.height}" y2="${plot.top + plot.height}"/>
-      ${xTicks.map((tick) => `<text class="chart-axis-label" x="${x(tick)}" y="${plot.top + plot.height + 24}" text-anchor="middle">${escapeHtml(formatNumber(tick, 2))}</text>`).join("")}
-      <text class="chart-axis-title" x="${plot.left + plot.width / 2}" y="${height - 18}" text-anchor="middle">${escapeHtml(t("scenario.distributionXAxis"))}</text>
-      <text class="chart-axis-title" transform="translate(${expanded ? 27 : 18} ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("scenario.distributionYAxis"))}</text>
-    </svg>
-    <output class="comparison-chart-output" data-histogram-output aria-live="polite">${escapeHtml(t("scenario.distributionExplore"))}</output>
-  </div>`;
 }
 
 function scenarioDeltaDistributionDialog(model) {
@@ -2120,11 +1979,11 @@ export function renderSectorPanelModel(model) {
   if (model.template === "land-cover-scenario") return renderLandCoverScenario(model);
   if (model.template === "income") return renderIncome(model);
   if (model.template === "population") return renderPopulation(model);
-  if (model.template === "metric-summary") return renderMetricSummary(model);
+  if (model.template === "metric-summary") return renderMetricSummaryPanel(model);
   throw new Error(`Unknown sector panel template '${model.template}'.`);
 }
 
 /** Render the About view from the same safe content helpers as result panels. */
 export function renderAboutPanelModel(model) {
-  return renderAbout(model.methodology, model.urbanAtlas, model.income, model.population, model.provenance, model.officialLayers);
+  return renderAboutPanel(model);
 }

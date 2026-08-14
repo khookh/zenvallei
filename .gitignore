@@ -24,3 +24,6 @@ test-results/
 .venv*/
 /git_passphrase.txt
 /playground/ecostress.txt
+/output/
+/papers/
+/tmp/

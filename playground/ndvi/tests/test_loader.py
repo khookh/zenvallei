@@ -120,7 +120,7 @@ def test_real_cache_exposes_the_twelve_selected_common_grid():
 def test_example_notebooks_are_clean_json_without_saved_outputs():
     notebook_root = Path(__file__).resolve().parents[1]
     notebooks = sorted(notebook_root.glob("*.ipynb"))
-    assert len(notebooks) >= 2
+    assert [path.name for path in notebooks] == ["01_halle_ndvi_2020_2021.ipynb"]
     for notebook_path in notebooks:
         notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
         assert notebook["nbformat"] == 4

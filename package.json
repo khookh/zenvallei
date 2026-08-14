@@ -28,14 +28,8 @@
     "green-population:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset groenkaart-population",
     "landsat-population:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-population",
     "lst-scenario:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset land-cover-scenario",
-    "lst-scenario:xgboost": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_xgboost_pipeline",
-    "lst-scenario:xgboost-smoothing": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_smoothing_benchmark",
-    "lst-scenario:xgboost-heatwave-mean": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_heatwave_mean_xgboost",
-    "lst-scenario:xgboost-heatwave-mean-notebook": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_heatwave_mean_notebook",
     "lst-scenario:xgboost-optuna": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_optuna --trials 50",
-    "lst-scenario:xgboost-optuna-notebook": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_optuna_notebook",
     "lst-scenario:xgboost-notebook": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_xgboost_notebook",
-    "lst-scenario:xgboost-radius-benchmark": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_radius_benchmark",
     "landgebruik:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landgebruik",
     "official-layers:publish": "node scripts/publish-official-layer-assets.mjs",
     "local-data:test": "node scripts/run-local-layer-python.mjs -m pytest processing/local-layers/tests",
@@ -87,7 +81,7 @@
     "sharp": "^0.35.3",
     "typescript": "^7.0.2",
     "unzipper": "^0.12.5",
-    "vite": "^8.2.0",
+    "vite": "^8.2.1",
     "vitest": "^4.1.10",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }

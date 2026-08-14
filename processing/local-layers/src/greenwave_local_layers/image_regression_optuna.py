@@ -34,8 +34,8 @@ from .image_regression import (
     make_sector_folds,
     prepare_regression_catalog,
 )
-from .image_regression_training import regression_metrics
-from .image_regression_smoothing_benchmark import smooth_masked_predictions
+from .prediction_smoothing import smooth_masked_predictions
+from .regression_metrics import regression_metrics
 from .image_regression_xgboost_pipeline import (
     EMBARGO_METERS,
     FEATURE_CONTRACT_VERSION,

@@ -354,7 +354,8 @@ test("discloses map controls without changing exploration state", async ({ page 
   await expect(controlsToggle).toHaveAttribute("aria-expanded", "false");
   await expect(controlsToggle).toHaveAttribute("aria-label", "Kaartbediening uitklappen");
   await expect(page.locator("#map-controls-toggle-icon")).toHaveText("+");
-  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
+  const adaptiveLayout = await page.locator(".map-shell").getAttribute("data-surface-mode") !== "expanded";
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", adaptiveLayout ? "true" : "false");
   expect(await page.evaluate(() => ({
     activeLayer: window.__heatMap.getActiveLayer(),
     heatMetric: window.__heatMap.getHeatMetric(),
@@ -545,10 +546,9 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator("#dataset-status")).toHaveCount(0);
   await expect(page.locator("#visible-count")).toHaveText("154 sectoren");
   await expect(page.locator("#about-button")).toContainText("Uitleg");
-  await expect(page.locator("#layer-context-meta")).toHaveText("Officiële broncijfers · 154 Statbel-sectoren · 2026");
-  await expect(page.locator("#layer-context-copy")).toContainText("Departement Zorg");
-  await expect(page.locator("#layer-context-copy")).toContainText("wij tonen ze zonder herberekening");
-  await expect(page.locator("#layer-context-sources")).toContainText("Departement Zorg van de Vlaamse overheid");
+  await expect(page.locator("#layer-context-meta")).toHaveText("Hittekwetsbaarheid 2026 · statistische sectoren");
+  await expect(page.locator("#layer-context-copy")).toContainText("relatieve score van 0 tot 10");
+  await expect(page.locator("#layer-context-sources")).toContainText("Hittekwetsbaarheidskaart Vlaanderen 2026");
   await expect(page.locator("#analysis-pairing")).toBeVisible();
   await expect(page.locator("#analysis-compare")).toHaveText(/Vergelijken/);
   const comparisonMapState = await page.evaluate(() => ({
@@ -609,7 +609,7 @@ test("maps Statbel median taxable income without creating municipality medians",
   await expect(page.locator("#active-layer-title")).toHaveText("Mediaan belastbaar inkomen");
   await expect(page.locator("#temporal-output")).toHaveText("2023");
   await expect(page.locator("#legend-title")).toContainText("Mediaan netto belastbaar inkomen");
-  await expect(page.locator("#layer-context-sources")).toContainText("Statbel");
+  await expect(page.locator("#layer-context-sources")).toContainText("Fiscale inkomens per statistische sector 2023");
   await showControls(page);
   await page.locator("#sector-search").fill("23003A001");
   await page.locator("#sector-search").press("Enter");
@@ -660,8 +660,9 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await expect(heatButton).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#active-layer-title")).toHaveText("Hittekwetsbaarheid · Hitte");
   await expect(page.locator("#legend-title")).toHaveText("Hittescore");
-  await expect(page.locator("#layer-context-meta")).toContainText("Officiële hittescore");
-  await expect(page.locator("#layer-context-copy")).toContainText("hittegolfgraaddagen in 2000–2019");
+  await expect(page.locator("#layer-context-meta")).toHaveText("Hittescore 2026 · statistische sectoren");
+  await expect(page.locator("#layer-context-copy")).toContainText("vroegere hittegolven");
+  await expect(page.locator("#layer-context-copy")).toContainText("relatieve hittescore van 0 tot 10");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Hittekwetsbaarheid · Hitte in de Zennevallei");
   await expect(page.locator("#selection-announcement")).toContainText("gewijzigd naar Hitte");
   expect(await sectorColor()).toBe("#96004E");
@@ -756,9 +757,9 @@ test("switches the complete interface to English without resetting exploration s
   await expect(search).toHaveValue(/23003A001/);
   await expect(search).toHaveAttribute("placeholder", "Name or sector code");
   await expect(page.locator("#legend-content")).toContainText("Insufficient data");
-  await expect(page.locator("#layer-context-meta")).toHaveText("Official source values · 154 Statbel sectors · 2026");
-  await expect(page.locator("#layer-context-copy")).toContainText("we display them without recalculation");
-  await expect(page.locator("#layer-context-sources")).toContainText("Department of Care, Government of Flanders");
+  await expect(page.locator("#layer-context-meta")).toHaveText("Heat vulnerability 2026 · statistical sectors");
+  await expect(page.locator("#layer-context-copy")).toContainText("relative score from 0 to 10");
+  await expect(page.locator("#layer-context-sources")).toContainText("Heat Vulnerability Map Flanders 2026");
   await expect(panel).toContainText("Official scores published by the Department of Care, Government of Flanders");
   await expect(page.locator(".maplibregl-ctrl-zoom-in")).toHaveAttribute("aria-label", "Zoom in");
   await expect(page.locator("#selection-announcement")).toContainText("Details opened");
@@ -802,9 +803,9 @@ test("loads Urban Atlas lazily and presents seven exhaustive category groups", a
   await expect(panel).toBeFocused();
   await expect(atlasButton).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#legend-title")).toHaveText("Urban Atlas-landbedekking 2021");
-  await expect(page.locator("#layer-context-meta")).toContainText("geïnterpreteerde polygonen · 2021");
-  await expect(page.locator("#layer-context-copy")).toContainText("landbedekking en landgebruik");
-  await expect(page.locator("#layer-context-copy")).toContainText("zeven presentatiegroepen");
+  await expect(page.locator("#layer-context-meta")).toHaveText("Copernicus Urban Atlas · polygonen uit 2021");
+  await expect(page.locator("#layer-context-copy")).toContainText("belangrijkste landbedekking");
+  await expect(page.locator("#layer-context-copy")).toContainText("wonen, werken, vervoer");
   await expect(page.locator("#map canvas")).toHaveAttribute("aria-label", "Interactieve kaart: Urban Atlas 2021 in de Zennevallei");
   await expect(page.locator("#legend-content")).toContainText("Kunstmatige oppervlakken");
   await expect(page.locator("#legend-content")).toContainText("Kruidachtige vegetatie");

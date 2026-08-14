@@ -117,7 +117,7 @@ for dataset, years in dataset_years.items():
         transform=from_bounds(minx, miny, maxx, maxy, 64, 64), fill=0,
     )
     scope[..., 3] = 255
-    Image.fromarray(scope, mode="RGBA").save(density_root / "scope-index.png")
+    Image.fromarray(scope).save(density_root / "scope-index.png")
     density_codes = [1] if dataset == "jaarbak" else [1, 2, 3, 4]
     density_years = {}
     for year in years:
@@ -300,7 +300,7 @@ scope_rgba = np.zeros((64, 64, 4), dtype=np.uint8)
 scope_rgba[..., 0] = 1
 scope_rgba[..., 1] = 1
 scope_rgba[..., 3] = 255
-Image.fromarray(scope_rgba, mode="RGBA").save(comparison_root / "scope-index.png")
+Image.fromarray(scope_rgba).save(comparison_root / "scope-index.png")
 comparison_series = [
     {"key": "family:artificialSurfaces", "type": "family", "id": "artificialSurfaces", "codes": ["11100", "11210", "11220", "11230", "11240", "11300", "12100", "12210", "12220", "12230", "13100", "13300", "13400"], "color": "#a51f3d"},
     {"key": "family:greenUrbanAreas", "type": "family", "id": "greenUrbanAreas", "codes": ["14110", "14120", "14130"], "color": "#4c7f00"},
@@ -361,7 +361,7 @@ for item in landsat_items:
     encoded[..., 0] = temperature_code >> 8
     encoded[..., 1] = temperature_code & 255
     encoded[..., 3] = 255
-    Image.fromarray(encoded, mode="RGBA").save(comparison_root / "display" / f"{item['value']}.png")
+    Image.fromarray(encoded).save(comparison_root / "display" / f"{item['value']}.png")
     all_keys = [entry["key"] for entry in comparison_series + class_series]
     distribution_payload = json.dumps({
         "schemaVersion": 2, "observationId": item["value"],
@@ -397,7 +397,7 @@ soil_root = ROOT / "landsat-jaarbak"
 (soil_root / "density-points").mkdir(parents=True, exist_ok=True)
 (soil_root / "density-values").mkdir(parents=True, exist_ok=True)
 (soil_root / "distributions").mkdir(parents=True, exist_ok=True)
-Image.fromarray(scope_rgba, mode="RGBA").save(soil_root / "scope-index.png")
+Image.fromarray(scope_rgba).save(soil_root / "scope-index.png")
 analysis_scope = np.zeros((64, 64, 4), dtype=np.uint8)
 fixture_sector_index = rasterize(
     [(row.geometry, index + 1) for index, row in sectors.iterrows()],
@@ -414,7 +414,7 @@ analysis_scope[..., 0] = (fixture_sector_index > 0).astype(np.uint8)
 analysis_scope[..., 1] = fixture_municipality_index
 analysis_scope[..., 2] = fixture_sector_index
 analysis_scope[..., 3] = 255
-Image.fromarray(analysis_scope, mode="RGBA").save(soil_root / "analysis-scope-index.png")
+Image.fromarray(analysis_scope).save(soil_root / "analysis-scope-index.png")
 soil_series = [
     {"key": "class:sealed", "type": "class", "id": "sealed", "color": "#8f1d2c"},
     {"key": "class:unsealed", "type": "class", "id": "unsealed", "color": "#176b43"},
@@ -462,14 +462,14 @@ for item in landsat_items:
     point_values[..., 0] = temperature_code >> 8
     point_values[..., 1] = temperature_code & 255
     point_values[..., 3] = 255
-    Image.fromarray(point_values, mode="RGBA").save(soil_root / "density-points" / f"{item['value']}.png")
+    Image.fromarray(point_values).save(soil_root / "density-points" / f"{item['value']}.png")
     density_values = np.zeros((64, 64, 4), dtype=np.uint8)
     density_code = np.tile(np.linspace(0, 10000, 64, dtype=np.uint16), (64, 1))
     density_values[..., 0] = density_code >> 8
     density_values[..., 1] = density_code & 255
     density_values[..., 2] = 255
     density_values[..., 3] = 255
-    Image.fromarray(density_values, mode="RGBA").save(soil_root / "density-values" / f"{item['value']}.png")
+    Image.fromarray(density_values).save(soil_root / "density-values" / f"{item['value']}.png")
     soil_distribution = json.dumps({
         "schemaVersion": 4, "observationId": item["value"],
         "secondaryYear": soil_years[item["value"]], "secondaryStatus": "provisional",
@@ -558,9 +558,9 @@ green_density[..., 3] = 255
 green_non_green = np.zeros((64, 64, 4), dtype=np.uint8)
 green_non_green[..., 0] = 30
 green_non_green[..., 3] = 255
-Image.fromarray(green_density, mode="RGBA").save(green_income_root / "density-grid.png")
-Image.fromarray(green_non_green, mode="RGBA").save(green_income_root / "density-non-green.png")
-Image.fromarray(sealed_scope, mode="RGBA").save(green_income_root / "scope-index.png")
+Image.fromarray(green_density).save(green_income_root / "density-grid.png")
+Image.fromarray(green_non_green).save(green_income_root / "density-non-green.png")
+Image.fromarray(sealed_scope).save(green_income_root / "scope-index.png")
 sealed_sector_stats = {}
 for _, row in sectors.iterrows():
     sector_id = str(row.sectorId)
@@ -657,9 +657,9 @@ green_population_manifest = {
 landsat_green_root = ROOT / "landsat-groenkaart"
 (landsat_green_root / "points").mkdir(parents=True, exist_ok=True)
 (landsat_green_root / "statistics").mkdir(parents=True, exist_ok=True)
-Image.fromarray(green_density, mode="RGBA").save(landsat_green_root / "green-density-grid.png")
-Image.fromarray(green_non_green, mode="RGBA").save(landsat_green_root / "green-density-non-green.png")
-Image.fromarray(sealed_scope, mode="RGBA").save(landsat_green_root / "scope-index.png")
+Image.fromarray(green_density).save(landsat_green_root / "green-density-grid.png")
+Image.fromarray(green_non_green).save(landsat_green_root / "green-density-non-green.png")
+Image.fromarray(sealed_scope).save(landsat_green_root / "scope-index.png")
 landsat_green_observations = {}
 landsat_income_observations = {}
 landsat_population_observations = {}
@@ -674,7 +674,7 @@ for observation_number, item in enumerate(landsat_items):
     points_image[..., 3] = np.where(sector_index > 0, 255, 0).astype(np.uint8)
     point_url = f"landsat-groenkaart/points/{item['value']}.json.gz"
     display_url = f"shared/landsat-display/{item['value']}.png"
-    Image.fromarray(points_image, mode="RGBA").save(ROOT / display_url)
+    Image.fromarray(points_image).save(ROOT / display_url)
     point_records = []
     for sector_number, _sector_id in enumerate(sector_ids, start=1):
         for parent_offset in range(5):

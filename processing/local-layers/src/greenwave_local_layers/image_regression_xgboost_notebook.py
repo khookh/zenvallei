@@ -24,9 +24,9 @@ def main():
         kernel_name="python3",
         resources={"metadata": {"path": str(PROJECT_ROOT)}},
     ).execute()
-    # The tracked copy is the public source linked by the application. Keeping
-    # its outputs makes the model evidence readable directly on GitHub.
-    nbformat.write(executed, SOURCE)
+    # The repository notebook is the reviewed production record. Execution is
+    # deliberately written only to the cache so a verification run cannot
+    # silently change that public evidence.
     DESTINATION.parent.mkdir(parents=True, exist_ok=True)
     nbformat.write(executed, DESTINATION)
     print(DESTINATION)

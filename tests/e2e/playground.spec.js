@@ -1,10 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const TRANSPARENT_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+4S7Z1AAAAABJRU5ErkJggg==",
-  "base64",
-);
-
 test("shows the latest Python export only in the opt-in local Test layer", async ({ page }) => {
   const errors = [];
   const images = [];
@@ -13,7 +8,6 @@ test("shows the latest Python export only in the opt-in local Test layer", async
   page.on("request", (request) => {
     if (request.url().includes("/__playground__/test")) images.push(request.url());
   });
-  await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG }));
   await page.goto("/");
   await expect.poll(async () => ({
     ready: await page.locator("html").getAttribute("data-app-ready"),

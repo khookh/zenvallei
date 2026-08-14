@@ -15,7 +15,7 @@ export default defineConfig({
   use: { baseURL: "http://127.0.0.1:4182", trace: "retain-on-failure" },
   projects: [{ name: "playground-chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "node scripts/prepare-playground-map-fixture.mjs && pnpm exec vite --mode playground --port 4182 --strictPort",
+    command: "node scripts/serve-playground-e2e.mjs --port 4182",
     url: "http://127.0.0.1:4182",
     reuseExistingServer: false,
     timeout: 120_000,

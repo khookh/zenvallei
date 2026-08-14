@@ -1,14 +1,12 @@
-"""Lazy image-regression inputs for clear Landsat surface temperatures.
+"""Catalogue and radial land-cover features for clear Landsat temperatures.
 
-The experiment keeps the authoritative ground classifications on their shared
-1 m Belgian Lambert grid.  A small catalog stores only eligible Landsat cell
-centres and targets; spatial and radial tensors are extracted lazily so that
-the experiment does not materialise tens of gigabytes of duplicate patches.
+The authoritative classifications remain on their shared 1 m Belgian Lambert
+grid. The catalogue stores eligible 30 m Landsat centres and targets; five
+mutually exclusive land-cover channels are read lazily around each centre.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 import json
@@ -46,12 +44,9 @@ DEFAULT_OBSERVATION_ID = "landsat-2026-06-22"
 PATCH_RADIUS_METERS = 100
 PATCH_RESOLUTION_METERS = 1
 PATCH_SIZE = PATCH_RADIUS_METERS * 2
-RADIAL_BINS = PATCH_RADIUS_METERS
-RADIAL_IMAGE_HEIGHT = 100
 RADIAL_BAND_EDGES_METERS = (0, 25, 50, 75, 100)
 GREEN_YEAR = 2021
 URBAN_ATLAS_YEAR = 2021
-CHANNEL_NAMES = ("soil_sealing", "high_green", "water")
 LAND_COVER_CHANNEL_NAMES = (
     "soil_sealing", "high_green", "low_green", "agriculture", "water",
 )
@@ -128,27 +123,6 @@ def _support_and_rings(radius: int = PATCH_RADIUS_METERS):
 SUPPORT_MASK, RING_INDEX = _support_and_rings()
 
 
-def annular_profiles(patch, valid_mask=None, radius: int = PATCH_RADIUS_METERS):
-    """Collapse a channel-first square patch into normalised 1 m annuli."""
-    values = np.asarray(patch, dtype=np.float32)
-    expected = (radius * 2, radius * 2)
-    if values.ndim != 3 or values.shape[1:] != expected:
-        raise ValueError(f"Patch must have shape (channels, {expected[0]}, {expected[1]}).")
-    support, rings = _support_and_rings(radius)
-    valid = support if valid_mask is None else support & np.asarray(valid_mask, dtype=bool)
-    if valid.shape != expected:
-        raise ValueError(f"Valid mask must have shape {expected}.")
-    ring_values = rings[valid]
-    counts = np.bincount(ring_values, minlength=radius).astype(np.float64)
-    if np.any(counts == 0):
-        raise ValueError("Every radial bin must contain at least one valid pixel.")
-    profiles = np.stack([
-        np.bincount(ring_values, weights=channel[valid], minlength=radius) / counts
-        for channel in values
-    ])
-    return np.clip(profiles, 0.0, 1.0).astype(np.float32)
-
-
 def radial_band_fractions(
         patch, valid_mask=None, band_edges=RADIAL_BAND_EDGES_METERS,
         radius: int = PATCH_RADIUS_METERS):
@@ -175,23 +149,6 @@ def radial_band_fractions(
             raise ValueError(f"Radial band [{lower}, {upper}) contains no valid pixels.")
         features[:, band_index] = values[:, band].sum(axis=1) / valid_count
     return np.clip(features, 0.0, 1.0).astype(np.float32, copy=False)
-
-
-def profiles_to_line_tensor(profiles, height: int = RADIAL_IMAGE_HEIGHT):
-    """Rasterise profiles as deterministic, connected, axis-free line images."""
-    values = np.asarray(profiles, dtype=np.float32)
-    if values.ndim != 2 or values.shape[1] < 2:
-        raise ValueError("Profiles must have shape (channels, at least two distances).")
-    if height < 2 or not np.all(np.isfinite(values)):
-        raise ValueError("Line images require finite profiles and a height of at least two.")
-    rows = np.rint((1.0 - np.clip(values, 0.0, 1.0)) * (height - 1)).astype(np.int32)
-    output = np.zeros((values.shape[0], height, values.shape[1]), dtype=np.float32)
-    for channel in range(values.shape[0]):
-        output[channel, rows[channel, 0], 0] = 1.0
-        for column in range(1, values.shape[1]):
-            start, stop = sorted((int(rows[channel, column - 1]), int(rows[channel, column])))
-            output[channel, start:stop + 1, column] = 1.0
-    return output
 
 
 def _relative_path(path: Path) -> str:
@@ -695,14 +652,11 @@ def load_regression_catalog(observation_id: str = DEFAULT_OBSERVATION_ID) -> Reg
     )
 
 
-class ImageRegressionDataset(Sequence):
-    """Lazy NumPy dataset for spatial patches or radial line-image tensors."""
+class ImageRegressionDataset:
+    """Lazy reader for the five production land-cover channels."""
 
-    def __init__(self, catalog: RegressionCatalog, representation: str = "spatial", indices=None):
-        if representation not in ("spatial", "radial"):
-            raise ValueError("representation must be 'spatial' or 'radial'.")
+    def __init__(self, catalog: RegressionCatalog, indices=None):
         self.catalog = catalog
-        self.representation = representation
         self.indices = np.arange(len(catalog.samples), dtype=np.int64) if indices is None \
             else np.asarray(indices, dtype=np.int64)
         if np.any(self.indices < 0) or np.any(self.indices >= len(catalog.samples)):
@@ -737,11 +691,10 @@ class ImageRegressionDataset(Sequence):
 
     def subset(self, indices):
         positions = np.asarray(indices, dtype=np.int64)
-        return ImageRegressionDataset(
-            self.catalog, self.representation, indices=self.indices[positions],
-        )
+        return ImageRegressionDataset(self.catalog, indices=self.indices[positions])
 
-    def _ground_patch(self, index: int, *, include_all_green_classes: bool):
+    def land_cover_patch(self, index: int):
+        """Return five mutually exclusive binary channels on the 100 m disk."""
         catalog_index = int(self.indices[index])
         row = self.catalog.samples.iloc[catalog_index]
         sources = self._sources()
@@ -751,59 +704,9 @@ class ImageRegressionDataset(Sequence):
         )
         if soil.shape != (PATCH_SIZE, PATCH_SIZE) or not _ground_valid(soil, green, urban)[SUPPORT_MASK].all():
             raise ValueError(f"Sample {row.sample_id} no longer has complete ground coverage.")
-        # The legacy CNN experiment is intentionally unchanged. Only the
-        # production XGBoost contract adopts the corrected ground plane.
-        patch = xgboost_land_cover_channels(
-            green, soil, analysis_water_union(water_context),
-        ) if include_all_green_classes else np.stack([
-            soil == 1, green == 1, (urban & UA_WATER) != 0,
-        ]).astype(np.float32)
+        patch = xgboost_land_cover_channels(green, soil, analysis_water_union(water_context))
         patch[:, ~SUPPORT_MASK] = 0.0
         return patch
-
-    def spatial_patch(self, index: int):
-        """Return the original three-channel CNN patch."""
-        return self._ground_patch(index, include_all_green_classes=False)
-
-    def land_cover_patch(self, index: int):
-        """Return five binary channels for compact land-cover feature models."""
-        return self._ground_patch(index, include_all_green_classes=True)
-
-    def profiles(self, index: int):
-        return annular_profiles(self.spatial_patch(index), SUPPORT_MASK)
-
-    def __getitem__(self, index):
-        catalog_index = int(self.indices[index])
-        row = self.catalog.samples.iloc[catalog_index]
-        spatial = self.spatial_patch(index)
-        if self.representation == "spatial":
-            input_tensor = spatial
-        else:
-            input_tensor = profiles_to_line_tensor(annular_profiles(spatial, SUPPORT_MASK))
-        metadata = {
-            "observation_id": str(row.observation_id),
-            "sector_id": str(row.sector_id),
-            "municipality": str(row.municipality),
-            "landsat_row": int(row.landsat_row),
-            "landsat_col": int(row.landsat_col),
-            "x_lambert": float(row.x_lambert),
-            "y_lambert": float(row.y_lambert),
-            "snapped_x_lambert": float(row.snapped_x_lambert),
-            "snapped_y_lambert": float(row.snapped_y_lambert),
-            "snap_offset_m": float(row.snap_offset_m),
-            "uncertainty_k": float(row.uncertainty_k),
-            "ground_coverage": float(row.ground_coverage),
-            "soil_year": int(row.soil_year),
-            "green_year": int(row.green_year),
-            "urban_year": int(row.urban_year),
-        }
-        return {
-            "input": input_tensor,
-            "target": np.float32(row.lst_c),
-            "sample_id": str(row.sample_id),
-            "site_id": str(row.site_id),
-            "metadata": metadata,
-        }
 
 
 def make_sector_folds(

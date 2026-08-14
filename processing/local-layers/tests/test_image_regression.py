@@ -1,4 +1,4 @@
-"""Contracts for the lazy Landsat image-regression experiment."""
+"""Contracts for the production Landsat/XGBoost feature catalogue."""
 
 from pathlib import Path
 
@@ -21,10 +21,8 @@ from greenwave_local_layers.image_regression import (
     _signature_is_current,
     _source_signature,
     _xgboost_input_contract,
-    annular_profiles,
     center_is_eligible,
     make_sector_folds,
-    profiles_to_line_tensor,
     radial_band_fractions,
 )
 
@@ -100,21 +98,6 @@ def test_xgboost_contract_has_five_channels_and_twenty_radial_features():
     }
 
 
-def test_lazy_spatial_dataset_reads_aligned_binary_channels_and_masks_disk(tmp_path):
-    dataset = ImageRegressionDataset(_synthetic_catalog(tmp_path), "spatial")
-    sample = dataset[0]
-    values = sample["input"]
-    assert values.shape == (3, PATCH_SIZE, PATCH_SIZE)
-    assert values.dtype == np.float32
-    assert np.all(values[0, SUPPORT_MASK] == 1)
-    assert np.all(values[:, ~SUPPORT_MASK] == 0)
-    assert 0.49 < values[1, SUPPORT_MASK].mean() < 0.51
-    assert 0.49 < values[2, SUPPORT_MASK].mean() < 0.51
-    assert sample["target"] == np.float32(31.25)
-    assert sample["metadata"]["uncertainty_k"] == 0.4
-    dataset.close()
-
-
 def test_land_cover_patch_adds_low_green_and_agriculture_channels(tmp_path):
     catalog = _synthetic_catalog(tmp_path)
     green = np.full((400, 400), 4, dtype=np.uint8)
@@ -123,7 +106,7 @@ def test_land_cover_patch_adds_low_green_and_agriculture_channels(tmp_path):
     green[:, 200:250] = 3
     with rasterio.open(catalog.green_path, "r+") as output:
         output.write(green, 1)
-    dataset = ImageRegressionDataset(catalog, "spatial")
+    dataset = ImageRegressionDataset(catalog)
     patch = dataset.land_cover_patch(0)
     assert LAND_COVER_CHANNEL_NAMES == (
         "soil_sealing", "high_green", "low_green", "agriculture", "water",
@@ -142,18 +125,6 @@ def test_land_cover_patch_adds_low_green_and_agriculture_channels(tmp_path):
     dataset.close()
 
 
-def test_annular_profiles_are_fractions_not_ring_counts():
-    patch = np.zeros((3, PATCH_SIZE, PATCH_SIZE), dtype=np.float32)
-    patch[0, SUPPORT_MASK] = 1
-    columns = np.indices(SUPPORT_MASK.shape)[1]
-    patch[1, SUPPORT_MASK & (columns >= PATCH_SIZE // 2)] = 1
-    profile = annular_profiles(patch)
-    assert profile.shape == (3, 100)
-    assert np.all(profile[0] == 1)
-    assert np.all(profile[2] == 0)
-    assert np.allclose(profile[1], 0.5, atol=0.12)
-
-
 def test_radial_band_features_are_area_weighted_channel_fractions():
     patch = np.zeros((3, PATCH_SIZE, PATCH_SIZE), dtype=np.float32)
     _, columns = np.indices(SUPPORT_MASK.shape)
@@ -168,26 +139,6 @@ def test_radial_band_features_are_area_weighted_channel_fractions():
     assert np.array_equal(features[0], np.array([1, 0, 0, 0], dtype=np.float32))
     assert np.allclose(features[1], 0.5)
     assert np.array_equal(features[2], np.ones(4, dtype=np.float32))
-
-
-def test_profiles_become_connected_axis_free_line_tensor():
-    profiles = np.stack([
-        np.zeros(100), np.ones(100), np.linspace(0, 1, 100),
-    ]).astype(np.float32)
-    image = profiles_to_line_tensor(profiles)
-    assert image.shape == (3, 100, 100)
-    assert np.all(image[0, -1] == 1)
-    assert np.all(image[1, 0] == 1)
-    assert image[2, -1, 0] == 1
-    assert image[2, 0, -1] == 1
-    assert np.all(image.sum(axis=1) >= 1)
-
-
-def test_dataset_radial_representation_exposes_model_tensor_and_profiles(tmp_path):
-    dataset = ImageRegressionDataset(_synthetic_catalog(tmp_path), "radial")
-    assert dataset[0]["input"].shape == (3, 100, 100)
-    assert dataset.profiles(0).shape == (3, 100)
-    dataset.close()
 
 
 def test_source_signature_detects_changed_cache_input(tmp_path):

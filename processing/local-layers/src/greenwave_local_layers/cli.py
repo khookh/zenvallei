@@ -5,7 +5,14 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .pipeline import prepare, update_index
+from .dataset_registry import (
+    DATASET_SPECS,
+    dataset_ids,
+    dataset_spec,
+    format_dataset_description,
+    format_dataset_list,
+)
+from .pipeline import update_index
 
 
 def parse_source(values: list[str]) -> dict[int, Path]:
@@ -23,71 +30,29 @@ def parse_source(values: list[str]) -> dict[int, Path]:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Prepare local Greenwave raster layers.")
-    parser.add_argument(
-        "--dataset",
-        choices=(
-            "all", "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
-            "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
-            "groenkaart-population",
-            "landsat-population",
-            "land-cover-scenario",
-        ),
-        default="all",
-    )
+    parser.add_argument("--dataset", choices=("all", *dataset_ids()), default="all")
     parser.add_argument("--source", action="append", default=[], metavar="YEAR=PATH")
+    parser.add_argument("--list", action="store_true", help="List preparation datasets and exit.")
+    parser.add_argument("--describe", choices=dataset_ids(), metavar="DATASET",
+                        help="Describe one dataset contract and exit.")
     arguments = parser.parse_args(argv)
+    if arguments.list or arguments.describe:
+        if arguments.source:
+            parser.error("--list and --describe cannot be combined with --source.")
+        print(format_dataset_list() if arguments.list else
+              format_dataset_description(dataset_spec(arguments.describe)))
+        return
+
     sources = parse_source(arguments.source)
     if arguments.dataset == "all" and sources:
         parser.error("Use --source with one explicit --dataset so the year cannot be assigned to the wrong product.")
-    datasets = (
-        "jaarbak", "groenkaart", "landgebruik", "landsat-temperature",
-        "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
-        "groenkaart-population",
-        "landsat-population",
-        "land-cover-scenario",
-    ) if arguments.dataset == "all" else (arguments.dataset,)
-    for dataset_id in datasets:
-        print(f"Preparing {dataset_id}…", flush=True)
-        if dataset_id == "landsat-temperature":
-            if sources:
-                parser.error("Landsat source overrides are not supported; the command caches signed COG windows.")
-            from .landsat import prepare_landsat_temperature
-            prepare_landsat_temperature()
-        elif dataset_id == "landsat-urban-atlas":
-            if sources:
-                parser.error("The Landsat-Urban Atlas comparison reuses prepared data and accepts no source override.")
-            from .landsat_urban_atlas import prepare_landsat_urban_atlas
-            prepare_landsat_urban_atlas()
-        elif dataset_id == "landsat-jaarbak":
-            if sources:
-                parser.error("The Landsat-JaarBAK comparison reuses prepared data and accepts no source override.")
-            from .landsat_jaarbak import prepare_landsat_jaarbak
-            prepare_landsat_jaarbak()
-        elif dataset_id == "sealed-urban-comparisons":
-            if sources:
-                parser.error("The sealed-urban comparisons reuse prepared data and accept no source override.")
-            from .sealed_urban_comparisons import prepare_sealed_urban_comparisons
-            prepare_sealed_urban_comparisons()
-        elif dataset_id == "groenkaart-population":
-            if sources:
-                parser.error("The Green Map-population comparison reuses prepared data and accepts no source override.")
-            from .groenkaart_population import prepare_groenkaart_population
-            prepare_groenkaart_population()
-        elif dataset_id == "landsat-population":
-            if sources:
-                parser.error("The Landsat-population comparison reuses prepared data and accepts no source override.")
-            from .landsat_population import prepare_landsat_population
-            prepare_landsat_population()
-        elif dataset_id == "land-cover-scenario":
-            if sources:
-                parser.error("The land-cover scenario reuses prepared data and accepts no source override.")
-            from .lst_scenario import prepare_lst_scenario
-            prepare_lst_scenario()
-        elif dataset_id == "landgebruik":
-            from .landgebruik import prepare_landgebruik
-            prepare_landgebruik(sources)
-        else:
-            prepare(dataset_id, sources)
+    specs = DATASET_SPECS if arguments.dataset == "all" else (dataset_spec(arguments.dataset),)
+    for spec in specs:
+        print(f"Preparing {spec.dataset_id}...", flush=True)
+        try:
+            spec.prepare(sources)
+        except ValueError as error:
+            parser.error(str(error))
         update_index()
     update_index()
     print("Local manifests and PMTiles are ready below .cache/local-layers.")

@@ -126,32 +126,6 @@ def test_replay_stops_before_cumulative_feature_loss_exceeds_global_tolerance(mo
     assert [decision["feature"] for decision in decisions] == ["a"]
 
 
-def test_tracked_notebook_reproduces_every_pipeline_stage_with_diagnostic_outputs():
-    path = PROJECT_ROOT / "playground" / "landsat_image_regression_xgboost_optuna.ipynb"
-    notebook = json.loads(path.read_text(encoding="utf-8"))
-    cell_ids = {cell["id"] for cell in notebook["cells"]}
-    assert {
-        "prepare-catalog", "eligibility-funnel", "extract-features", "build-folds",
-        "run-tuning", "feature-selection", "residual-diagnostics",
-        "all-data-candidate", "promotion-gate", "deployment-artifacts",
-    }.issubset(cell_ids)
-    code = "\n".join(
-        "".join(cell.get("source", []))
-        for cell in notebook["cells"] if cell["cell_type"] == "code"
-    )
-    for helper in (
-        "prepare_regression_catalog", "extract_optuna_features",
-        "build_optuna_folds", "run_optuna_benchmark",
-    ):
-        assert helper in code
-    cells_by_id = {cell["id"]: cell for cell in notebook["cells"]}
-    for cell_id in (
-            "eligibility-funnel", "cohort-plots", "feature-plots",
-            "optimisation-history", "residual-diagnostics", "candidate-importance",
-            "promotion-gate"):
-        assert cells_by_id[cell_id].get("outputs"), f"Missing notebook output for {cell_id}"
-
-
 def test_xgboost_notebook_exposes_the_contract_search_ranges_and_diagnostics():
     path = PROJECT_ROOT / "playground" / "xgboost_2026_heatwave_regression_zennevallei.ipynb"
     notebook = json.loads(path.read_text(encoding="utf-8"))

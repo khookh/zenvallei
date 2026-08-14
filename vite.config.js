@@ -378,18 +378,24 @@ export default defineConfig(({ mode }) => {
     const allowedFiles = new Set(["manifest.json", "test.png",
       "test-beersel.png", "test-drogenbos.png", "test-halle.png", "test-linkebeek.png",
       "test-pepingen.png", "test-sint-genesius-rode.png", "test-sint-pieters-leeuw.png"]);
+    const mountPlaygroundAssets = (middlewares) => {
+      middlewares.use("/__playground__", (request, response, next) => {
+        const name = decodeURIComponent((request.url ?? "").split("?")[0]).replace(/^\//, "");
+        if (!allowedFiles.has(name)) return next();
+        const target = path.join(exportRoot, name);
+        if (!fs.existsSync(target)) return next();
+        response.setHeader("Cache-Control", "no-store");
+        response.setHeader("Content-Type", name.endsWith(".json") ? "application/json; charset=utf-8" : "image/png");
+        fs.createReadStream(target).pipe(response);
+      });
+    };
     plugins.push({
       name: "greenwave-local-notebook-layer",
       configureServer(server) {
-        server.middlewares.use("/__playground__", (request, response, next) => {
-          const name = decodeURIComponent((request.url ?? "").split("?")[0]).replace(/^\//, "");
-          if (!allowedFiles.has(name)) return next();
-          const target = path.join(exportRoot, name);
-          if (!fs.existsSync(target)) return next();
-          response.setHeader("Cache-Control", "no-store");
-          response.setHeader("Content-Type", name.endsWith(".json") ? "application/json; charset=utf-8" : "image/png");
-          fs.createReadStream(target).pipe(response);
-        });
+        mountPlaygroundAssets(server.middlewares);
+      },
+      configurePreviewServer(server) {
+        mountPlaygroundAssets(server.middlewares);
       },
     });
   }
@@ -399,6 +405,10 @@ export default defineConfig(({ mode }) => {
   }
   return {
     plugins,
+    // MapLibre, GeoTIFF and the comparison renderers intentionally ship as a
+    // map-focused application bundle. scripts/check-dist.mjs enforces the
+    // project-specific asset budgets, so suppress Vite's generic 500 kB hint.
+    build: { chunkSizeWarningLimit: 1_500 },
     optimizeDeps: {
       exclude: ["maplibre-gl"],
     },
