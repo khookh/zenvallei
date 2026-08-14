@@ -53,7 +53,9 @@ jobs:
         run: python -m pip install --editable "playground/ndvi[dev]"
 
       - name: Install local raster preparation dependencies
-        run: python -m pip install --editable "processing/local-layers[test]"
+        # The verification suite imports the Optuna/XGBoost scenario pipeline,
+        # so CI must install the same optional ML dependencies used locally.
+        run: python -m pip install --editable "processing/local-layers[test,scenario-ml]"
 
       - name: Verify NDVI playground
         run: python -m pytest playground/ndvi/tests -q
