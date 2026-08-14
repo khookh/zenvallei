@@ -1,45 +1,49 @@
 # Contributing
 
-## Setup
+Choose the smallest path that matches the change.
+
+## Documentation or copy
+
+Edit the concise guide nearest to the code. Keep facts about a product in
+`docs/data-reference.md`, not in several feature guides. English and Dutch UI
+copy must change together.
+
+## Scientific or data-processing change
+
+The production geospatial pipeline is Python under `processing/local-layers`.
+JavaScript is not required to change an existing source, mask, aggregation,
+statistic or model diagnostic.
 
 ```powershell
-pnpm install --frozen-lockfile
-pnpm verify:quick
+pnpm local-data:setup
+processing\local-layers\.venv\Scripts\greenwave-local-layers.exe --list
+processing\local-layers\.venv\Scripts\greenwave-local-layers.exe --describe landsat-jaarbak
+pnpm local-data:test
 ```
 
-Use Node.js 24 LTS and the pnpm version declared in `package.json`.
+Read the [Python preparation guide](processing/local-layers/README.md) before
+changing a scientific contract. Add a frozen, small fixture for the numerical
+rule; large official inputs stay outside Git.
 
-## Code style
+## New browser presentation
 
-- Prefer small named functions and plain objects.
-- Keep runtime UI code under `src` and preparation code under `scripts`.
-- Put dataset meaning and palette logic in its layer module.
-- Do not add layer-specific branches to the shared MapLibre controller.
-- Use JSDoc for shared contracts and non-obvious structures.
-- Comment why a constraint exists, especially source authority, geometry transformations and security boundaries.
-- Do not comment statements that are already clear from their names.
-- Add matching Dutch and English translation keys; tests require catalogue parity.
-- Escape source-provided text and pass external URLs through `safeExternalUrl`.
+A new visual layer or comparison needs a small adapter under `src/layers` or
+`src/comparisons`, a registry entry, English and Dutch labels, and browser
+tests. See [the frontend structure](src/README.md). Keep scientific processing
+in Python or the existing preparation scripts rather than recreating it in the
+browser.
 
-## Testing
+## Definition of done
 
-Use `pnpm test:watch` while changing pure logic. Before each reviewable commit, run:
+- Source authority, year, units, masks and aggregation remain explicit.
+- Categorical rasters use nearest-neighbour resampling; continuous rasters use
+  a documented method.
+- Missing/cloud/nodata values never become zeros silently.
+- Generated assets pass `pnpm data:validate` and contain no credentials or
+  local paths.
+- English and Dutch catalogues remain in parity.
+- Relevant unit and browser tests pass; run `pnpm verify` before release.
 
-```powershell
-pnpm verify:quick
-```
-
-Before release or handover, run:
-
-```powershell
-pnpm verify
-pnpm test:e2e:cross-browser
-```
-
-Preparation commands are not part of the normal static build because they require large official inputs or short-lived credentials. Their reusable logic must have fixtures under `tests`.
-
-## Generated data
-
-Commit browser-ready outputs and their provenance only after `pnpm data:validate` passes. Never commit raw source archives, credentials, `.env` files or personal local paths.
-
-Keep data and structural refactors in separate commits so numerical changes remain reviewable.
+Comment why a non-obvious constraint exists—especially CRS alignment, area
+weighting, spatial validation and security boundaries. Do not comment code that
+is already clear from its names.

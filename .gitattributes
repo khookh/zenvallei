@@ -1,4 +1,5 @@
 *.geojson -diff
 *.png binary
+playground/xgboost_2026_heatwave_regression_zennevallei.ipynb binary
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
