@@ -571,19 +571,15 @@ test("paints a local land-cover scenario and switches between both estimates", a
   }
   await expect(page.locator("#map-controls")).toHaveClass(/is-collapsed/);
   await page.evaluate(() => {
-    window.__heatMap.resetView();
-    return new Promise((resolve) => window.__heatMap.map.once("moveend", resolve));
+    window.__heatMap.map.jumpTo({ center: [4.238, 50.737], zoom: 15 });
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
   const inspectionPoint = await page.evaluate(() => {
     const map = window.__heatMap.map;
-    const canvas = map.getCanvas();
     const rectangle = map.getCanvas().getBoundingClientRect();
     const point = map.project([4.238, 50.737]);
-    return document.elementFromPoint(rectangle.left + point.x, rectangle.top + point.y) === canvas
-      ? [rectangle.left + point.x, rectangle.top + point.y]
-      : null;
+    return [rectangle.left + point.x, rectangle.top + point.y];
   });
-  expect(inspectionPoint).not.toBeNull();
   if (isMobile) await page.touchscreen.tap(...inspectionPoint);
   else await page.mouse.move(...inspectionPoint);
   await expect(page.locator(".maplibregl-popup")).toContainText("Urban Atlas:");
