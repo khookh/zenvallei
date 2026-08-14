@@ -5,7 +5,7 @@
  */
 import { formatCurrency, formatNumber, t } from "../i18n.js";
 import { heatMetricStatus, heatMetricValue } from "../heat-metric.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 
 const INCOME_YEAR = 2023;
 const HEAT_SOURCE_URL = "https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen";
@@ -183,10 +183,9 @@ export function createHeatIncomeComparison({ scores, income, heatLayer, incomeLa
     getContext: () => ({
       meta: t("heatIncome.contextMeta", { count: points().length }),
       text: t("heatIncome.contextText", { metric: t(`heatMetric.${metric()}`) }),
-      note: t("heatIncome.contextNote", { area: activeMunicipality || t("controls.allMunicipalities") }),
       sources: [
-        authorityLink("departmentCare", HEAT_SOURCE_URL),
-        authorityLink("statbel", income.source.pageUrl),
+        productLink("heat", HEAT_SOURCE_URL),
+        productLink("income", income.source.pageUrl),
       ],
     }),
     getLegendModel() {

@@ -54,6 +54,9 @@ pnpm landsat-soil-sealing:prepare # Landsat x Soil sealing comparison
 pnpm sealed-urban:prepare         # Green, temperature and income in sealed urban fabric
 pnpm green-population:prepare     # Green Map x uniform 2019 population model
 pnpm landsat-population:prepare  # Landsat x uniform 2019 population model
+pnpm lst-scenario:xgboost-optuna  # fresh 50-trial 2026 model selection when required
+pnpm lst-scenario:xgboost-notebook # executed 2026 Heatwave XGBoost report
+pnpm lst-scenario:prepare       # local-only two-method land-cover ΔLST scenario
 pnpm dev:local-data
 ```
 
@@ -82,6 +85,7 @@ Open `playground/ndvi` in VS Code and select that interpreter as the notebook ke
 - [Local official layers](docs/local-official-layers.md)
 - [Landsat surface temperature](docs/landsat-surface-temperature.md)
 - [Landgebruik Vlaanderen](docs/landgebruik-vlaanderen.md)
+- [Land-cover change tool](docs/land-cover-lst-scenario.md)
 - [Deployment](docs/deployment.md)
 - [Third-party data](THIRD_PARTY_DATA.md)
 

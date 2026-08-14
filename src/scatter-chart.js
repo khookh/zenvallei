@@ -11,6 +11,23 @@ function pointCount(points) {
   return ArrayBuffer.isView(points) ? Math.floor(points.length / 2) : points.length;
 }
 
+/**
+ * Keep sparse raster subsets legible without changing their data or weights.
+ * The regional view retains its existing appearance; only presentation alpha
+ * and mark size increase as observations become sparse in the plot rectangle.
+ */
+export function pixelScatterStyle(count, plotWidth, plotHeight) {
+  const density = Math.max(0, Number(count) || 0)
+    / Math.max(Number.EPSILON, (Number(plotWidth) || 0) * (Number(plotHeight) || 0));
+  const boost = Math.max(1, Math.sqrt(0.7 / Math.max(density, Number.EPSILON)));
+  return {
+    density,
+    boost,
+    opacity: Math.min(0.65, 0.18 * boost),
+    markSize: Math.min(2.8, 1.4 * Math.sqrt(boost)),
+  };
+}
+
 function pointReadout(comparisonId, xValue, yValue) {
   if (comparisonId === "landsat-jaarbak-density") {
     return t("soilComparison.densityPointReadout", {
@@ -50,13 +67,14 @@ export function mountPixelScatterCharts(root, model) {
     const comparisonId = canvas.dataset.comparisonId;
     const bucketSize = 12;
     const buckets = new Map();
+    const style = pixelScatterStyle(pointCount(points), plotWidth, plotHeight);
     context.clearRect(0, 0, width, height);
-    context.fillStyle = "rgba(26,94,104,0.18)";
+    context.fillStyle = `rgba(26,94,104,${style.opacity})`;
     const draw = (xValue, yValue, pointIndex) => {
       const x = left + (xValue - xMin) / Math.max(1e-9, xMax - xMin) * plotWidth;
       const y = top + plotHeight - (yValue - yMin) / Math.max(1e-9, yMax - yMin) * plotHeight;
       if (x < left || x > left + plotWidth || y < top || y > top + plotHeight) return;
-      context.fillRect(x - .7, y - .7, 1.4, 1.4);
+      context.fillRect(x - style.markSize / 2, y - style.markSize / 2, style.markSize, style.markSize);
       const key = `${Math.floor((x - left) / bucketSize)}:${Math.floor((y - top) / bucketSize)}`;
       if (!buckets.has(key)) buckets.set(key, []);
       buckets.get(key).push(pointIndex);

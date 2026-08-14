@@ -98,7 +98,7 @@ async function publishComparison(comparisonId, descriptor) {
     await copyAsset(manifest.densityGridUrl, ".png");
     await copyAsset(manifest.densityNonGreenUrl, ".png");
     await copyAsset(manifest.scopeIndexUrl, ".png");
-    await copyAsset(manifest.statisticsUrl, ".json");
+    await copyAsset(manifest.statisticsUrl, ".json.gz");
     await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
   } else if (comparisonId === "groenkaart-population") {
     await copyAsset(manifest.statisticsUrl, ".json");
@@ -135,7 +135,8 @@ async function publishComparison(comparisonId, descriptor) {
       await copyAsset(observation.pointDataUrl ?? observation.pixelDataUrl, ".png");
     }
     await copyAsset(observation.statisticsUrl ?? observation.distributionUrl,
-      ["landsat-urban-atlas", "landsat-population"].includes(comparisonId) ? ".json.gz" : ".json");
+      ["landsat-urban-atlas", "landsat-jaarbak", "landsat-groenkaart", "landsat-income", "landsat-population"]
+        .includes(comparisonId) ? ".json.gz" : ".json");
   }
   await writeJson(path.join(outputRoot, comparisonId, "manifest.json"), manifest);
 }

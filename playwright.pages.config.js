@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: {
     command: "node scripts/serve-pages-e2e.mjs --port 4181",
     url: "http://127.0.0.1:4181/zenvallei/",
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.GREENWAVE_REUSE_PAGES_SERVER === "1",
     timeout: 120_000,
   },
   projects: [

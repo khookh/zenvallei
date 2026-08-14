@@ -57,12 +57,18 @@ pnpm landsat-urban-atlas:prepare
 pnpm landsat-soil-sealing:prepare
 pnpm sealed-urban:prepare
 pnpm green-population:prepare
+pnpm landsat-population:prepare
+pnpm lst-scenario:prepare
 pnpm official-layers:publish
 ```
 
 JaarBAK, Groenkaart and Landgebruik accept a cached source with `--source YEAR=C:\path\source.tif`. Native grids produce statistics; lossless Web Mercator PMTiles are visual derivatives only. JaarBAK and Groenkaart additionally create 100 m focal-density GeoTIFFs from padded native source windows. Green Map × population and Landsat × population reuse the 2019 100 m Government of Flanders model and generate no new download. Landgebruik downloads bounded AGPA 2025 parcels from the official OGC API. Landsat uses public Planetary Computer STAC discovery and caches aligned source windows. All comparison preparations reuse these validated caches. `official-layers:publish` is the only supported route from the private cache to the static browser assets. See [Official raster layers](local-official-layers.md), [Landgebruik Vlaanderen](landgebruik-vlaanderen.md) and [Landsat surface temperature](landsat-surface-temperature.md).
 
 ## Python research playground
+
+`lst-scenario:xgboost-optuna` builds the optional 22 June 2026 all-clear-cell catalogue from one mutually exclusive upper surface. Its analytical water channel is the union of Urban Atlas 2021 water and Flanders Land Use 2025 class 17, with water taking absolute priority over the other channels. It extracts five explicit cover fractions across candidate radial rings and performs five-fold sector-held-out tuning, feature selection and fold-safe Gaussian prediction smoothing with a 200 m embargo. The command caches the contract-5 booster, feature artifact and baseline inference grid. `lst-scenario:xgboost-notebook` executes the public step-by-step report. `lst-scenario:prepare` advertises XGBoost only when the model, feature, catalogue and grid hashes reconcile; otherwise the live tool falls back to Radoux. Session calculations remain under `.cache`, and distribution checks reject the endpoint, model and runtime assets. See [Land-cover change tool](land-cover-lst-scenario.md).
+
+`lst-scenario:xgboost-heatwave-mean` remains an offline research command for a strict six-date complete-case target below `.cache/local-layers/image-regression/xgboost-heatwave-mean-2020-2026/`. It is not registered or calculated in the live land-cover change tool. Its old artifacts are invalid under contract 5 until that separate research model is retrained. `lst-scenario:xgboost-heatwave-mean-notebook` remains its standalone report command.
 
 The VS Code playground downloads Sentinel-2 bands and calculates NDVI independently from the application:
 

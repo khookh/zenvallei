@@ -1,6 +1,6 @@
 # Layer and comparison audit
 
-This inventory is the factual display contract for the eight base layers and nine comparisons. It distinguishes the question answered, authoritative source, physical quantity, spatial unit, display footprint, analytical observation and content placement. A map colour is never treated as analytical data.
+This inventory is the factual display contract for the eight public base layers, one local scenario layer and nine comparisons. It distinguishes the question answered, authoritative source, physical quantity, spatial unit, display footprint, analytical observation and content placement. A map colour is never treated as analytical data.
 
 ## Shared scientific and content rules
 
@@ -108,6 +108,18 @@ This inventory is the factual display contract for the eight base layers and nin
 - **Limitations:** income is not salary, disposable household income or wealth, and values are not inflation-adjusted.
 - **Prioritised improvement:** Explain fiscal-income supporting metrics without implying a full income distribution.
 
+### 9. Land-cover change tool, local only
+
+- **Question:** How could a user-drawn conversion between verified vegetation and sealed-surface classes change daytime land-surface temperature?
+- **Sources and years:** Flanders Green Map 2021; Soil sealing 2024, official product JaarBAK; Urban Atlas 2021; Flanders Land Use 2025 class 17 as a non-rendered analytical-water supplement; Radoux et al. (2025); Landsat 22 June 2026 for the optional local XGBoost relationship.
+- **Map and resolution:** One combined map may show hidden ground below a patterned High-canopy flag for editing. Both estimators resolve that state to one mutually exclusive upper surface. Radoux is sampled at 30 m after a 15 m Gaussian thermal-support calculation; XGBoost also returns one ΔLST value per 30 m thermal centre.
+- **Metrics and denominator:** Radoux ΔLST is the coefficient-weighted change in cover proportions. XGBoost ΔLST is modified minus baseline prediction from five cover fractions in four radial bands. Affected centres have an encoded absolute change of at least 0.01°C. Area accounting uses native 1 m cells.
+- **Aggregation and exclusions:** Green Map non-green cells identified as unsealed are an explicit Radoux bare-soil proxy and XGBoost's implicit remainder. Water, agriculture, invalid cells and outside-scope areas are locked. Water → Agriculture → High → Sealed → Low → Other unsealed is the shared analytical priority. Ordered operations use latest-completed-applicable-polygon precedence.
+- **Charts and observations:** Scope results show strongest estimated cooling and warming plus an inline and expandable histogram of method-specific ΔLST across affected 30 m thermal centres. Symmetric zero-centred bins show the percentage of affected centres, with cooling in blue and warming in red.
+- **Legend and panel:** the fixed blue/red scale is transparent below 0.01°C and offers Radoux/XGBoost selection when the verified model exists. Hover reports both estimates, selected first. The panel retains the accepted-area and before/change/after composition summaries; Methodology documents coefficients, grids, spatial CV and limitations.
+- **Limitations:** Radoux transfers proxy coefficients from Belgian cities; XGBoost learns one Zennevallei observation. Both estimate daytime surface-temperature change, not absolute temperature, air temperature, comfort, exposure, causality or counterfactual uncertainty.
+- **Prioritised improvement:** Validate the interaction with practitioners before adding absolute-temperature or saved-scenario features.
+
 ## Comparisons
 
 ### 9. Heat vulnerability × income
@@ -124,12 +136,12 @@ This inventory is the factual display contract for the eight base layers and nin
 
 ### 10. Heat vulnerability × population
 
-- **Question:** How do heat scores vary among sectors of different population, and how many residents live in sectors at each score?
+- **Question:** How do heat scores vary among sectors with different population densities, and how many residents live in sectors at each score?
 - **Sources and years:** Government of Flanders heat scores 2026; Statbel population 2025; Statbel geometry 2024.
 - **Map and footprint:** selected heat fill plus one-to-five deterministic person symbols for fixed sector-population bands.
-- **Metrics and observations:** box plots weight each comparable sector once. Bars sum residents assigned their sector's score. At-or-above shares use all comparable residents as denominator.
+- **Metrics and observations:** box plots group sectors by authoritative 2025 population density (published residents divided by complete sector area) and weight each comparable sector once. Bars sum residents assigned their sector's score. At-or-above shares use all comparable residents as denominator.
 - **Aggregation and exclusions:** municipality scope recalculates boxes, bars and totals. Published zero population has no symbol; residents in sectors without a selected heat score are disclosed separately.
-- **Charts:** vertical score box plots by five population bands; independently expandable non-cumulative resident bars for scores 0–10 with exact and cumulative hover values.
+- **Charts:** vertical score box plots by five fixed population-density bands; independently expandable non-cumulative resident bars for scores 0–10 with exact and cumulative hover values.
 - **Legend and panel:** heat palette and person symbols are separated. Panel states comparable and excluded population. Details defines box plots and the different chart weightings.
 - **Limitations:** assigning residents a sector score is an area-level summary, not individual exposure.
 - **Prioritised improvement:** Add a downloadable municipality-scoped resident-by-score table.

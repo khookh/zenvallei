@@ -1,35 +1,18 @@
 import { t } from "./i18n.js";
 import { safeExternalUrl } from "./security.js";
-import { authorityName } from "./source-authorities.js";
+import { SOURCE_PRODUCTS, authorityName } from "./source-authorities.js";
 
-export const MAP_SOURCE_PRODUCTS = [
-  { authorityId: "departmentCare", products: [
-    ["sources.productHeat", "https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen"],
-  ] },
-  { authorityId: "departmentEnvironment", products: [
-    ["sources.productJaarbak", "https://www.vlaanderen.be/datavindplaats/catalogus/jaarlijkse-bodemafdekkingskaart-jaarbak-1-m-resolutie-2023"],
-    ["sources.productLandUse", "https://www.vlaanderen.be/datavindplaats/catalogus/landgebruik-vlaanderen-toestand-2025"],
-    ["sources.productPopulationModel", "https://www.vlaanderen.be/datavindplaats/catalogus/inwonersdichtheid-per-ha-vlaanderen-toestand-2019"],
-  ] },
-  { authorityId: "natureForests", products: [
-    ["sources.productGreenMap", "https://www.vlaanderen.be/datavindplaats/catalogus/groenkaart-vlaanderen-2021"],
-  ] },
-  { authorityId: "copernicusClms", products: [
-    ["sources.productUrbanAtlas", "https://land.copernicus.eu/en/products/urban-atlas/urban-atlas-2021"],
-  ] },
-  { authorityId: "landsat", products: [
-    ["sources.productLandsat", "https://www.usgs.gov/landsat-missions/landsat-collection-2-surface-temperature"],
-  ] },
-  { authorityId: "meteorologicalInstitute", products: [
-    ["sources.productHeatwaves", "https://www.meteo.be/nl/klimaat/klimaatverandering-in-belgie/klimaattrends-in-ukkel/luchttemperatuur/zomer-indices/hittegolven/hittegolven-in-ukkel"],
-  ] },
-  { authorityId: "statbel", products: [
-    ["sources.productBoundaries", "https://statbel.fgov.be/en/open-data/statistical-sectors-2024"],
-    ["sources.productIncome", "https://statbel.fgov.be/en/open-data/fiscal-statistics-income-statistical-sector"],
-    ["sources.productPopulationGrid", "https://statbel.fgov.be/en/themes/datalab/variable-cell-grid"],
-    ["sources.productPopulationTotals", "https://statbel.fgov.be/en/open-data/population-place-residence-nationality-marital-status-age-and-sex-16"],
-  ] },
-];
+export const MAP_SOURCE_PRODUCTS = Object.entries(SOURCE_PRODUCTS)
+  .filter(([, product]) => product.mapDialog !== false)
+  .reduce((groups, [productId, product]) => {
+    let group = groups.find(({ authorityId }) => authorityId === product.authorityId);
+    if (!group) {
+      group = { authorityId: product.authorityId, products: [] };
+      groups.push(group);
+    }
+    group.products.push({ productId, labelKey: product.labelKey, url: product.url });
+    return groups;
+  }, []);
 
 function linksFromHtml(html) {
   const template = document.createElement("template");
@@ -94,7 +77,7 @@ export function createMapSourceDialog({ config }) {
       group.className = "map-source-product-group";
       const heading = document.createElement("h4");
       heading.textContent = authorityName(authorityId);
-      group.append(heading, renderLinks(products.map(([labelKey, url]) => ({ label: t(labelKey), url }))));
+      group.append(heading, renderLinks(products.map(({ labelKey, url }) => ({ label: t(labelKey), url }))));
       data.append(group);
     });
     article.append(header, basemap, data);

@@ -1,5 +1,6 @@
 import { t } from "../i18n.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
+import { fetchJsonAsset } from "./compressed-json.js";
 import { createExactSealedRaster } from "./exact-sealed-raster.js";
 import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette.js";
 
@@ -15,7 +16,7 @@ function resolveAsset(root, value, extension) {
 }
 
 export function validateLandsatJaarbakManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 3 || manifest.comparisonId !== "landsat-jaarbak"
+  if (!manifest || manifest.schemaVersion !== 4 || manifest.comparisonId !== "landsat-jaarbak"
     || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
     || manifest.aggregation !== "exact-masked-area" || manifest.minimumAnalysedAreaHa !== .1
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "jaarbak") {
@@ -85,7 +86,7 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
         loaded.analysisScopeIndexUrl = resolveAsset(descriptor.assetRoot, loaded.analysisScopeIndexUrl, ".png");
       }
       Object.values(loaded.observations).forEach((observation) => {
-        observation.distributionUrl = resolveAsset(descriptor.assetRoot, observation.distributionUrl, ".json");
+        observation.distributionUrl = resolveAsset(descriptor.assetRoot, observation.distributionUrl, ".json.gz");
         if (observation.densityPointDataUrl) {
           observation.densityPointDataUrl = resolveAsset(descriptor.assetRoot, observation.densityPointDataUrl, ".png");
           observation.densityDataUrl = resolveAsset(descriptor.assetRoot, observation.densityDataUrl, ".png");
@@ -99,11 +100,9 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
   const activeObservation = () => manifest?.observations?.[activeObservationId()];
   const loadDistribution = async (observationId) => {
     if (!distributionCache.has(observationId)) {
-      distributionCache.set(observationId, fetch(manifest.observations[observationId].distributionUrl)
-        .then((response) => {
-          if (!response.ok) throw new Error(`Comparison distribution HTTP ${response.status}.`);
-          return response.json();
-        }).then((loaded) => { resolvedDistributions.set(observationId, loaded); return loaded; }));
+      distributionCache.set(observationId, fetchJsonAsset(
+        manifest.observations[observationId].distributionUrl, "Landsat-JaarBAK distribution",
+      ).then((loaded) => { resolvedDistributions.set(observationId, loaded); return loaded; }));
     }
     return distributionCache.get(observationId);
   };
@@ -241,10 +240,9 @@ export function createLandsatJaarbakComparison({ descriptor, landsatLayer, jaarb
       return {
         meta: t("soilComparison.contextMeta", { year: activeObservation()?.secondaryYear ?? "" }),
         text: t("soilComparison.contextTextExact"),
-        note: t("soilComparison.contextNote"),
         sources: [
-          authorityLink("landsat", runtime.manifest?.source?.productUrl),
-          authorityLink("departmentEnvironment", jaarbakLayer.getRuntimeData()?.descriptor?.source?.url),
+          productLink("landsat", runtime.manifest?.source?.productUrl),
+          productLink("jaarbak", jaarbakLayer.getRuntimeData()?.descriptor?.source?.url),
         ],
       };
     },

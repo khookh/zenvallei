@@ -11,6 +11,13 @@ from greenwave_local_layers.image_regression_xgboost import (
     XGBoostConfig,
     train_xgboost_fold,
 )
+from greenwave_local_layers.image_regression_xgboost_pipeline import (
+    bounded_parameter_search,
+    outside_training_ranges,
+    radial_feature_names,
+    select_configuration,
+)
+import greenwave_local_layers.image_regression_xgboost_pipeline as scenario_pipeline
 
 
 def _folds():
@@ -66,3 +73,47 @@ def test_xgboost_fold_rejects_test_leakage():
             XGBoostConfig(num_boost_round=2, early_stopping_rounds=1),
             device="cpu", verbose=False,
         )
+
+
+def test_scenario_search_is_bounded_deterministic_and_uses_twenty_physical_features():
+    assert radial_feature_names() == tuple(
+        f"{channel}_{lower}_{upper}m"
+        for channel in ("soil_sealing", "high_green", "low_green", "agriculture", "water")
+        for lower, upper in ((0, 25), (25, 50), (50, 75), (75, 100))
+    )
+    first = bounded_parameter_search()
+    second = bounded_parameter_search()
+    assert first == second
+    assert 1 < len(first) <= 32
+    assert len({
+        (item.learning_rate, item.max_depth, item.min_child_weight, item.subsample,
+         item.colsample_bytree, item.reg_alpha, item.reg_lambda)
+        for item in first
+    }) == len(first)
+
+
+def test_configuration_near_ties_prefer_the_simpler_tree(monkeypatch):
+    complex_config = XGBoostConfig(max_depth=6, min_child_weight=1, learning_rate=.05)
+    simple_config = XGBoostConfig(max_depth=3, min_child_weight=3, learning_rate=.05)
+
+    def fake_evaluation(_features, _targets, _names, _folds, config, **_kwargs):
+        return {
+            "meanRmseC": 2.0 if config.max_depth == 6 else 2.003,
+            "bestRounds": [25], "folds": [],
+        }
+
+    monkeypatch.setattr(scenario_pipeline, "evaluate_configuration", fake_evaluation)
+    selected, tested = select_configuration(
+        np.zeros((2, 1), dtype=np.float32), np.zeros(2, dtype=np.float32),
+        ("feature",), (), (complex_config, simple_config), device="cpu",
+    )
+    assert len(tested) == 2
+    assert selected["config"] == simple_config
+
+
+def test_counterfactual_rows_outside_training_ranges_are_flagged():
+    features = np.array([[.2, .5], [.1, .8], [.4, .3]], dtype=np.float32)
+    outside = outside_training_ranges(
+        features, ("soil", "green"), {"soil": [.1, .4], "green": [.3, .7]},
+    )
+    assert outside.tolist() == [False, True, False]

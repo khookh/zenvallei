@@ -11,6 +11,14 @@ describe("compressed comparison JSON", () => {
     await expect(fetchJsonAsset("/points.json.gz")).resolves.toEqual(payload);
   });
 
+  it("does not decompress a body already decoded from Content-Encoding", async () => {
+    const payload = { schemaVersion: 3, inferenceBySurface: {} };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(payload), {
+      headers: { "Content-Encoding": "gzip", "Content-Type": "application/json" },
+    })));
+    await expect(fetchJsonAsset("/statistics.json.gz")).resolves.toEqual(payload);
+  });
+
   it("keeps ordinary JSON compatible", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ ok: true })));
     await expect(fetchJsonAsset("/statistics.json")).resolves.toEqual({ ok: true });

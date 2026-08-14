@@ -3,7 +3,7 @@ import { validateLandsatJaarbakManifest } from "../src/comparisons/landsat-jaarb
 import { comparisonLegendItems, thermalColor } from "../src/comparisons/thermal-palette.js";
 
 const manifest = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   comparisonId: "landsat-jaarbak",
   primaryLayerId: "landsat-temperature",
   secondaryLayerId: "jaarbak",

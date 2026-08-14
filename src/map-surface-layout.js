@@ -49,6 +49,7 @@ export function createMapSurfaceLayout({
   let priority = "controls";
   let applying = false;
   let frame = 0;
+  let initialised = false;
 
   const boundsWithinShell = (element) => {
     if (!element || element.hidden || !element.getClientRects().length) return null;
@@ -92,6 +93,17 @@ export function createMapSurfaceLayout({
     mode = surfaceModeForWidth(shell.clientWidth || window.innerWidth);
     shell.dataset.surfaceMode = mode;
 
+    // A result may open during the same frame in which this coordinator is
+    // created. Trust the visible panel rectangle if its open request arrived
+    // before the layout object was assigned to the application.
+    if (!initialised
+      && panel.getAttribute("aria-hidden") === "false"
+      && desired.panelPresentation === "closed") {
+      desired.panelPresentation = "expanded";
+      priority = "panel";
+    }
+    initialised = true;
+
     let controlsExpanded = desired.controlsExpanded;
     let legendExpanded = desired.legendExpanded;
     let panelPresentation = desired.panelPresentation;
@@ -101,10 +113,10 @@ export function createMapSurfaceLayout({
         legendExpanded = false;
       } else if (priority === "legend" && legendExpanded) {
         controlsExpanded = false;
-        if (panelPresentation !== "closed") panelPresentation = "peek";
+        panelPresentation = "closed";
       } else {
         legendExpanded = false;
-        if (panelPresentation !== "closed") panelPresentation = "peek";
+        if (controlsExpanded) panelPresentation = "closed";
       }
     }
 
@@ -123,11 +135,15 @@ export function createMapSurfaceLayout({
       const controlRect = controls.getBoundingClientRect();
       const panelRect = panel.getAttribute("aria-hidden") === "true" ? null : panel.getBoundingClientRect();
       const shellRect = shell.getBoundingClientRect();
+      const controlsAreExpanded = !controls.classList.contains("is-collapsed");
+      const legendDockLeft = mode === "expanded" && controlsAreExpanded
+        ? Math.ceil(controlRect.right - shellRect.left + 16)
+        : 16;
       const available = mode === "expanded"
-        ? (panelRect?.left ?? shellRect.right) - controlRect.right - 32
+        ? (panelRect?.left ?? shellRect.right) - shellRect.left - legendDockLeft - 16
         : shellRect.width - 32;
       legend.style.setProperty("--legend-safe-width", `${Math.max(196, Math.floor(available))}px`);
-      legend.style.setProperty("--legend-dock-left", mode === "expanded" ? `${Math.ceil(controlRect.right - shellRect.left + 16)}px` : "16px");
+      legend.style.setProperty("--legend-dock-left", `${legendDockLeft}px`);
       const nativeControlRight = mode === "expanded" && panelRect && getPanelPresentation() === "expanded"
         ? Math.ceil(shellRect.right - panelRect.left + 14)
         : 12;
@@ -149,16 +165,32 @@ export function createMapSurfaceLayout({
 
   const requestControls = (expanded) => {
     desired.controlsExpanded = expanded;
-    if (expanded) priority = "controls";
+    if (expanded) {
+      priority = "controls";
+      if (mode !== "expanded") {
+        desired.legendExpanded = false;
+        desired.panelPresentation = "closed";
+      }
+    }
     schedule();
   };
   const requestLegend = (expanded) => {
     if (!applying) desired.legendExpanded = expanded;
-    if (expanded) priority = "legend";
+    if (expanded) {
+      priority = "legend";
+      if (mode !== "expanded") {
+        desired.controlsExpanded = false;
+        desired.panelPresentation = "closed";
+      }
+    }
     schedule();
   };
   const requestPanel = (presentation) => {
     desired.panelPresentation = presentation;
+    if (presentation === "expanded" && mode !== "expanded") {
+      desired.controlsExpanded = false;
+      desired.legendExpanded = false;
+    }
     priority = presentation === "expanded"
       ? "panel"
       : (desired.legendExpanded ? "legend" : "controls");

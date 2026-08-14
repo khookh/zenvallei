@@ -8,6 +8,7 @@ temperature observation. Browser PNGs are visual indexes, never statistics.
 from __future__ import annotations
 
 import json
+import gzip
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from .landsat_urban_atlas import (
 from .pipeline import file_hash, update_index
 from .density import _fraction_grid, focal_density
 from .exact_landsat_mask import SOIL_SEALED, SOIL_UNSEALED, prepare_exact_mask_table
+from .spatial_inference import spatial_modified_t_test_lattice
 
 OUTPUT_ROOT = CACHE_ROOT / "landsat-jaarbak"
 YEAR_BY_OBSERVATION = {
@@ -186,12 +188,17 @@ def _density_on_landsat(year, grid):
 
 
 def _density_scope_analysis(temperature, status, density, sector_index, region_index,
-                            municipality_index, sector_meta, municipality_lookup):
+                            municipality_index, sector_meta, municipality_lookup, transform):
     clear = (status == 1) & np.isfinite(temperature) & np.isfinite(density)
     scopes = {}
 
     def add(key, selected):
-        scopes[key] = ordinary_least_squares(density[selected], temperature[selected])
+        regression = ordinary_least_squares(density[selected], temperature[selected])
+        if regression is not None:
+            regression["inference"] = spatial_modified_t_test_lattice(
+                density, temperature, selected, transform,
+            )
+        scopes[key] = regression
 
     add("region:zennevallei", clear & (region_index > 0))
     for name, index in municipality_lookup.items():
@@ -333,21 +340,22 @@ def prepare_landsat_jaarbak():
             raise ValueError(f"{observation_id}: analytical grid is not aligned.")
         exact = prepare_exact_mask_table(observation_id, year)
         distributions = _exact_soil_scope_distributions(exact, sector_meta)
-        distribution_path = OUTPUT_ROOT / "distributions" / f"{observation_id}.json"
+        distribution_path = OUTPUT_ROOT / "distributions" / f"{observation_id}.json.gz"
         distribution_path.parent.mkdir(parents=True, exist_ok=True)
         density_analysis = _density_scope_analysis(
             temperature, status, sealing_density, sector_index, region_index,
-            municipality_index, sector_meta, municipality_lookup,
+            municipality_index, sector_meta, municipality_lookup, grid["transform"],
         )
-        distribution_path.write_text(json.dumps({
-            "schemaVersion": 3,
+        distribution_payload = json.dumps({
+            "schemaVersion": 4,
             "observationId": observation_id,
             "secondaryYear": year,
             "secondaryStatus": jaarbak["years"][str(year)]["status"],
             "scopes": distributions,
             "surfaceStats": _surface_stats(jaarbak, year),
             "densityAnalysis": density_analysis,
-        }, separators=(",", ":")), encoding="utf-8")
+        }, separators=(",", ":")).encode("utf-8")
+        distribution_path.write_bytes(gzip.compress(distribution_payload, compresslevel=9, mtime=0))
 
         temperature_code = np.rint(np.clip(np.nan_to_num(temperature, nan=-100) + 100, 0, 655.35) * 100).astype(np.uint16)
         density_code = np.rint(np.clip(np.nan_to_num(sealing_density), 0, 100) * 100).astype(np.uint16)
@@ -369,7 +377,7 @@ def prepare_landsat_jaarbak():
         observations[observation_id] = {
             "secondaryYear": year,
             "secondaryStatus": jaarbak["years"][str(year)]["status"],
-            "distributionUrl": f"landsat-jaarbak/distributions/{observation_id}.json",
+            "distributionUrl": f"landsat-jaarbak/distributions/{observation_id}.json.gz",
             "densityPointDataUrl": f"landsat-jaarbak/density-points/{observation_id}.png",
             "densityDataUrl": f"landsat-jaarbak/density-values/{observation_id}.png",
             "distributionSha256": file_hash(distribution_path),
@@ -378,7 +386,7 @@ def prepare_landsat_jaarbak():
         }
 
     manifest = {
-        "schemaVersion": 3,
+        "schemaVersion": 4,
         "comparisonId": "landsat-jaarbak",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "jaarbak",

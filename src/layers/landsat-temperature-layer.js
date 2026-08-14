@@ -1,7 +1,7 @@
 import { formatNumber, getLanguage, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
 import { defineLayer } from "./layer-contract.js";
-import { authorityLink, authorityName } from "../source-authorities.js";
+import { authorityName, productLink } from "../source-authorities.js";
 import { createTemporalPmtilesMap } from "./temporal-pmtiles-layer.js";
 
 const DATASET_ID = "landsat-temperature";
@@ -185,8 +185,7 @@ export function createLandsatTemperatureLayer({ descriptor: inputDescriptor, loa
         kind: kindLabel(current()?.kind),
       }),
       text: t("landsat.contextText"),
-      note: t("landsat.missing2025"),
-      sources: [authorityLink("landsat", manifest?.source?.productUrl ?? descriptor?.source?.productUrl)],
+      sources: [productLink("landsat", manifest?.source?.productUrl ?? descriptor?.source?.productUrl)],
     }),
     getLegendModel: () => ({
       title: t("landsat.legendTitle", { date: localDateTime(current()?.acquiredAt) }),
@@ -233,7 +232,6 @@ export function createLandsatTemperatureLayer({ descriptor: inputDescriptor, loa
         activeValue: activeObservation,
         label: t("landsat.timelineLabel"),
         note: t("landsat.timelineNote", { date: localDateTime(active?.acquiredAt), kind: kindLabel(active?.kind) }),
-        auxiliaryNote: t("landsat.missing2025"),
         previousLabel: t("landsat.previousObservation"),
         nextLabel: t("landsat.nextObservation"),
       };

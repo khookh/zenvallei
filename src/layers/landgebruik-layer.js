@@ -1,7 +1,7 @@
 import { formatNumber, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
 import { defineLayer } from "./layer-contract.js";
-import { authorityLink, authorityName } from "../source-authorities.js";
+import { authorityName, productLink } from "../source-authorities.js";
 import { createTemporalPmtilesMap } from "./temporal-pmtiles-layer.js";
 
 const DATASET_ID = "landgebruik";
@@ -213,9 +213,8 @@ export function createLandgebruikLayer({ descriptor, loadManifest = fetchManifes
     getContext: () => ({
       meta: t("landgebruik.contextMeta", { year: activeYear }),
       text: t(activeMode === "agriculture" ? "landgebruik.agricultureContext" : "landgebruik.contextText"),
-      note: activeMode === "landuse" ? t("landgebruik.temporalNote") : "",
-      sources: [authorityLink(
-        activeMode === "agriculture" ? "agricultureFisheries" : "departmentEnvironment",
+      sources: [productLink(
+        activeMode === "agriculture" ? "agricultureParcels" : "landUse",
         activeMode === "agriculture"
           ? manifest?.agriculturalDetail?.source?.url
           : manifest?.source?.url ?? descriptor?.source?.url,

@@ -28,7 +28,6 @@ const elements = {
   municipality: document.querySelector("#municipality-select"),
   sectorSearch: document.querySelector("#sector-search"),
   sectorOptions: document.querySelector("#sector-options"),
-  resetView: document.querySelector("#reset-view"),
   visibleCount: document.querySelector("#visible-count"),
   legendDisclosure: document.querySelector("#legend"),
   legend: document.querySelector("#legend-content"),
@@ -40,6 +39,17 @@ const elements = {
   secondaryControl: document.querySelector("#secondary-control"),
   secondaryPrompt: document.querySelector("#secondary-control-prompt"),
   secondarySwitch: document.querySelector("#secondary-switch"),
+  scenarioEditor: document.querySelector("#scenario-editor"),
+  scenarioTargets: document.querySelector("#scenario-targets"),
+  scenarioState: document.querySelector("#scenario-editor-state"),
+  scenarioHelp: document.querySelector("#scenario-editor-help"),
+  scenarioDraw: document.querySelector("#scenario-draw"),
+  scenarioFinish: document.querySelector("#scenario-finish"),
+  scenarioCancel: document.querySelector("#scenario-cancel"),
+  scenarioRetry: document.querySelector("#scenario-retry"),
+  scenarioUndo: document.querySelector("#scenario-undo"),
+  scenarioRedo: document.querySelector("#scenario-redo"),
+  scenarioReset: document.querySelector("#scenario-reset"),
   temporalControl: document.querySelector("#temporal-control"),
   temporalLabel: document.querySelector("#temporal-label"),
   temporalSlider: document.querySelector("#temporal-slider"),
@@ -67,10 +77,6 @@ const elements = {
   detailPanel: document.querySelector("#detail-panel"),
   panelContent: document.querySelector("#panel-content"),
   panelClose: document.querySelector("#panel-close"),
-  panelToggle: document.querySelector("#panel-toggle"),
-  panelPeek: document.querySelector("#panel-peek"),
-  panelPeekLabel: document.querySelector("#panel-peek-label"),
-  panelPeekValue: document.querySelector("#panel-peek-value"),
   mapLoading: document.querySelector("#map-loading"),
   errorBanner: document.querySelector("#error-banner"),
   errorMessage: document.querySelector("#error-message"),
@@ -98,6 +104,7 @@ const application = {
   analysisPickMode: null,
   comparisons: new Map(),
   activeComparisonId: null,
+  comparisonFeedback: null,
   comparisonSession: null,
   activateAnalysisPairing: null,
   deactivateAnalysisPairing: null,
@@ -385,6 +392,7 @@ async function removeAnalysisPairing() {
 }
 
 function updateSecondaryControls() {
+  updateScenarioEditor();
   const comparison = activeComparison()?.isActive() ? activeComparison() : null;
   const control = comparison?.suppressSecondaryControl
     ? null
@@ -449,6 +457,43 @@ function updateSecondaryControls() {
   updateAnalysisPairing();
 }
 
+function updateScenarioEditor() {
+  const layer = activeLayer();
+  const model = layer?.getScenarioEditorModel?.() ?? null;
+  elements.scenarioEditor.hidden = !model;
+  if (!model) return;
+  const targets = ["unseal", "sealed", "high", "remove-high", "restore"];
+  elements.scenarioTargets.setAttribute("aria-label", t("scenario.targetLabel"));
+  elements.scenarioTargets.replaceChildren(...targets.map((id) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.scenarioTarget = id;
+    button.className = `scenario-target is-${id}`;
+    button.textContent = t(`scenario.target.${id}`);
+    button.setAttribute("aria-pressed", String(model.target === id));
+    button.classList.toggle("is-active", model.target === id);
+    button.disabled = model.drawing || model.calculating;
+    return button;
+  }));
+  elements.scenarioDraw.hidden = model.drawing;
+  elements.scenarioFinish.hidden = !model.drawing;
+  elements.scenarioCancel.hidden = !model.drawing;
+  elements.scenarioRetry.hidden = model.drawing || !model.error;
+  elements.scenarioDraw.disabled = model.calculating;
+  elements.scenarioFinish.disabled = !model.canFinish || model.calculating;
+  elements.scenarioRetry.disabled = model.calculating;
+  elements.scenarioUndo.disabled = !model.canUndo || model.calculating;
+  elements.scenarioRedo.disabled = !model.canRedo || model.calculating;
+  elements.scenarioReset.disabled = !model.canReset || model.calculating;
+  elements.scenarioState.textContent = model.calculating
+    ? t("scenario.calculating")
+      : model.error ? t("scenario.editorError")
+      : model.drawing ? t("scenario.vertices", { count: model.vertexCount }) : t("scenario.ready");
+  elements.scenarioHelp.textContent = model.error
+    ? t("scenario.editorFailure", { message: model.error }) : t("scenario.editorHelp");
+  elements.scenarioHelp.classList.toggle("is-error", Boolean(model.error));
+}
+
 function updateLayerContext() {
   if (!application.layers) return;
   const layer = activeLayer();
@@ -484,10 +529,15 @@ function updateLayerContext() {
 
 function renderLegend() {
   if (!application.layers) return;
-  const model = activeComparison()?.isActive()
-    ? activeComparison().getLegendModel()
+  const comparison = activeComparison();
+  const model = comparison?.isActive()
+    ? comparison.getLegendModel()
     : activeLayer().getLegendModel();
   renderLegendModel({ title: elements.legendTitle, note: elements.legendNote, content: elements.legend }, model);
+  if (comparison?.isActive() && application.comparisonFeedback?.comparisonId === comparison.id) {
+    const feedback = elements.legend.querySelector("[data-comparison-feedback]");
+    if (feedback) feedback.textContent = t(application.comparisonFeedback.key);
+  }
 }
 
 function populateMunicipalities(provenance) {
@@ -567,7 +617,8 @@ async function start() {
   elements.mapControls.classList.toggle("has-official-layers", Object.keys(data.officialLayers ?? {}).length > 0);
   const extraLayers = [];
   if (Object.keys(data.officialLayers ?? {}).length) {
-    extraLayers.push(...(await import("./layers/local-official-layers.js")).createOfficialRasterLayers(data.officialLayers));
+    const officialRasterLayers = (await import("./layers/local-official-layers.js")).createOfficialRasterLayers(data.officialLayers);
+    extraLayers.push(...officialRasterLayers);
     if (data.officialLayers.landgebruik) {
       extraLayers.push((await import("./layers/landgebruik-layer.js")).createLandgebruikLayer({
         descriptor: data.officialLayers.landgebruik,
@@ -577,6 +628,15 @@ async function start() {
       extraLayers.push((await import("./layers/landsat-temperature-layer.js")).createLandsatTemperatureLayer({
         descriptor: data.officialLayers["landsat-temperature"],
       }));
+    }
+    if (import.meta.env.MODE === "local-data" && data.officialLayers["land-cover-scenario"]) {
+      const groenkaartLayer = officialRasterLayers.find(({ id }) => id === "groenkaart");
+      const jaarbakLayer = officialRasterLayers.find(({ id }) => id === "jaarbak");
+      if (groenkaartLayer && jaarbakLayer) {
+        extraLayers.push((await import("./layers/land-cover-scenario-layer.js")).createLandCoverScenarioLayer({
+          descriptor: data.officialLayers["land-cover-scenario"], groenkaartLayer, jaarbakLayer,
+        }));
+      }
     }
   }
   application.layers = buildLayerRegistry(data, {
@@ -593,7 +653,6 @@ async function start() {
   populateSectorOptions(data.scores);
 
   let selectedSectorId = "";
-  let suppressPanelFallback = false;
   const municipalityRecord = (municipality) => ({
     scope: "municipality",
     municipality,
@@ -620,10 +679,6 @@ async function start() {
     panel: elements.detailPanel,
     content: elements.panelContent,
     closeButton: elements.panelClose,
-    toggleButton: elements.panelToggle,
-    peekButton: elements.panelPeek,
-    peekLabel: elements.panelPeekLabel,
-    peekValue: elements.panelPeekValue,
     getPanelModel: (layerId, record) => {
       const comparison = activeComparison();
       return comparison?.isActive() && comparison.primaryLayerId === layerId
@@ -640,25 +695,11 @@ async function start() {
     onSectorHover: (sectorId) => application.mapController?.setExternalHover(sectorId),
     onOpen: () => application.surfaceLayout?.requestPanel("expanded"),
     onPresentationRequest: (presentation) => application.surfaceLayout?.requestPanel(presentation),
-    onClose: (closedView, returnFocusElement) => {
+    onClose: (_closedView, returnFocusElement) => {
       selectedSectorId = "";
       application.mapController?.setSelected("");
       application.announcement = { type: "closed" };
       updateAnnouncement();
-      if (!suppressPanelFallback && closedView?.type === "record" && !closedView.record.scope && activeComparison()?.isActive()) {
-        queueMicrotask(() => panel.open(
-          elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(),
-          elements.municipality,
-          application.activeLayer,
-        ));
-      } else if (!suppressPanelFallback && closedView?.type === "record" && closedView.record.scope !== "municipality"
-        && elements.municipality.value && supportsMunicipalitySummary()) {
-        queueMicrotask(() => panel.open(
-          municipalityRecord(elements.municipality.value),
-          elements.municipality,
-          application.activeLayer,
-        ));
-      }
       application.surfaceLayout?.requestPanel("closed");
       if (returnFocusElement instanceof HTMLElement && elements.mapControls.contains(returnFocusElement)) {
         application.surfaceLayout?.requestControls(true);
@@ -666,6 +707,15 @@ async function start() {
     },
   });
   application.panel = panel;
+  application.layers.forEach((layer) => layer.subscribeScenario?.(() => {
+    if (application.activeLayer !== layer.id) return;
+    application.mapController?.refreshInteractionCursor?.();
+    updateScenarioEditor();
+    updateSecondaryControls();
+    updateLayerContext();
+    renderLegend();
+    panel.refresh();
+  }));
 
   const clearSectorSelection = () => {
     selectedSectorId = "";
@@ -865,7 +915,7 @@ async function start() {
   application.comparisons.set(populationComparison.id, populationComparison);
   validateProductContract(application.layers, application.comparisons, {
     playground: import.meta.env.MODE === "playground",
-    localData: import.meta.env.MODE === "local-data",
+    localData: Boolean(data.officialLayers?.["land-cover-scenario"]),
   });
   application.comparisons.forEach((comparison) => comparison.subscribe(() => {
     if (!comparison.isActive()) return;
@@ -880,6 +930,7 @@ async function start() {
   updateAnalysisPairing();
   updateLayerControls();
   application.activateAnalysisPairing = async (initiatorLayerId, targetId) => {
+    application.comparisonFeedback = null;
     const pair = comparisonForLayers(initiatorLayerId, targetId);
     const next = pair ? application.comparisons.get(pair.id) : null;
     if (!next) return false;
@@ -946,6 +997,7 @@ async function start() {
     return true;
   };
   application.deactivateAnalysisPairing = async () => {
+    application.comparisonFeedback = null;
     const comparison = activeComparison();
     const session = application.comparisonSession;
     if (!comparison?.isActive() || !session) return;
@@ -1006,10 +1058,10 @@ async function start() {
   // again. A deliberate click or keyboard activation still commits the scope
   // so users can leave sector detail without choosing a different area first.
   elements.municipality.addEventListener("click", () => {
-    if (selectedSectorId) commitAreaScope(elements.municipality);
+    commitAreaScope(elements.municipality);
   });
   elements.municipality.addEventListener("keydown", (event) => {
-    if (selectedSectorId && ["Enter", " "].includes(event.key)) commitAreaScope(elements.municipality);
+    if (["Enter", " "].includes(event.key)) commitAreaScope(elements.municipality);
   });
 
   const search = () => {
@@ -1036,9 +1088,6 @@ async function start() {
   });
   elements.sectorSearch.addEventListener("input", () => elements.sectorSearch.setCustomValidity(""));
 
-  elements.resetView.addEventListener("click", () => {
-    commitAreaScope(elements.resetView);
-  });
   elements.aboutButton.addEventListener("click", () => panel.openAbout(elements.aboutButton));
   elements.secondarySwitch.addEventListener("click", (event) => {
     const button = event.target.closest("[data-secondary-option]");
@@ -1053,6 +1102,56 @@ async function start() {
     const buttons = [...elements.secondarySwitch.querySelectorAll("button:not(:disabled)")];
     const button = event.target.closest("button");
     if (button) moveSegmentFocus(event, buttons, button);
+  });
+  elements.scenarioTargets.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-scenario-target]");
+    if (!button || button.disabled) return;
+    activeLayer()?.setScenarioTarget?.(button.dataset.scenarioTarget);
+    elements.scenarioTargets.querySelector(`[data-scenario-target="${button.dataset.scenarioTarget}"]`)?.focus();
+  });
+  // Await completion so the same state transition is used by the visible
+  // Finish control and keyboard completion.  Fire-and-forget left browser UI
+  // in drawing mode when an asynchronous failure happened before its next
+  // subscription render.
+  const finishActiveScenarioPolygon = async () => {
+    const layer = activeLayer();
+    if (!layer?.finishScenarioPolygon) return false;
+    try {
+      return await layer.finishScenarioPolygon();
+    } catch (error) {
+      console.error("Could not finish the scenario polygon.", error);
+      updateScenarioEditor();
+      updateLayerContext();
+      return false;
+    }
+  };
+  // One delegated handler keeps the static editor controls reliable as their
+  // visibility changes during drawing and asynchronous calculation.
+  elements.scenarioEditor.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button || button.disabled) return;
+    const layer = activeLayer();
+    if (button === elements.scenarioDraw) layer?.beginScenarioPolygon?.();
+    else if (button === elements.scenarioFinish) finishActiveScenarioPolygon();
+    else if (button === elements.scenarioCancel) layer?.cancelScenarioPolygon?.();
+    else if (button === elements.scenarioRetry) layer?.retryScenario?.();
+    else if (button === elements.scenarioUndo) layer?.undoScenario?.();
+    else if (button === elements.scenarioRedo) layer?.redoScenario?.();
+    else if (button === elements.scenarioReset) layer?.resetScenario?.();
+  });
+  document.addEventListener("keydown", (event) => {
+    const layer = activeLayer();
+    if (!layer?.isDrawingActive?.()) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finishActiveScenarioPolygon();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      layer.cancelScenarioPolygon?.();
+    } else if (event.key === "Backspace") {
+      event.preventDefault();
+      layer.removeScenarioVertex?.();
+    }
   });
   elements.analysisCompare.addEventListener("click", () => enterAnalysisPickMode(elements.analysisCompare));
   elements.mapModeAction.addEventListener("click", async () => {
@@ -1102,6 +1201,23 @@ async function start() {
     if (!application.surfaceLayout?.isApplying()) application.surfaceLayout?.requestLegend(elements.legendDisclosure.open);
   });
   elements.legend.addEventListener("click", (event) => {
+    const scenarioCategory = event.target.closest("[data-scenario-category]");
+    if (scenarioCategory && activeLayer()?.toggleScenarioCategory?.(scenarioCategory.dataset.scenarioCategory)) {
+      renderLegend();
+      return;
+    }
+    const scenarioDelta = event.target.closest("[data-scenario-delta]");
+    if (scenarioDelta && activeLayer()?.toggleScenarioDelta?.()) {
+      renderLegend();
+      return;
+    }
+    const scenarioMethod = event.target.closest("[data-scenario-method]");
+    if (scenarioMethod && activeLayer()?.setScenarioMethod?.(scenarioMethod.dataset.scenarioMethod)) {
+      renderLegend();
+      updateLayerContext();
+      if (panel.isOpen()) panel.refresh();
+      return;
+    }
     const densityButton = event.target.closest("[data-density-class]");
     if (densityButton && (activeComparison()?.toggleGreenClass || activeLayer()?.toggleDensityClass)) {
       const result = activeComparison()?.isActive() && activeComparison().toggleGreenClass
@@ -1121,12 +1237,16 @@ async function start() {
     }
     const button = event.target.closest("[data-comparison-series]");
     if (!button || !activeComparison()?.isActive() || !activeComparison().toggleSeries) return;
-    const result = activeComparison().toggleSeries(button.dataset.comparisonSeries);
+    const comparison = activeComparison();
+    application.comparisonFeedback = null;
+    const result = comparison.toggleSeries(button.dataset.comparisonSeries);
     if (result.minimum) {
+      application.comparisonFeedback = { comparisonId: comparison.id, key: "density.minimumClass" };
       const feedback = elements.legend.querySelector("[data-comparison-feedback]");
       if (feedback) feedback.textContent = t("density.minimumClass");
       elements.announcement.textContent = t("density.minimumClass");
     } else if (result.limit) {
+      application.comparisonFeedback = { comparisonId: comparison.id, key: "comparison.seriesLimit" };
       const feedback = elements.legend.querySelector("[data-comparison-feedback]");
       if (feedback) feedback.textContent = t("comparison.seriesLimit");
       application.announcement = { type: "analysisPairing", key: "comparison.seriesLimit", parameters: {} };
@@ -1200,9 +1320,7 @@ async function start() {
       }
       application.activeLayer = layerId;
       if (changedLayer && panel.isOpen()) {
-        suppressPanelFallback = true;
         panel.close({ restoreFocus: false });
-        suppressPanelFallback = false;
       }
       if (changedLayer) clearSectorSelection();
       if (application.analysisPickMode) cancelAnalysisPickMode({ restoreFocus: false });

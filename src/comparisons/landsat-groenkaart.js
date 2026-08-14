@@ -1,5 +1,5 @@
 import { formatNumber, t } from "../i18n.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette.js";
 import { fetchJsonAsset } from "./compressed-json.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
@@ -7,14 +7,14 @@ import { hideComparisonVeil, showComparisonVeil } from "./map-veil.js";
 import {
   comparisonPixelOffset, GREEN_DENSITY_GRADIENT, GREEN_DENSITY_STOPS,
   greenClassSelector, hasUrbanSurfaceContract, loadImageData, ordinaryLeastSquares, safeAsset, SEALED_URBAN_SOURCE_URLS,
-  selectedUrbanClassIndexes, surroundingAreaHa, urbanSurfaceSelector,
+  selectedUrbanClassIndexes, surroundingAreaHa, urbanSurfaceSelector, validateSpatialInference,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "landsat-groenkaart-temperature";
 const BEFORE_LAYER = "heat-sectors-hit-area";
 
 export function validateLandsatGroenkaartManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 6 || manifest.comparisonId !== "landsat-groenkaart"
+  if (!manifest || manifest.schemaVersion !== 7 || manifest.comparisonId !== "landsat-groenkaart"
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "groenkaart"
     || manifest.greenMapYear !== 2021 || manifest.urbanAtlasYear !== 2021
     || manifest.analysisResolutionMeters !== 30 || manifest.maskResolutionMeters !== 1
@@ -35,6 +35,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
   let densityData;
   let densityNonGreenData;
   let pointData;
+  let statistics;
   let displayData;
   let loadedObservation = "";
   let map;
@@ -65,7 +66,7 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     Object.values(manifest.observations).forEach((item) => {
       item.displayDataUrl = safeAsset(descriptor.assetRoot, item.displayDataUrl, ".png");
       item.pointDataUrl = safeAsset(descriptor.assetRoot, item.pointDataUrl, ".json.gz");
-      item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json");
+      item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json.gz");
     });
     [densityData, densityNonGreenData] = await Promise.all([
       loadImageData(manifest.densityGridUrl, manifest.imageSize),
@@ -81,12 +82,27 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     const id = observationId();
     if (loadedObservation === id) return;
     const item = manifest.observations[id];
-    const [display, points] = await Promise.all([
+    const [display, points, loadedStatistics] = await Promise.all([
       loadImageData(item.displayDataUrl, manifest.imageSize),
       fetchJsonAsset(item.pointDataUrl, "Exact comparison points"),
+      fetchJsonAsset(item.statisticsUrl, "Landsat-Green Map statistics"),
     ]);
     displayData = display;
     pointData = points;
+    statistics = loadedStatistics;
+    if (statistics.schemaVersion !== 3 || statistics.observationId !== id) {
+      throw new TypeError("Unsupported Landsat-Green Map statistics.");
+    }
+    const scopeKeys = ["region:zennevallei",
+      ...Object.keys(manifest.municipalityIndexes).map((name) => `municipality:${name}`),
+      ...Object.keys(manifest.sectorIndexes).map((sectorId) => `sector:${sectorId}`)];
+    const greenKeys = Array.from({ length: 15 }, (_, bits) => manifest.greenClasses
+      .map(({ value }) => value).filter((_, index) => (bits + 1) & (1 << index)).join("+"));
+    const surfaceKeys = [[manifest.urbanSurfaceGroups[0].id], [manifest.urbanSurfaceGroups[1].id],
+      manifest.urbanSurfaceGroups.map(({ id: surfaceId }) => surfaceId)].map((values) => values.join("+"));
+    surfaceKeys.forEach((surfaceKey) => greenKeys.forEach((greenKey) => scopeKeys.forEach((scopeKey) => {
+      validateSpatialInference(statistics.inferenceBySurface?.[surfaceKey]?.[greenKey]?.[scopeKey]);
+    })));
     loadedObservation = id;
   };
 
@@ -220,12 +236,12 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
     getLabel: () => t("landsatGreen.title"),
     getActiveNote: () => t("landsatGreen.activeNote"),
     getContext: () => ({
-      meta: t("landsatGreen.contextMeta"), text: t("landsatGreen.contextText"), note: t("landsatGreen.contextNote"),
+      meta: t("landsatGreen.contextMeta"), text: t("landsatGreen.contextText"),
       sources: [
-        authorityLink("landsat", SEALED_URBAN_SOURCE_URLS.landsat),
-        authorityLink("natureForests", SEALED_URBAN_SOURCE_URLS.greenMap),
-        authorityLink("departmentEnvironment", SEALED_URBAN_SOURCE_URLS.jaarbak),
-        authorityLink("copernicusClms", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
+        productLink("landsat", SEALED_URBAN_SOURCE_URLS.landsat),
+        productLink("greenMap", SEALED_URBAN_SOURCE_URLS.greenMap),
+        productLink("jaarbak", SEALED_URBAN_SOURCE_URLS.jaarbak),
+        productLink("urbanAtlas", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
       ],
     }),
     getLegendModel: () => {
@@ -302,7 +318,17 @@ export function createLandsatGroenkaartComparison({ descriptor, landsatLayer, gr
       const regression = ordinaryLeastSquares(
         points.map(([density, temperature]) => ({ density, temperature })), "density", "temperature",
       );
-      if (regression) regression.analysedAreaHa = points.reduce((sum, point) => sum + point[2], 0) / 10_000;
+      if (regression) {
+        const surfaceKey = manifest.urbanSurfaceGroups.filter(({ id }) => selectedUrban.has(id))
+          .map(({ id }) => id).join("+");
+        const greenKey = [...selectedGreen].sort((left, right) => left - right).join("+");
+        const areaScope = record?.sectorId && record.scope !== "municipality" && record.scope !== "region"
+          ? `sector:${record.sectorId}`
+          : record?.scope === "municipality" ? `municipality:${record.municipality}`
+            : municipality ? `municipality:${municipality}` : "region:zennevallei";
+        regression.inference = statistics?.inferenceBySurface?.[surfaceKey]?.[greenKey]?.[areaScope];
+        regression.analysedAreaHa = points.reduce((sum, point) => sum + point[2], 0) / 10_000;
+      }
       return {
         template: "sealed-urban-scatter", comparisonId: "landsat-groenkaart", record,
         title: t("landsatGreen.chartTitle"), definition: t("landsatGreen.definition"),

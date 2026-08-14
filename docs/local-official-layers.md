@@ -16,6 +16,7 @@ pnpm landsat-soil-sealing:prepare
 pnpm sealed-urban:prepare
 pnpm green-population:prepare
 pnpm landsat-population:prepare
+pnpm lst-scenario:prepare
 ```
 
 `--dataset all` prepares the source layers and every raster comparison. Soil sealing, Groenkaart and Landgebruik also accept `--source YEAR=C:\data\source.tif`. Landsat discovery reads public STAC metadata and signed source windows, without storing signed URLs. The comparison commands reuse prepared files and make no network request.
@@ -46,6 +47,8 @@ pnpm test:local-data
 ```
 
 The local endpoint serves only allowed cache files and supports PMTiles byte ranges. Missing local data omits only that optional layer.
+
+The local-only **Land-cover change tool** additionally starts one persistent Python calculation worker. It reuses Green Map and Urban Atlas 2021, Soil sealing 2024 and a non-rendered Flanders Land Use 2025 analytical-water mask, accepts bounded polygon operations, and returns Radoux plus the optional independently validated **2026 Heatwave XGBoost** ΔLST. Both estimators consume the same mutually exclusive upper surface and exact edit-area ledger. Session derivatives remain under `.cache/local-layers/land-cover-scenario/runtime`; verified model artifacts stay under `.cache/local-layers/image-regression/xgboost-2026`. The heatwave-mean experiment remains offline research and is never loaded by the live tool. Public and Pages builds contain neither endpoint nor scenario/model assets. See [Land-cover change tool](land-cover-lst-scenario.md).
 
 ## Interpretation
 

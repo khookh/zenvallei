@@ -30,6 +30,7 @@ from .exact_landsat_mask import MINIMUM_ANALYSED_AREA_M2, SOIL_SEALED, prepare_e
 from .landsat import EXPECTED_SELECTED_OBSERVATIONS, _read_analysis
 from .landsat_jaarbak import YEAR_BY_OBSERVATION, _classify_jaarbak, display_scope_indexes
 from .pipeline import _pmtiles, _validate_pmtiles, _write_cutline, file_hash, update_index
+from .spatial_inference import prepare_lattice_spatial_support, spatial_modified_t_test
 
 COMPARISON_IDS = ("landsat-groenkaart", "groenkaart-income", "landsat-income")
 URBAN_FABRIC_CODES = ("11100", "11210", "11220", "11230", "11240")
@@ -461,14 +462,28 @@ def _scope_indexes(sector_meta):
     return scopes
 
 
-def _sector_regressions(sector_stats, x_key, y_value):
+def _sector_coordinates(sectors):
+    centroids = sectors.geometry.centroid
+    return {
+        row.sectorId: (float(centroid.x), float(centroid.y))
+        for (_, row), centroid in zip(sectors.iterrows(), centroids, strict=True)
+    }
+
+
+def _sector_regressions(sector_stats, x_key, y_value, coordinates=None):
     """Store exact area-scoped OLS summaries used by sector scatter plots."""
     output = {}
     scopes = {"region:zennevallei": None, **{f"municipality:{name}": name for name in MUNICIPALITIES}}
     for scope_id, municipality in scopes.items():
         records = [record for record in sector_stats.values()
                    if municipality is None or record["municipality"] == municipality]
-        output[scope_id] = y_value(records, x_key)
+        regression, valid, response = y_value(records, x_key)
+        if regression is not None and coordinates is not None:
+            regression["inference"] = spatial_modified_t_test(
+                [record[x_key] for record in valid], response,
+                [coordinates[record["sectorId"]] for record in valid],
+            )
+        output[scope_id] = regression
     return output
 
 
@@ -627,6 +642,76 @@ def _selected_income_sector_stats(sector_stats, selected_ids):
     return output
 
 
+def _selected_green_sector_stats(sector_stats, selected_ids):
+    """Combine precomputed Green Map groups with exact analysed-area weights."""
+    output = {}
+    for sector_id, record in sector_stats.items():
+        groups = [record["urbanSurfaceGroups"][group_id] for group_id in selected_ids]
+        area_ha = sum(group["analysedAreaHa"] for group in groups)
+        output[sector_id] = {
+            **record,
+            "analysedAreaHa": round(area_ha, 4),
+            "eligibleDensityCellCount": sum(group["eligibleDensityCellCount"] for group in groups),
+            "meanDensityByGreenClass": {
+                str(code): None if not area_ha else round(sum(
+                    group["meanDensityByGreenClass"][str(code)] * group["analysedAreaHa"]
+                    for group in groups if group["meanDensityByGreenClass"][str(code)] is not None
+                ) / area_ha, 5)
+                for code in GREEN_CLASS_CODES
+            },
+        }
+    return output
+
+
+def _landsat_green_inference(exact_points, temperature, grid, sector_meta):
+    """Precompute every visible pixel-regression selector and area scope."""
+    output = {
+        _surface_selection_key(surface): {
+            _combination_key(codes): {} for codes in _green_combinations()
+        } for surface in _surface_selection_keys()
+    }
+    if not exact_points:
+        return output
+    records = np.asarray(exact_points, dtype=np.float64)
+    sector_indexes = records[:, 0].astype(np.int64)
+    landsat_indexes = records[:, 1].astype(np.int64)
+    group_indexes = records[:, 2].astype(np.int64)
+    scope_indexes = _scope_indexes(sector_meta)
+    group_number = {group["id"]: index for index, group in enumerate(LANDSAT_GREEN_SURFACE_GROUPS, start=1)}
+    cell_count = temperature.size
+
+    for surface_ids in _surface_selection_keys():
+        surface_key = _surface_selection_key(surface_ids)
+        allowed_groups = [group_number[group_id] for group_id in surface_ids]
+        surface_mask = np.isin(group_indexes, allowed_groups)
+        for scope_id, allowed_sectors in scope_indexes.items():
+            selected = surface_mask & np.isin(sector_indexes, allowed_sectors)
+            area = np.bincount(
+                landsat_indexes[selected], weights=records[selected, 3], minlength=cell_count + 1,
+            )[1:]
+            valid = (area > 0) & np.isfinite(temperature.ravel())
+            support = prepare_lattice_spatial_support(
+                temperature, valid.reshape(temperature.shape), grid["transform"],
+            )
+            band_grids = []
+            for band in range(4):
+                sums = np.bincount(
+                    landsat_indexes[selected], weights=records[selected, 4 + band], minlength=cell_count + 1,
+                )[1:]
+                density = np.full(cell_count, np.nan, dtype=np.float64)
+                density[valid] = sums[valid] / area[valid]
+                band_grids.append(density.reshape(temperature.shape))
+            for codes in _green_combinations():
+                green_key = _combination_key(codes)
+                if isinstance(support, dict):
+                    inference = dict(support)
+                else:
+                    density = np.sum([band_grids[code - 1] for code in codes], axis=0)
+                    inference = support.inference(density)
+                output[surface_key][green_key][scope_id] = inference
+    return output
+
+
 def _display_scopes_10m(sectors, grid):
     """Return dissolved display masks without analytical sector boundaries."""
     municipality_lookup = {name: index + 1 for index, name in enumerate(MUNICIPALITIES)}
@@ -658,24 +743,34 @@ def _green_income_product(densities, coverage, density_grid, sectors, income, ur
     _write_rgba(scope_path, [region, municipality, np.zeros_like(region), np.full_like(region, 255)])
 
     sector_stats = _exact_green_income_statistics(densities, coverage, density_grid, sectors, income)
-    regressions = {}
-    for codes in _green_combinations():
-        key = _combination_key(codes)
-        def calculate(records, x_key, selected_codes=codes):
-            valid = [record for record in records if record["analysedAreaHa"] >= MINIMUM_GREEN_INCOME_AREA_HA
-                     and record.get(x_key) is not None
-                     and all(record["meanDensityByGreenClass"].get(str(code)) is not None for code in selected_codes)]
-            return ordinary_least_squares(
-                [record[x_key] for record in valid],
-                [sum(record["meanDensityByGreenClass"][str(code)] for code in selected_codes) for record in valid],
+    coordinates = _sector_coordinates(sectors)
+    regressions_by_surface = {}
+    for surface_ids in _surface_selection_keys():
+        surface_key = _surface_selection_key(surface_ids)
+        selected_stats = _selected_green_sector_stats(sector_stats, surface_ids)
+        regressions_by_surface[surface_key] = {}
+        for codes in _green_combinations():
+            key = _combination_key(codes)
+            def calculate(records, x_key, selected_codes=codes):
+                valid = [record for record in records if record["analysedAreaHa"] >= MINIMUM_GREEN_INCOME_AREA_HA
+                         and record.get(x_key) is not None
+                         and all(record["meanDensityByGreenClass"].get(str(code)) is not None for code in selected_codes)]
+                response = [sum(record["meanDensityByGreenClass"][str(code)] for code in selected_codes)
+                            for record in valid]
+                return ordinary_least_squares([record[x_key] for record in valid], response), valid, response
+            regressions_by_surface[surface_key][key] = _sector_regressions(
+                selected_stats, "income", calculate, coordinates,
             )
-        regressions[key] = _sector_regressions(sector_stats, "income", calculate)
-    stats_path = output_root / "statistics.json"
-    stats_path.write_text(json.dumps({
-        "schemaVersion": 3, "sectorStats": sector_stats, "regressions": regressions,
-    }, separators=(",", ":")), encoding="utf-8")
+    default_surface_key = _surface_selection_key(tuple(group["id"] for group in LANDSAT_GREEN_SURFACE_GROUPS))
+    regressions = regressions_by_surface[default_surface_key]
+    stats_path = output_root / "statistics.json.gz"
+    stats_payload = json.dumps({
+        "schemaVersion": 4, "sectorStats": sector_stats, "regressions": regressions,
+        "regressionsBySurface": regressions_by_surface,
+    }, separators=(",", ":")).encode("utf-8")
+    stats_path.write_bytes(gzip.compress(stats_payload, compresslevel=9, mtime=0))
     manifest = {
-        "schemaVersion": 4,
+        "schemaVersion": 5,
         "comparisonId": "groenkaart-income",
         "primaryLayerId": "groenkaart",
         "secondaryLayerId": "income",
@@ -711,7 +806,7 @@ def _green_income_product(densities, coverage, density_grid, sectors, income, ur
         "densityGridUrl": "groenkaart-income/density-grid.png",
         "densityNonGreenUrl": "groenkaart-income/density-non-green.png",
         "scopeIndexUrl": "groenkaart-income/scope-index.png",
-        "statisticsUrl": "groenkaart-income/statistics.json",
+        "statisticsUrl": "groenkaart-income/statistics.json.gz",
         "densityGridSha256": file_hash(grid_path),
         "densityNonGreenSha256": file_hash(non_green_path),
         "scopeIndexSha256": file_hash(scope_path),
@@ -748,6 +843,7 @@ def _landsat_products(
     _, _, _, grid = _read_analysis(first)
     sectors_projected = sectors.to_crs(grid["crs"])
     sector_meta = _sector_metadata(sectors_projected)
+    sector_coordinates = _sector_coordinates(sectors_projected)
     display_region, display_municipality, municipality_lookup = display_scope_indexes(sectors_projected, grid)
     scope_path = CACHE_ROOT / "landsat-groenkaart" / "scope-index.png"
     _write_rgba(scope_path, [display_region, display_municipality, np.zeros_like(display_region),
@@ -796,32 +892,33 @@ def _landsat_products(
         # precision and record cardinality are unchanged in the browser.
         point_path.write_bytes(gzip.compress(point_payload, compresslevel=9, mtime=0))
 
-        green_stats_path = CACHE_ROOT / "landsat-groenkaart" / "statistics" / f"{observation_id}.json"
+        green_stats_path = CACHE_ROOT / "landsat-groenkaart" / "statistics" / f"{observation_id}.json.gz"
         green_stats_path.parent.mkdir(parents=True, exist_ok=True)
-        green_stats_path.write_text(json.dumps({
-            "schemaVersion": 2,
+        green_stats_payload = json.dumps({
+            "schemaVersion": 3,
             "observationId": observation_id,
             "secondaryYear": year,
             "pointCount": len(exact_points),
             "aggregation": "exact-masked-area",
-        }, separators=(",", ":")), encoding="utf-8")
+            "inferenceBySurface": _landsat_green_inference(exact_points, temperature, grid, sector_meta),
+        }, separators=(",", ":")).encode("utf-8")
+        green_stats_path.write_bytes(gzip.compress(green_stats_payload, compresslevel=9, mtime=0))
 
-        income_stats_path = CACHE_ROOT / "landsat-income" / "statistics" / f"{observation_id}.json"
+        income_stats_path = CACHE_ROOT / "landsat-income" / "statistics" / f"{observation_id}.json.gz"
         income_stats_path.parent.mkdir(parents=True, exist_ok=True)
         income_sector_stats = _aggregate_exact_income_sectors(exact, sector_meta, income)
         def temperature_regression(records, x_key):
             valid = [record for record in records if record["analysedAreaHa"] >= MINIMUM_GREEN_INCOME_AREA_HA
                      and record.get(x_key) is not None and record["meanTemperatureC"] is not None]
-            return ordinary_least_squares(
-                [record[x_key] for record in valid], [record["meanTemperatureC"] for record in valid],
-            )
+            response = [record["meanTemperatureC"] for record in valid]
+            return ordinary_least_squares([record[x_key] for record in valid], response), valid, response
         regressions_by_surface = {}
         categories_by_surface = {}
-        for selected_ids in _surface_selection_keys():
-            key = _surface_selection_key(selected_ids)
-            selected_stats = _selected_income_sector_stats(income_sector_stats, selected_ids)
+        for surface_ids in _surface_selection_keys():
+            key = _surface_selection_key(surface_ids)
+            selected_stats = _selected_income_sector_stats(income_sector_stats, surface_ids)
             regressions_by_surface[key] = _sector_regressions(
-                selected_stats, "income", temperature_regression,
+                selected_stats, "income", temperature_regression, sector_coordinates,
             )
             categories_by_surface[key] = {
                 scope_id: {"sectors": {
@@ -833,20 +930,23 @@ def _landsat_products(
                     ]) for category in ("low", "middle", "high")
                 }} for scope_id, indexes in _scope_indexes(sector_meta).items()
             }
-        income_stats_path.write_text(json.dumps({
-            "schemaVersion": 3,
+        income_stats_payload = json.dumps({
+            "schemaVersion": 4,
             "observationId": observation_id,
             "secondaryYear": year,
             "sectorStats": income_sector_stats,
-            "regressions": _sector_regressions(income_sector_stats, "income", temperature_regression),
+            "regressions": _sector_regressions(
+                income_sector_stats, "income", temperature_regression, sector_coordinates,
+            ),
             "regressionsBySurface": regressions_by_surface,
             "incomeCategoriesBySurface": categories_by_surface,
-        }, separators=(",", ":")), encoding="utf-8")
+        }, separators=(",", ":")).encode("utf-8")
+        income_stats_path.write_bytes(gzip.compress(income_stats_payload, compresslevel=9, mtime=0))
         green_observations[observation_id] = {
             "jaarbakYear": year,
             "displayDataUrl": f"shared/landsat-display/{observation_id}.png",
             "pointDataUrl": f"landsat-groenkaart/points/{observation_id}.json.gz",
-            "statisticsUrl": f"landsat-groenkaart/statistics/{observation_id}.json",
+            "statisticsUrl": f"landsat-groenkaart/statistics/{observation_id}.json.gz",
             "displayDataSha256": file_hash(display_path),
             "pointDataSha256": file_hash(point_path),
             "statisticsSha256": file_hash(green_stats_path),
@@ -854,7 +954,7 @@ def _landsat_products(
         income_observations[observation_id] = {
             "jaarbakYear": year,
             "displayDataUrl": f"shared/landsat-display/{observation_id}.png",
-            "statisticsUrl": f"landsat-income/statistics/{observation_id}.json",
+            "statisticsUrl": f"landsat-income/statistics/{observation_id}.json.gz",
             "displayDataSha256": file_hash(display_path),
             "statisticsSha256": file_hash(income_stats_path),
         }
@@ -880,7 +980,7 @@ def _landsat_products(
     }
     green_manifest = {
         **common,
-        "schemaVersion": 6,
+        "schemaVersion": 7,
         "comparisonId": "landsat-groenkaart",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "groenkaart",
@@ -909,7 +1009,7 @@ def _landsat_products(
     }
     income_manifest = {
         **common,
-        "schemaVersion": 4,
+        "schemaVersion": 5,
         "comparisonId": "landsat-income",
         "primaryLayerId": "landsat-temperature",
         "secondaryLayerId": "income",

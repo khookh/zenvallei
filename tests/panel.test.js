@@ -299,7 +299,7 @@ describe("progressive detail panel", () => {
     expect(panel.querySelector("[data-open-map-sources]")?.textContent).toBe("Map and data sources");
   });
 
-  it("presents Landsat temperature as an overpass measurement with clear coverage", () => {
+  it("presents Landsat temperature as a NASA/USGS overpass measurement with provenance under methodology", () => {
     setLanguage("en");
     const html = renderSectorPanelModel({
       template: "landsat-temperature",
@@ -324,11 +324,21 @@ describe("progressive detail panel", () => {
     const text = document.querySelector("#content").textContent;
     expect(text).toContain("Heatwave observation");
     expect(text).toContain("36.4");
-    expect(text).toContain("not air temperature");
-    expect(text).toContain("Clear coverage: 91.2%");
+    expect(text).toContain("This is land-surface temperature, not air temperature");
+    expect(text).toContain("buildings, streets, vegetation and other surfaces");
+    expect(text).toContain("NASA/USGS satellite overpass");
+    expect(text).toContain("do not directly measure air temperature");
+    expect(text).not.toContain("Clear coverage: 91.2%");
     expect(text).toContain("P10");
     expect(text).toContain("P90");
-    expect(document.querySelector('[data-section="landsat-methodology"]').hasAttribute("open")).toBe(false);
+    const methodology = document.querySelector('[data-section="landsat-methodology"]');
+    expect(methodology.hasAttribute("open")).toBe(false);
+    expect(methodology.textContent).toContain("Calculated by this application");
+    expect(methodology.textContent).toContain("selected and mosaicked scenes");
+    expect(methodology.textContent).not.toContain("Important:");
+    expect(methodology.textContent).not.toContain("cannot by itself prove");
+    expect(methodology.textContent).not.toContain("ASTER emissivity");
+    expect(document.querySelector('[data-section="landsat-observation-details"]').textContent).toContain("Cloud-obscured area");
 
     setLanguage("nl");
     const dutch = renderSectorPanelModel({
@@ -340,6 +350,8 @@ describe("progressive detail panel", () => {
     });
     expect(dutch).toContain("Waarneming tijdens een hittegolf");
     expect(dutch).toContain("geen luchttemperatuur");
+    expect(dutch).toContain("gebouwen, straten, vegetatie en andere oppervlakken");
+    expect(dutch).toContain("NASA/USGS-satelliet");
   });
 
   it("keeps only sector-level income-category boxes in Landsat-income views", () => {
@@ -360,7 +372,9 @@ describe("progressive detail panel", () => {
       definition: "One point is one sector.", methodology: "Documented method.", caveat: "Descriptive only.",
       xLabel: "Median net taxable income", yLabel: "Land-surface temperature (°C)",
       xKey: "income", yKey: "temperature", points,
-      regression: { n: 15, slope: .0001, intercept: 30, rSquared: .5, pearsonR: .7, spearmanRho: .6 },
+      regression: { n: 15, slope: .0001, intercept: 30, rSquared: .5, pearsonR: .7, spearmanRho: .6,
+        inference: { method: "crh-dutilleul-modified-t", status: "available", pValue: .0004,
+          effectiveSampleSize: 11.25, distanceClassCount: 13 } },
       slopeScale: 10_000, slopeUnit: "°C per €10,000",
       incomeCategories: {
         sectors: { low: category(31.2), middle: category(33.2), high: category(35.2) },
@@ -371,12 +385,42 @@ describe("progressive detail panel", () => {
     expect(html.match(/<h4>Sector temperatures by income category<\/h4>/g)).toHaveLength(2);
     expect(html).not.toContain("Clear-pixel temperatures by income category");
     expect(html).not.toContain("Expanded clear-pixel statistics");
+    expect(html).toContain("Spatially adjusted p-value (two-sided)");
+    expect(html).toContain("p &lt; 0.001");
+    expect(html).toContain("Effective spatial sample");
+    expect(html).toContain("11.3");
     document.querySelector("#content").innerHTML = html;
     expect(document.querySelectorAll("[data-expand-comparison-chart]")).toHaveLength(2);
     expect(document.querySelector('[data-dialog-target="landsat-income-scatter"]')).not.toBeNull();
     expect(document.querySelector('[data-dialog-target="landsat-income-sector-boxes"]')).not.toBeNull();
     expect(document.querySelector('[data-chart-dialog-id="landsat-income-scatter"] .income-temperature-box-chart')).toBeNull();
     expect(document.querySelectorAll('[data-chart-dialog-id="landsat-income-sector-boxes"] .income-temperature-box-chart')).toHaveLength(1);
+  });
+
+  it("explains the 13-class spatial adjustment for every expanded regression", () => {
+    const comparisons = ["landsat-groenkaart", "landsat-jaarbak", "groenkaart-income", "landsat-income"];
+    for (const language of ["en", "nl"]) {
+      setLanguage(language);
+      for (const [index, comparisonId] of comparisons.entries()) {
+        const html = renderSectorPanelModel({
+          template: "sealed-urban-scatter", comparisonId,
+          record: { scope: "region", sectorName: "Entire Zennevallei" },
+          title: "Regression", definition: "Definition", methodology: "Method", caveat: "Caveat",
+          xLabel: "X", yLabel: "Y", xKey: "x", yKey: "y", points: [{ x: 1, y: 2 }],
+          regression: {
+            n: 20, slope: 1, intercept: 1, rSquared: .4, pearsonR: .6, spearmanRho: .5,
+            inference: index === 3
+              ? { method: "crh-dutilleul-modified-t", status: "insufficient-effective-sample", distanceClassCount: 13 }
+              : { method: "crh-dutilleul-modified-t", status: "available", pValue: .02, effectiveSampleSize: 12, distanceClassCount: 13 },
+          },
+        });
+        const expected = language === "en"
+          ? "Spatial autocorrelation in both plotted variables is estimated over 13 distance classes"
+          : "Ruimtelijke autocorrelatie in beide getoonde variabelen wordt geschat over 13 afstandsklassen";
+        expect(html).toContain(expected);
+        expect(html).toContain(language === "en" ? "before testing Pearson r = 0" : "voordat Pearson r = 0 wordt getoetst");
+      }
+    }
   });
 
   it("gives each Landsat-population chart its own expansion and full-width cumulative hit areas", () => {
@@ -399,7 +443,7 @@ describe("progressive detail panel", () => {
       points: [{}, {}], curve, bins, totalResidents: 100, weightedMean: 33,
       temperatureMinimum: 31, temperatureMaximum: 36, zeroPopulationCount: 0,
       analysedAreaHa: .25, contributingLandsatCount: 7,
-      observation: { label: "22 June 2026" },
+      observation: { acquiredAt: "2026-06-22T10:33:00Z" },
     });
     document.querySelector("#content").innerHTML = html;
     const buttons = [...document.querySelectorAll("[data-expand-comparison-chart]")];
@@ -418,6 +462,7 @@ describe("progressive detail panel", () => {
     });
     expect(html).toContain("40 residents (40%) are in eligible cells at or above");
     expect(html).toContain("60 (60%) are in cooler cells");
+    expect(html).toContain("22 June 2026");
   });
 
   it("renders continuous and categorical local notebook summaries without frontend-specific data", () => {

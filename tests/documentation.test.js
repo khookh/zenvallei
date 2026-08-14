@@ -58,12 +58,12 @@ describe("active documentation", () => {
     expect(guide).toContain("cannot represent the Dutch, French or other-language distribution of all residents");
   });
 
-  it("keeps one factual contract and one priority for all seventeen active views", async () => {
+  it("keeps one factual contract and one priority for all eighteen active views", async () => {
     const audit = await fs.readFile(path.join(projectRoot, "docs", "layer-and-comparison-audit.md"), "utf8");
     const numberedViews = audit.match(/^### \d+\. /gm) ?? [];
     const priorities = audit.match(/^- \*\*Prioritised improvement:\*\*/gm) ?? [];
-    expect(numberedViews).toHaveLength(17);
-    expect(priorities).toHaveLength(17);
+    expect(numberedViews).toHaveLength(18);
+    expect(priorities).toHaveLength(18);
     expect(audit).toContain("exact 1 m display masks");
     expect(audit).toContain("10 m focal-density calculations");
     expect(audit).toContain("30 m Landsat");

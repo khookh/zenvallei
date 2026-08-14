@@ -44,7 +44,10 @@ function continuousScale(model) {
   if (model.accessibleLabel) figure.setAttribute("aria-label", model.accessibleLabel);
   const ramp = document.createElement("span");
   ramp.className = "legend-continuous-ramp";
-  ramp.style.background = model.gradient;
+  ramp.classList.toggle("has-transparent-centre", Boolean(model.transparentCentre));
+  ramp.style.background = model.transparentCentre
+    ? `${model.gradient}, repeating-conic-gradient(#d8dfdc 0 25%, #f4f6f5 0 50%) 0 / 10px 10px`
+    : model.gradient;
   ramp.setAttribute("aria-hidden", "true");
   const ticks = document.createElement("div");
   ticks.className = "legend-continuous-ticks";
@@ -56,6 +59,65 @@ function continuousScale(model) {
   }));
   figure.append(ramp, ticks);
   return figure;
+}
+
+function methodSelector(model) {
+  if (!model?.items?.length) return null;
+  const wrapper = document.createElement("section");
+  wrapper.className = "scenario-method-selector";
+  const heading = document.createElement("h3");
+  heading.textContent = model.title;
+  const options = document.createElement("div");
+  options.setAttribute("role", "group");
+  options.setAttribute("aria-label", model.title);
+  model.items.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.scenarioMethod = item.id;
+    button.textContent = item.label;
+    button.disabled = Boolean(item.disabled);
+    button.setAttribute("aria-pressed", String(item.selected));
+    button.classList.toggle("is-selected", item.selected);
+    options.append(button);
+  });
+  wrapper.append(heading, options);
+  return wrapper;
+}
+
+function scenarioSelector(model) {
+  if (!model?.items?.length) return null;
+  const wrapper = document.createElement("section");
+  wrapper.className = "scenario-category-selector";
+  const heading = document.createElement("h3");
+  heading.textContent = model.title;
+  const options = document.createElement("div");
+  options.setAttribute("role", "group");
+  options.setAttribute("aria-label", model.title);
+  model.items.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.scenarioCategory = item.id;
+    button.setAttribute("aria-pressed", String(item.selected));
+    button.classList.toggle("is-selected", item.selected);
+    const swatch = document.createElement("i");
+    swatch.style.setProperty("--swatch", item.color);
+    if (item.pattern) swatch.classList.add("is-patterned");
+    swatch.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.textContent = item.label;
+    button.append(swatch, label);
+    options.append(button);
+  });
+  const delta = document.createElement("button");
+  delta.type = "button";
+  delta.className = "scenario-delta-toggle";
+  delta.dataset.scenarioDelta = "";
+  delta.disabled = Boolean(model.delta.disabled);
+  delta.setAttribute("aria-pressed", String(model.delta.selected));
+  delta.classList.toggle("is-selected", model.delta.selected);
+  delta.textContent = model.delta.label;
+  wrapper.append(heading, options, delta);
+  return wrapper;
 }
 
 function surfaceSelector(model) {
@@ -199,6 +261,16 @@ export function renderLegendModel({ title, note, content }, model) {
     footnote.className = "legend-footnote";
     footnote.textContent = model.footnote;
   }
+  if (model.layout === "scenario") {
+    const categories = scenarioSelector(model.scenarioSelector);
+    const scale = model.scenarioSelector?.delta?.selected ? continuousScale(model.continuousScale) : null;
+    const methods = model.scenarioSelector?.delta?.selected ? methodSelector(model.methodSelector) : null;
+    content.replaceChildren(
+      ...(categories ? [categories] : []), ...(scale ? [scale] : []),
+      ...(methods ? [methods] : []), ...(footnote ? [footnote] : []),
+    );
+    return;
+  }
   if (model.layout === "scale") {
     const scale = document.createElement("div");
     scale.className = "legend-scale";
@@ -211,7 +283,8 @@ export function renderLegendModel({ title, note, content }, model) {
     const surfaces = model.surfaceSelector ? surfaceSelector(model.surfaceSelector) : null;
     const density = model.densitySelector ? densitySelector(model.densitySelector) : null;
     const dual = model.dualSelector ? dualSelector(model.dualSelector) : null;
-    content.replaceChildren(...(continuous ? [continuous] : [scale]), statuses, ...(comparison ? [comparison] : []), ...(surfaces ? [surfaces] : []), ...(density ? [density] : []), ...(dual ? [dual] : []), ...(footnote ? [footnote] : []));
+    const methods = methodSelector(model.methodSelector);
+    content.replaceChildren(...(continuous ? [continuous] : [scale]), statuses, ...(methods ? [methods] : []), ...(comparison ? [comparison] : []), ...(surfaces ? [surfaces] : []), ...(density ? [density] : []), ...(dual ? [dual] : []), ...(footnote ? [footnote] : []));
     return;
   }
   const hasGroups = model.groups.some((group) => group.title);

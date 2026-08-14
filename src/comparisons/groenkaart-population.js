@@ -1,5 +1,5 @@
 import { formatNumber, t } from "../i18n.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import { hideComparisonVeil, showComparisonVeil } from "./map-veil.js";
 import {
@@ -189,12 +189,12 @@ export function createGroenkaartPopulationComparison({
     getLabel: () => t("greenPopulation.title"),
     getActiveNote: () => t("greenPopulation.activeNote", { area: municipality || t("controls.allMunicipalities") }),
     getContext: () => ({
-      meta: t("greenPopulation.contextMeta"), text: t("greenPopulation.contextText"), note: t("greenPopulation.contextNote"),
+      meta: t("greenPopulation.contextMeta"), text: t("greenPopulation.contextText"),
       sources: [
-        authorityLink("natureForests", SEALED_URBAN_SOURCE_URLS.greenMap),
-        authorityLink("departmentEnvironment", SEALED_URBAN_SOURCE_URLS.jaarbak),
-        authorityLink("copernicusClms", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
-        authorityLink("departmentEnvironment", populationLayer.getDataset(POPULATION_DATASET)?.source?.pageUrl),
+        productLink("greenMap", SEALED_URBAN_SOURCE_URLS.greenMap),
+        productLink("jaarbak", SEALED_URBAN_SOURCE_URLS.jaarbak),
+        productLink("urbanAtlas", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
+        productLink("populationModel", populationLayer.getDataset(POPULATION_DATASET)?.source?.pageUrl),
       ],
     }),
     getLegendModel() {

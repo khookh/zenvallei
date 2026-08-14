@@ -116,8 +116,10 @@ def _missing_rectangles(source_bounds, target_bounds):
     return [item for item in rectangles if item[2] > item[0] and item[3] > item[1]]
 
 
-def ensure_halo_source(source_path, dataset_id, year, target_bounds, destination):
-    """Cache the small Zennevallei source window plus the required 100 m halo."""
+def ensure_halo_source(
+        source_path, dataset_id, year, target_bounds, destination,
+        *, radius_m=RADIUS_METERS, download_missing=True):
+    """Cache a Zennevallei source window plus the requested analytical halo."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     source_sha = file_hash(source_path)
     if destination.exists():
@@ -127,6 +129,9 @@ def ensure_halo_source(source_path, dataset_id, year, target_bounds, destination
                 and cached.tags().get("source_sha256") == source_sha
                 and cached.width == int(target_bounds[2] - target_bounds[0])
                 and cached.height == int(target_bounds[3] - target_bounds[1])
+                and cached.tags().get("radius_halo_m") == str(radius_m)
+                and cached.tags().get("missing_source_policy", "official-wcs")
+                    == ("official-wcs" if download_missing else "nodata")
             ):
                 return destination, source_sha
     nodata = 255 if dataset_id == "jaarbak" else 0
@@ -171,7 +176,7 @@ def ensure_halo_source(source_path, dataset_id, year, target_bounds, destination
             resampling=Resampling.nearest,
         )
         rectangles = _missing_rectangles(source.bounds, target_bounds)
-        if rectangles:
+        if rectangles and download_missing:
             url, coverage = _coverage_request(dataset_id, year)
             for index, bounds in enumerate(rectangles, start=1):
                 part_width = int(round(bounds[2] - bounds[0]))
@@ -186,7 +191,11 @@ def ensure_halo_source(source_path, dataset_id, year, target_bounds, destination
                     ).astype(np.uint8)
                 window = rasterio.windows.from_bounds(*bounds, transform=output.transform).round_offsets().round_lengths()
                 output.write(values, 1, window=window)
-        output.update_tags(source_sha256=source_sha, radius_halo_m=str(RADIUS_METERS))
+        output.update_tags(
+            source_sha256=source_sha,
+            radius_halo_m=str(radius_m),
+            missing_source_policy="official-wcs" if download_missing else "nodata",
+        )
     temporary.replace(destination)
     return destination, source_sha
 

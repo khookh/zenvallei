@@ -5,7 +5,7 @@
  */
 import { formatNumber, t } from "../i18n.js";
 import { heatMetricStatus, heatMetricValue } from "../heat-metric.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 
 const POPULATION_YEAR = 2025;
 const HEAT_SOURCE_URL = "https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen";
@@ -19,6 +19,15 @@ export function populationLevel(value) {
   if (value < 500) return 2;
   if (value < 1_000) return 3;
   if (value < 2_000) return 4;
+  return 5;
+}
+
+export function populationDensityBand(value) {
+  if (!Number.isFinite(value) || value < 0) return null;
+  if (value < 5) return 1;
+  if (value < 15) return 2;
+  if (value < 30) return 3;
+  if (value < 50) return 4;
   return 5;
 }
 
@@ -37,21 +46,25 @@ export function buildHeatPopulationPoints(scores, population, metric) {
     const demographic = records[record.sectorId];
     const residents = demographic?.population;
     const level = populationLevel(residents);
+    const densityPerHa = demographic?.densityPerHa;
+    const densityBand = populationDensityBand(densityPerHa);
     if (heatMetricStatus(record, metric) !== "scored"
       || !Number.isFinite(score)
       || demographic?.sourceStatus !== "available"
       || !Number.isFinite(residents)
-      || !level) return [];
+      || !level || !densityBand) return [];
     return [{
       sectorId: record.sectorId,
       sectorName: record.sectorName,
       municipality: record.municipality,
       population: residents,
       level,
+      densityPerHa,
+      densityBand,
       score,
     }];
-  }).sort((left, right) => left.level - right.level
-    || left.population - right.population
+  }).sort((left, right) => left.densityBand - right.densityBand
+    || left.densityPerHa - right.densityPerHa
     || left.sectorId.localeCompare(right.sectorId));
 }
 
@@ -66,10 +79,10 @@ function quantile(sortedValues, probability) {
 }
 
 /** Tukey summaries treat every comparable statistical sector as one record. */
-export function summarizeHeatByPopulationLevel(points) {
+export function summarizeHeatByPopulationDensity(points) {
   return Array.from({ length: 5 }, (_, index) => {
     const level = index + 1;
-    const values = points.filter((point) => point.level === level)
+    const values = points.filter((point) => point.densityBand === level)
       .map((point) => point.score)
       .sort((a, b) => a - b);
     if (!values.length) return { level, count: 0 };
@@ -274,10 +287,9 @@ export function createHeatPopulationComparison({ scores, population, heatLayer, 
     getContext: () => ({
       meta: t("heatPopulation.contextMeta", { count: points().length }),
       text: t("heatPopulation.contextText", { metric: t(`heatMetric.${metric()}`) }),
-      note: t("heatPopulation.contextNote", { area: activeMunicipality || t("controls.allMunicipalities") }),
       sources: [
-        authorityLink("departmentCare", HEAT_SOURCE_URL),
-        authorityLink("statbel", dataset.source.sectorDownloadUrl),
+        productLink("heat", HEAT_SOURCE_URL),
+        productLink("populationTotals", dataset.source.sectorDownloadUrl),
       ],
     }),
     getLegendModel() {
@@ -305,6 +317,7 @@ export function createHeatPopulationComparison({ scores, population, heatLayer, 
         subtitle: t("heatPopulation.popupSubtitle"),
         lines: demographic?.sourceStatus === "available" ? [
           t("heatPopulation.popupPopulation", { value: formatNumber(demographic.population, 0) }),
+          t("heatPopulation.popupDensity", { value: formatNumber(demographic.densityPerHa, 1) }),
           comparable
             ? t("heatPopulation.popupScore", { metric: t(`heatMetric.${metric()}`), score: formatNumber(score, 0) })
             : t("heatPopulation.noHeatValue"),
@@ -333,7 +346,7 @@ export function createHeatPopulationComparison({ scores, population, heatLayer, 
         metric: metric(),
         populationYear: POPULATION_YEAR,
         points: comparablePoints,
-        levelSummaries: summarizeHeatByPopulationLevel(comparablePoints),
+        levelSummaries: summarizeHeatByPopulationDensity(comparablePoints),
         populationByScore: sumPopulationByHeatScore(comparablePoints),
         scoreColors,
         totalSectorCount: records.length,

@@ -30,6 +30,7 @@ def main(argv=None):
             "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
             "groenkaart-population",
             "landsat-population",
+            "land-cover-scenario",
         ),
         default="all",
     )
@@ -43,6 +44,7 @@ def main(argv=None):
         "landsat-urban-atlas", "landsat-jaarbak", "sealed-urban-comparisons",
         "groenkaart-population",
         "landsat-population",
+        "land-cover-scenario",
     ) if arguments.dataset == "all" else (arguments.dataset,)
     for dataset_id in datasets:
         print(f"Preparing {dataset_id}…", flush=True)
@@ -76,6 +78,11 @@ def main(argv=None):
                 parser.error("The Landsat-population comparison reuses prepared data and accepts no source override.")
             from .landsat_population import prepare_landsat_population
             prepare_landsat_population()
+        elif dataset_id == "land-cover-scenario":
+            if sources:
+                parser.error("The land-cover scenario reuses prepared data and accepts no source override.")
+            from .lst_scenario import prepare_lst_scenario
+            prepare_lst_scenario()
         elif dataset_id == "landgebruik":
             from .landgebruik import prepare_landgebruik
             prepare_landgebruik(sources)

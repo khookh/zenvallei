@@ -1,7 +1,7 @@
 /** Population density from a current Statbel grid and a separate 2019 model. */
 import { formatNumber, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
-import { authorityLink, authorityName } from "../source-authorities.js";
+import { authorityName, productLink } from "../source-authorities.js";
 import { defineLayer } from "./layer-contract.js";
 
 const DATASETS = Object.freeze(["statbel-2025", "flanders-2019"]);
@@ -141,13 +141,11 @@ export function createPopulationLayer({ population: input }) {
     getContext: () => activeDatasetId === DATASETS[0] ? {
       meta: t("population.currentContextMeta"),
       text: t("population.currentContextText"),
-      note: t("population.currentContextNote"),
-      sources: [authorityLink("statbel", activeDataset().source.pageUrl)],
+      sources: [productLink("populationGrid", activeDataset().source.pageUrl)],
     } : {
       meta: t("population.modelContextMeta"),
       text: t("population.modelContextText"),
-      note: t("population.modelContextNote"),
-      sources: [authorityLink("departmentEnvironment", activeDataset().source.pageUrl)],
+      sources: [productLink("populationModel", activeDataset().source.pageUrl)],
     },
     getLegendModel: () => ({
       title: t("population.legendTitle"),

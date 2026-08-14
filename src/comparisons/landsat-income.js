@@ -1,11 +1,13 @@
 import { t } from "../i18n.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
+import { fetchJsonAsset } from "./compressed-json.js";
 import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import {
   comparisonAreaRecord, comparisonPixelOffset, hideIncomeSymbols, incomeLegend, loadImageData, mountIncomeSymbols,
   combineUrbanGroupStats, hasUrbanSurfaceContract, ordinaryLeastSquares, safeAsset, SEALED_URBAN_SOURCE_URLS,
   sectorPointLabel, selectedUrbanClassIndexes, urbanSurfaceSelector,
+  validateSpatialInference,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "landsat-income-temperature";
@@ -15,7 +17,7 @@ const scopeId = (record) => record.scope === "region" ? "region:zennevallei"
   : record.scope === "municipality" ? `municipality:${record.municipality}` : `sector:${record.sectorId}`;
 
 export function validateLandsatIncomeManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 4 || manifest.comparisonId !== "landsat-income"
+  if (!manifest || manifest.schemaVersion !== 5 || manifest.comparisonId !== "landsat-income"
     || manifest.primaryLayerId !== "landsat-temperature" || manifest.secondaryLayerId !== "income"
     || manifest.incomeYear !== 2023 || manifest.analysisResolutionMeters !== 30
     || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
@@ -57,7 +59,7 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     selectedUrban = new Set(manifest.defaultUrbanSurfaceGroups);
     Object.values(manifest.observations).forEach((item) => {
       item.displayDataUrl = safeAsset(descriptor.assetRoot, item.displayDataUrl, ".png");
-      item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json");
+      item.statisticsUrl = safeAsset(descriptor.assetRoot, item.statisticsUrl, ".json.gz");
     });
   };
 
@@ -67,12 +69,17 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     if (loadedObservation === id) return;
     const item = manifest.observations[id];
     if (!item) throw new Error(`No sealed-urban comparison data for ${id}.`);
-    const [display, statsResponse] = await Promise.all([
-      loadImageData(item.displayDataUrl, manifest.imageSize), fetch(item.statisticsUrl),
+    const [display, loadedStatistics] = await Promise.all([
+      loadImageData(item.displayDataUrl, manifest.imageSize),
+      fetchJsonAsset(item.statisticsUrl, "Landsat-income statistics"),
     ]);
-    if (!statsResponse.ok) throw new Error(`Comparison statistics HTTP ${statsResponse.status}.`);
     displayData = display;
-    statistics = await statsResponse.json();
+    statistics = loadedStatistics;
+    if (statistics.schemaVersion !== 4 || statistics.observationId !== id || !statistics.regressionsBySurface) {
+      throw new TypeError("Unsupported Landsat-income statistics.");
+    }
+    Object.values(statistics.regressionsBySurface).forEach((byScope) => Object.values(byScope)
+      .filter(Boolean).forEach((regression) => validateSpatialInference(regression.inference)));
     loadedObservation = id;
   };
 
@@ -157,12 +164,12 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
     getLabel: () => t("landsatIncome.title"),
     getActiveNote: () => t("landsatIncome.activeNote", { area: municipality || t("controls.allMunicipalities") }),
     getContext: () => ({
-      meta: t("landsatIncome.contextMeta"), text: t("landsatIncome.contextText"), note: t("landsatIncome.contextNote"),
+      meta: t("landsatIncome.contextMeta"), text: t("landsatIncome.contextText"),
       sources: [
-        authorityLink("landsat", SEALED_URBAN_SOURCE_URLS.landsat),
-        authorityLink("departmentEnvironment", SEALED_URBAN_SOURCE_URLS.jaarbak),
-        authorityLink("copernicusClms", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
-        authorityLink("statbel", SEALED_URBAN_SOURCE_URLS.income),
+        productLink("landsat", SEALED_URBAN_SOURCE_URLS.landsat),
+        productLink("jaarbak", SEALED_URBAN_SOURCE_URLS.jaarbak),
+        productLink("urbanAtlas", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
+        productLink("income", SEALED_URBAN_SOURCE_URLS.income),
       ],
     }),
     getLegendModel: () => ({

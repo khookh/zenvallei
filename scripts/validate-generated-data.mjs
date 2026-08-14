@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
 import { validateApplicationData } from "../src/data-validation.js";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -9,6 +10,25 @@ const dataRoot = path.join(publicRoot, "data");
 
 async function readJson(fileName) {
   return JSON.parse(await fs.readFile(path.join(dataRoot, fileName), "utf8"));
+}
+
+async function readJsonAsset(file) {
+  const contents = await fs.readFile(file);
+  return JSON.parse((file.endsWith(".json.gz") ? gunzipSync(contents) : contents).toString("utf8"));
+}
+
+function assertSpatialInference(inference, label) {
+  const statuses = new Set([
+    "available", "insufficient-observations", "undefined-variance", "undefined-spatial-structure",
+    "insufficient-distance-classes", "insufficient-effective-sample", "numerical-failure",
+  ]);
+  if (inference?.method !== "crh-dutilleul-modified-t"
+    || inference.hypothesis !== "pearson-r-equals-zero" || inference.sidedness !== "two-sided"
+    || inference.distanceClassCount !== 13 || !statuses.has(inference.status)
+    || (inference.status === "available" && (!Number.isFinite(inference.pValue)
+      || !Number.isFinite(inference.effectiveSampleSize) || inference.effectiveSampleSize < 10))) {
+    throw new Error(`${label}: invalid spatial-inference contract.`);
+  }
 }
 
 function browserAssetPath(assetUrl) {
@@ -154,7 +174,7 @@ for (const comparisonId of comparisonIds) {
       manifest.urbanAtlasClassMaskUrl);
     if (manifest.analysisResolutionMeters !== 10 || manifest.greenMapYear !== 2021
       || manifest.urbanAtlasYear !== 2021 || manifest.jaarbakYear !== 2021
-      || manifest.incomeYear !== 2023 || manifest.schemaVersion !== 4
+      || manifest.incomeYear !== 2023 || manifest.schemaVersion !== 5
       || manifest.statisticWeighting !== "exact-sealed-urban-area") {
       throw new Error(`${comparisonId}: published analytical contract is incompatible.`);
     }
@@ -169,7 +189,7 @@ for (const comparisonId of comparisonIds) {
   } else if (comparisonId === "landsat-groenkaart") {
     referencedAssets.push(manifest.densityGridUrl, manifest.densityNonGreenUrl, manifest.urbanFabricMaskUrl,
       manifest.urbanAtlasClassMaskUrl);
-    if (manifest.schemaVersion !== 6 || manifest.displayResolutionMeters !== 1
+    if (manifest.schemaVersion !== 7 || manifest.displayResolutionMeters !== 1
       || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
       || manifest.aggregation !== "exact-masked-area" || manifest.minimumAnalysedAreaHa !== .1
       || JSON.stringify(manifest.defaultUrbanSurfaceGroups) !== JSON.stringify(["residential", "employmentInstitutional"])) {
@@ -177,7 +197,7 @@ for (const comparisonId of comparisonIds) {
     }
   } else if (comparisonId === "landsat-income") {
     referencedAssets.push(manifest.urbanAtlasClassMaskUrl);
-    if (manifest.schemaVersion !== 4 || manifest.displayResolutionMeters !== 1
+    if (manifest.schemaVersion !== 5 || manifest.displayResolutionMeters !== 1
       || manifest.maskResolutionMeters !== 1 || manifest.temperatureResolutionMeters !== 30
       || manifest.aggregation !== "exact-masked-area" || manifest.minimumAnalysedAreaHa !== .1) {
       throw new Error(`${comparisonId}: published display contract is incompatible.`);
@@ -192,7 +212,7 @@ for (const comparisonId of comparisonIds) {
     }
   } else if (comparisonId === "landsat-jaarbak") {
     referencedAssets.push(manifest.analysisScopeIndexUrl);
-    if (manifest.schemaVersion !== 3 || manifest.maskResolutionMeters !== 1
+    if (manifest.schemaVersion !== 4 || manifest.maskResolutionMeters !== 1
       || manifest.temperatureResolutionMeters !== 30 || manifest.aggregation !== "exact-masked-area"
       || manifest.minimumAnalysedAreaHa !== .1 || manifest.classification?.sourceResolutionMetres !== 1
       || manifest.classification?.temperatureResolutionMetres !== 30
@@ -226,12 +246,46 @@ for (const comparisonId of comparisonIds) {
   }
   if (comparisonId === "landsat-income") {
     for (const observation of Object.values(manifest.observations)) {
-      const statistics = JSON.parse(await fs.readFile(path.join(officialRoot, observation.statisticsUrl), "utf8"));
+      const statistics = await readJsonAsset(path.join(officialRoot, observation.statisticsUrl));
+      if (statistics.schemaVersion !== 4) throw new Error("landsat-income: unsupported statistics schema.");
       const sectors = Object.values(statistics.sectorStats ?? {});
       if (!sectors.some(({ analysedAreaHa }) => analysedAreaHa >= manifest.minimumAnalysedAreaHa)
         || sectors.some((record) => Object.hasOwn(record, "meanDensityByGreenClass"))) {
         throw new Error("landsat-income: sector temperatures must not depend on Green Map coverage.");
       }
+      Object.values(statistics.regressionsBySurface ?? {}).forEach((byScope) => Object.values(byScope)
+        .filter(Boolean).forEach(({ inference }) => assertSpatialInference(inference, "landsat-income")));
+    }
+  } else if (comparisonId === "landsat-groenkaart") {
+    const expected = 3 * 15 * (1 + Object.keys(manifest.municipalityIndexes).length
+      + Object.keys(manifest.sectorIndexes).length);
+    for (const observation of Object.values(manifest.observations)) {
+      const statistics = await readJsonAsset(path.join(officialRoot, observation.statisticsUrl));
+      const records = Object.values(statistics.inferenceBySurface ?? {}).flatMap((byGreen) => (
+        Object.values(byGreen).flatMap((byScope) => Object.values(byScope))
+      ));
+      if (statistics.schemaVersion !== 3 || records.length !== expected) {
+        throw new Error("landsat-groenkaart: incomplete selector/scope inference matrix.");
+      }
+      records.forEach((inference) => assertSpatialInference(inference, "landsat-groenkaart"));
+    }
+  } else if (comparisonId === "groenkaart-income") {
+    const statistics = await readJsonAsset(path.join(officialRoot, manifest.statisticsUrl));
+    const regressions = Object.values(statistics.regressionsBySurface ?? {}).flatMap((byGreen) => (
+      Object.values(byGreen).flatMap((byScope) => Object.values(byScope))
+    )).filter(Boolean);
+    if (statistics.schemaVersion !== 4 || regressions.length !== 3 * 15 * 8) {
+      throw new Error("groenkaart-income: incomplete selector/scope regression matrix.");
+    }
+    regressions.forEach(({ inference }) => assertSpatialInference(inference, "groenkaart-income"));
+  } else if (comparisonId === "landsat-jaarbak") {
+    for (const observation of Object.values(manifest.observations)) {
+      const distribution = await readJsonAsset(path.join(officialRoot, observation.distributionUrl));
+      const regressions = Object.values(distribution.densityAnalysis ?? {}).filter(Boolean);
+      if (distribution.schemaVersion !== 4 || regressions.length !== 162) {
+        throw new Error("landsat-jaarbak: incomplete spatial density analysis.");
+      }
+      regressions.forEach(({ inference }) => assertSpatialInference(inference, "landsat-jaarbak"));
     }
   }
   for (const asset of referencedAssets) {

@@ -1,7 +1,7 @@
 /** Official raster layers prepared from validated native source grids. */
 import { formatNumber, getLanguage, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
-import { authorityLink, authorityName } from "../source-authorities.js";
+import { authorityName, productLink } from "../source-authorities.js";
 import { defineLayer } from "./layer-contract.js";
 import { createTemporalPmtilesMap } from "./temporal-pmtiles-layer.js";
 import { createDensityMode } from "./density-mode.js";
@@ -264,13 +264,10 @@ export function createLocalOfficialLayer({ descriptor: inputDescriptor, manifest
     getLabel: () => t(config.labelKey, { year: activeYear }),
     getContext: () => ({
       meta: t(`${config.contextKey}.contextMeta`, { year: activeYear }),
-      text: t(`${config.contextKey}.contextText`),
-      note: densityMode?.isActive()
+      text: densityMode?.isActive()
         ? t(`${config.contextKey}.densityContext`, { year: activeYear, radius: 100 })
-        : manifest ? temporalNote(manifest, activeYear) : "",
-      sources: descriptor?.source?.url
-        ? config.authorityIds.map((authorityId) => authorityLink(authorityId, descriptor.source.url))
-        : [],
+        : t(`${config.contextKey}.contextText`),
+      sources: descriptor?.source?.url ? [productLink(datasetId === "groenkaart" ? "greenMap" : "jaarbak", descriptor.source.url)] : [],
     }),
     getLegendModel: () => densityMode?.isActive()
       ? densityMode.getLegendModel()

@@ -2,7 +2,7 @@
 import { formatNumber, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 import { dominantUrbanAtlasCategory } from "../urban-atlas-categories.js";
 
 const MAP_LAYER_ID = "urban-atlas-fill";
@@ -28,7 +28,7 @@ export function createUrbanAtlasLayer({ urbanAtlas }) {
       meta: t("layers.context.urbanAtlasMeta", { year: year() }),
       text: t("layers.context.urbanAtlasText", { year: year() }),
       sources: urbanAtlas?.source?.productUrl
-        ? [authorityLink("copernicusClms", urbanAtlas.source.productUrl)]
+        ? [productLink("urbanAtlas", urbanAtlas.source.productUrl)]
         : [],
     }),
     getLegendModel: () => {

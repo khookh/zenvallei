@@ -43,6 +43,7 @@ The map controller deliberately does not decide what an Urban Atlas, Landsat or 
 - `processing/local-layers` is an isolated Python boundary for Landsat temperature, Soil sealing (official product: JaarBAK), Groenkaart and Landgebruik. Runtime startup reads only a lightweight catalogue; each full manifest and PMTiles archive is loaded on first activation and cached in memory. Local-data mode serves the preparation cache through allow-listed endpoints. Static builds use the validated derivatives under `public/data/official-layers`. Landsat pixel inspection reads a small clipped query raster in the browser; raw source windows remain private.
 - Comparison modules are separate from the top-level layer registry. One explicit nine-pair table supports Heat with income or population; Landsat with Urban Atlas, Soil sealing, Green Map, income or population; and Green Map with income or population. Either participant discovers the same canonical comparison; the coordinator switches to that presentation and restores the initiating layer when it is removed. Prepared comparison assets are lazy and use catalogue schema 3 in local and static builds.
 - Comparisons that need an exact footprint share one focused raster-composition module. It reads the same Soil sealing PMTiles as the standalone layer and an indexed PMTiles mask rasterised from the original Urban Atlas polygons. This is display composition only: Green Map focal cover remains a 10 m calculation, Landsat charts remain 30 m observations and the population comparison remains 100 m model cells.
+- Local-data mode has one deliberately narrow runtime exception: the Land-cover change tool posts bounded polygon histories to a same-origin Vite middleware and one persistent Python worker. The worker retains latent ground only for editing, resolves one mutually exclusive upper surface for Radoux and 2026 Heatwave XGBoost, and owns their 30 m ΔLST outputs. The browser owns presentation, drawing, method choice and session history. Its endpoint, model and runtime assets are absent from normal and Pages distributions.
 
 Every JSON manifest has a `schemaVersion`. Missing versions are temporarily interpreted as version 1 for older generated files. Unsupported versions fail during data loading with a readable error.
 
@@ -54,7 +55,7 @@ Each module registered in `src/layers/registry.js` provides:
 - availability and optional secondary controls;
 - an optional temporal control for discrete years or semantic observation timelines;
 
-The normal registry contains heat vulnerability, Landsat temperature, Urban Atlas, Soil sealing, Flanders Green Map, Flanders land use, population density and Statbel income. Local-data mode resolves the same prepared raster modules from the ignored working catalogue. Retired experiments remain outside the registry and are not shipped.
+The normal registry contains heat vulnerability, Landsat temperature, Urban Atlas, Soil sealing, Flanders Green Map, Flanders land use, population density and Statbel income. Local-data mode adds the Land-cover change tool from the ignored working catalogue. Retired experiments remain outside the registry and are not shipped.
 - lazy `mount`, visibility and municipality-filter functions;
 - plain legend, popup and panel models;
 - attribution entries.

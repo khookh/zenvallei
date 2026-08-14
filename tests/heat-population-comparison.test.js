@@ -5,8 +5,9 @@ import {
   buildHeatPopulationPoints,
   createHeatPopulationComparison,
   createPopulationIcon,
+  populationDensityBand,
   populationLevel,
-  summarizeHeatByPopulationLevel,
+  summarizeHeatByPopulationDensity,
   sumPopulationByHeatScore,
 } from "../src/comparisons/heat-population.js";
 import { setLanguage } from "../src/i18n.js";
@@ -34,6 +35,8 @@ describe("heat-population comparison", () => {
     expect(populationLevel(1_000)).toBe(4);
     expect(populationLevel(1_999)).toBe(4);
     expect(populationLevel(2_000)).toBe(5);
+    expect([0, 4.99, 5, 14.99, 15, 29.99, 30, 49.99, 50].map(populationDensityBand))
+      .toEqual([1, 1, 2, 2, 3, 3, 4, 4, 5]);
   });
 
   it("joins the authoritative 2025 totals and excludes unavailable heat scores", () => {
@@ -43,7 +46,7 @@ describe("heat-population comparison", () => {
       expect(points.every(({ population: value, score, level }) => (
         Number.isFinite(value) && value > 0 && Number.isFinite(score) && level >= 1 && level <= 5
       ))).toBe(true);
-      expect(summarizeHeatByPopulationLevel(points).map(({ count }) => count)).toEqual([22, 30, 37, 32, 19]);
+      expect(summarizeHeatByPopulationDensity(points).map(({ count }) => count)).toEqual([36, 28, 43, 23, 10]);
       const populationByScore = sumPopulationByHeatScore(points);
       expect(populationByScore).toHaveLength(11);
       expect(populationByScore.reduce((sum, entry) => sum + entry.population, 0)).toBe(139_939);
@@ -125,7 +128,7 @@ describe("heat-population comparison", () => {
       record: { scope: "region", sectorName: "Entire Zennevallei", municipality: "", sectorId: "", sectorCount: 154 },
       metric: "final",
       points,
-      levelSummaries: summarizeHeatByPopulationLevel(points),
+      levelSummaries: summarizeHeatByPopulationDensity(points),
       populationByScore: sumPopulationByHeatScore(points),
       scoreColors: Object.fromEntries(Array.from({ length: 11 }, (_, score) => [score, `#${String(score).repeat(6).slice(0, 6)}`])),
       comparablePopulation: 139_939,
@@ -136,7 +139,7 @@ describe("heat-population comparison", () => {
     };
     setLanguage("en");
     const english = renderSectorPanelModel(model);
-    expect(english).toContain("Heat score by population band");
+    expect(english).toContain("Heat score by population density");
     expect(english).toContain("Residents by heat-score level");
     expect(english.match(/data-scatter-sector=/g)).toHaveLength(280);
     // The inline bar chart and its own expanded dialog contain the same eleven
@@ -150,7 +153,7 @@ describe("heat-population comparison", () => {
 
     setLanguage("nl");
     const dutch = renderSectorPanelModel({ ...model, metric: "heat" });
-    expect(dutch).toContain("Hittescore per bevolkingsklasse");
+    expect(dutch).toContain("Hittescore per bevolkingsdichtheid");
     expect(dutch).toContain("Inwoners per hittescore");
     expect(dutch).toContain("139.939 van 140.122 inwoners zijn vertegenwoordigd");
   });

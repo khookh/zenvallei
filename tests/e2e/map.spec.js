@@ -45,10 +45,8 @@ async function showControls(page, { minimiseResults = true } = {}) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const panel = page.locator("#detail-panel");
   const adaptive = await page.locator(".map-shell").getAttribute("data-surface-mode") !== "expanded";
-  if (adaptive && minimiseResults
-    && await panel.getAttribute("aria-hidden") === "false"
-    && !await panel.evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-toggle").click();
+  if (adaptive && minimiseResults && await panel.getAttribute("aria-hidden") === "false") {
+    await page.locator("#panel-close").click();
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
   const controls = page.locator("#map-controls");
@@ -93,7 +91,7 @@ async function mapSurfaceState(page) {
       mode: document.querySelector(".map-shell")?.dataset.surfaceMode,
       controlsExpanded: !document.querySelector("#map-controls")?.classList.contains("is-collapsed"),
       legendExpanded: document.querySelector("#legend")?.open,
-      panelPresentation: document.querySelector("#detail-panel")?.classList.contains("is-peek") ? "peek" : "expanded",
+      panelPresentation: document.querySelector("#detail-panel")?.getAttribute("aria-hidden") === "true" ? "closed" : "expanded",
       collisions,
     };
   });
@@ -390,6 +388,7 @@ test("discloses map controls without changing exploration state", async ({ page 
 });
 
 test("keeps controls, legend and results collision-free across adaptive layouts", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.locator("#sector-search").fill("23003A001");
   await page.locator("#sector-search").press("Enter");
   const indicators = page.locator('details[data-section="indicators"]');
@@ -407,18 +406,20 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
     { width: 320, height: 568, mode: "compact" },
   ]) {
     await page.setViewportSize(viewport);
-    const state = await waitForSurfaceState(page, viewport.mode === "expanded"
-      ? { mode: viewport.mode }
-      : {
-          mode: viewport.mode,
-          controlsExpanded: false,
-          legendExpanded: false,
-          panelPresentation: "expanded",
-        });
+    let state = await waitForSurfaceState(page, { mode: viewport.mode });
     expect(state.mode).toBe(viewport.mode);
     expect(state.collisions, `${viewport.width} by ${viewport.height}`).toEqual([]);
 
     if (viewport.mode !== "expanded") {
+      await showControls(page);
+      await page.locator("#sector-search").fill("23003A001");
+      await page.locator("#sector-search").press("Enter");
+      state = await waitForSurfaceState(page, {
+        mode: viewport.mode,
+        controlsExpanded: false,
+        legendExpanded: false,
+        panelPresentation: "expanded",
+      });
       expect(state.controlsExpanded).toBe(false);
       expect(state.legendExpanded).toBe(false);
       expect(state.panelPresentation).toBe("expanded");
@@ -427,11 +428,11 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
       const controlsState = await waitForSurfaceState(page, {
         controlsExpanded: true,
         legendExpanded: false,
-        panelPresentation: "peek",
+        panelPresentation: "closed",
       });
       expect(controlsState.controlsExpanded).toBe(true);
       expect(controlsState.legendExpanded).toBe(false);
-      expect(controlsState.panelPresentation).toBe("peek");
+      expect(controlsState.panelPresentation).toBe("closed");
       expect(controlsState.collisions).toEqual([]);
       if (viewport.width === 320) {
         const compactMetrics = await page.evaluate(() => ({
@@ -455,14 +456,20 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
         controlsExpanded: false,
         legendExpanded: true,
 
-        panelPresentation: "peek",
+        panelPresentation: "closed",
       });
       expect(legendState.controlsExpanded).toBe(false);
       expect(legendState.legendExpanded).toBe(true);
-      expect(legendState.panelPresentation).toBe("peek");
+      expect(legendState.panelPresentation).toBe("closed");
       expect(legendState.collisions).toEqual([]);
+      const legendLeft = await page.locator("#legend").evaluate((element) => Math.round(element.getBoundingClientRect().left));
+      expect(legendLeft).toBeLessThanOrEqual(24);
 
-      await page.locator("#panel-peek").click();
+      if (await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
+        await page.locator("#map-controls-toggle").click();
+      }
+      await page.locator("#sector-search").fill("23003A001");
+      await page.locator("#sector-search").press("Enter");
       await page.waitForTimeout(220);
     }
   }
@@ -472,7 +479,7 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
   const zoomed = await waitForSurfaceState(page, { mode: "compact" });
   expect(zoomed.mode).toBe("compact");
   expect(zoomed.collisions).toEqual([]);
-  await expect(indicators).toHaveAttribute("open", "");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
 });
 
 test("keeps local sectors usable when basemap tiles are unavailable", async ({ page }) => {
@@ -888,6 +895,15 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await search.fill("23003A001");
   await search.press("Enter");
   await page.locator("#panel-close").click();
+  await expect(panel).toHaveAttribute("aria-hidden", "true");
+  await expect.poll(() => page.evaluate(() => {
+    const rect = document.querySelector(".maplibregl-ctrl-bottom-right")?.getBoundingClientRect();
+    return rect ? Math.round(window.innerWidth - rect.right) : null;
+  })).toBeLessThanOrEqual(24);
+
+  await showControls(page);
+  await page.locator("#municipality-select").dispatchEvent("click");
+  await expect(panel).toHaveAttribute("aria-hidden", "false");
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
 
   await showControls(page);

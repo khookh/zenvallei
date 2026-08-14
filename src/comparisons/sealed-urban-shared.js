@@ -61,6 +61,26 @@ export const SEALED_URBAN_SOURCE_URLS = Object.freeze({
   income: "https://statbel.fgov.be/en/open-data/fiscal-statistics-income-statistical-sector",
 });
 
+const SPATIAL_INFERENCE_STATUSES = new Set([
+  "available", "insufficient-observations", "undefined-variance",
+  "undefined-spatial-structure", "insufficient-distance-classes",
+  "insufficient-effective-sample", "numerical-failure",
+]);
+
+export function validateSpatialInference(inference) {
+  const valid = inference?.method === "crh-dutilleul-modified-t"
+    && inference.hypothesis === "pearson-r-equals-zero"
+    && inference.sidedness === "two-sided"
+    && inference.distanceClassCount === 13
+    && Number.isInteger(inference.observationCount)
+    && SPATIAL_INFERENCE_STATUSES.has(inference.status)
+    && (inference.status !== "available"
+      || (Number.isFinite(inference.pValue) && inference.pValue >= 0 && inference.pValue <= 1
+        && Number.isFinite(inference.effectiveSampleSize) && inference.effectiveSampleSize >= 10));
+  if (!valid) throw new TypeError("Unsupported spatial-inference record.");
+  return inference;
+}
+
 export function safeAsset(root, value, extension) {
   if (typeof value !== "string" || value.includes("..") || !value.endsWith(extension)) {
     throw new TypeError(`Unsafe comparison asset '${value}'.`);

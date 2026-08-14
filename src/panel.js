@@ -20,6 +20,7 @@ import {
   dominantUrbanAtlasCategory,
   urbanAtlasCategoryBreakdown,
 } from "./urban-atlas-categories.js";
+import { SOURCE_PRODUCTS } from "./source-authorities.js";
 
 const safeHref = (value) => escapeHtml(safeExternalUrl(value));
 
@@ -471,7 +472,6 @@ function renderLocalOfficialRaster(model) {
   return `
     <article class="panel-article local-official-panel">
       ${body}
-      ${manifest.years?.[year]?.status === "provisional" ? `<p class="panel-warning local-provisional-warning">${escapeHtml(t("officialData.provisionalYear"))}</p>` : ""}
       ${stats ? `<details class="detail-accordion" data-section="local-raster-details">
         <summary data-focus-key="local-raster-details-summary"><span>${escapeHtml(t("panel.detailsKicker"))}</span></summary>
         <div class="accordion-content methodology-copy">
@@ -485,6 +485,7 @@ function renderLocalOfficialRaster(model) {
           <p>${escapeHtml(t(datasetId === "jaarbak" ? "jaarbak.definition" : "groenkaart.contextText"))}</p>
           <p>${escapeHtml(t(methodKey))}</p>
           <p>${escapeHtml(t(datasetId === "jaarbak" ? "jaarbak.derivedNote" : "groenkaart.derivedNote"))}</p>
+          ${manifest.years?.[year]?.status === "provisional" ? `<p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("officialData.provisionalYear"))}</p>` : ""}
           ${manifest.density ? `
             <p>${escapeHtml(t("density.methodology"))}</p>
             <p>${escapeHtml(t("density.radiusEvidence"))}</p>
@@ -571,11 +572,12 @@ function renderLandgebruik(model) {
     </article>`;
 }
 
-function aboutLayerRow(key, label) {
+function aboutLayerRow(key, label, source = null) {
   return `<li class="about-layer-row">
     <strong>${escapeHtml(label)}</strong>
     <span>${escapeHtml(t(`about.${key}Question`))}</span>
     <small>${escapeHtml(t(`about.${key}Summary`))}</small>
+    ${source ? `<a href="${safeHref(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.label)}</a>` : ""}
   </li>`;
 }
 
@@ -604,6 +606,9 @@ function renderAbout(_methodology, urbanAtlas, _income, _population, provenance,
           <ul class="about-layer-index">
             ${aboutLayerRow("heat", t("layers.heat"))}
             ${aboutLayerRow("landsat", t("layers.landsatTemperature"))}
+            ${officialLayers?.["land-cover-scenario"] ? aboutLayerRow("scenario", t("layers.landCoverScenario"), {
+              label: t(SOURCE_PRODUCTS.xgboost.labelKey), url: SOURCE_PRODUCTS.xgboost.url,
+            }) : ""}
           </ul>
         </div>
         <div class="about-layer-category">
@@ -773,7 +778,7 @@ function comparisonHistogram(model, { expanded = false, showExpand = true } = {}
       <line class="comparison-crosshair" data-comparison-crosshair x1="${plot.left}" x2="${plot.left}" y1="${plot.top}" y2="${plot.top + plot.height}" hidden></line>
     </svg>
     <div class="comparison-bin-hitareas" role="toolbar" aria-label="${escapeHtml(t("comparison.histogramTitle"))}">
-      ${labels.map((label, index) => `<button type="button" data-histogram-bin="${index}" data-histogram-x="${plot.left + (index + .5) / labels.length * plot.width}" data-histogram-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></button>`).join("")}
+      ${labels.map((label, index) => `<button type="button" data-histogram-bin="${index}" data-focus-key="${prefix}-bin-${index}" data-histogram-x="${plot.left + (index + .5) / labels.length * plot.width}" data-histogram-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></button>`).join("")}
     </div>
     </div>
     <p class="comparison-bin-output" data-histogram-output aria-live="polite">${escapeHtml(labels[Math.floor(labels.length / 2)] ?? "")}</p>
@@ -963,7 +968,7 @@ function heatIncomeScatter(model, { expanded = false } = {}) {
     score: formatNumber(point.score, 0),
   });
   return `<div class="heat-income-chart ${expanded ? "is-expanded" : ""}" data-sector-comparison-chart data-heat-income-chart>
-    ${expanded ? "" : `<div class="heat-income-chart-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart aria-label="${escapeHtml(t("chart.expandNamed", { chart: model.title ?? t("heatIncome.chartTitle", { metric: model.metricLabel }) }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
+    ${expanded ? "" : `<div class="heat-income-chart-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart aria-label="${escapeHtml(t("chart.expandNamed", { chart: t("heatIncome.chartTitle", { metric: t(`heatMetric.${model.metric}`) }) }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
     <p class="heat-income-boxplot-explanation">${escapeHtml(t("heatIncome.boxPlotExplanation"))}</p>
     <svg viewBox="0 0 ${layout.width} ${layout.height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
       <title id="${prefix}-title">${escapeHtml(t("heatIncome.chartTitle", { metric: t(`heatMetric.${model.metric}`) }))}</title>
@@ -1052,6 +1057,7 @@ function heatPopulationPointLabel(model, point) {
     code: point.sectorId,
     municipality: point.municipality,
     population: formatNumber(point.population, 0),
+    density: formatNumber(point.densityPerHa, 1),
     metric: t(`heatMetric.${model.metric}`),
     score: formatNumber(point.score, 0),
   });
@@ -1092,18 +1098,15 @@ function heatPopulationBoxPlot(model, { expanded = false, showExpand = false } =
       </g>
       <g class="heat-population-axis-values" aria-hidden="true">
         ${yTicks.map((value) => `<text x="${plot.left - 14}" y="${layout.y(value) + 5}" text-anchor="end">${value}</text>`).join("")}
-        ${Array.from({ length: 5 }, (_, index) => index + 1).map((level) => `<g>
-          <text x="${layout.x(level)}" y="${plot.top + plot.height + 30}" text-anchor="middle">${level}</text>
-          <text class="heat-population-range-tick" x="${layout.x(level)}" y="${plot.top + plot.height + 55}" text-anchor="middle">${escapeHtml(t(`heatPopulation.levelShort${level}`))}</text>
-        </g>`).join("")}
+        ${Array.from({ length: 5 }, (_, index) => index + 1).map((level) => `<text class="heat-population-range-tick" x="${layout.x(level)}" y="${plot.top + plot.height + 36}" text-anchor="middle">${escapeHtml(t(`heatPopulation.densityBand${level}`))}</text>`).join("")}
       </g>
-      <text class="heat-population-axis-label" x="${plot.left + plot.width / 2}" y="${layout.height - 24}" text-anchor="middle">${escapeHtml(t("heatPopulation.axisPopulationBand"))}</text>
+      <text class="heat-population-axis-label" x="${plot.left + plot.width / 2}" y="${layout.height - 24}" text-anchor="middle">${escapeHtml(t("heatPopulation.axisPopulationDensity"))}</text>
       <text class="heat-population-axis-label" transform="translate(28 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("heatPopulation.axisScore", { metric: t(`heatMetric.${model.metric}`) }))}</text>
       <g class="heat-population-points" role="group" aria-label="${escapeHtml(t("heatPopulation.pointsLabel"))}">
         ${model.points.map((point, index) => {
           const highlighted = point.sectorId === model.highlightedSectorId;
           const label = heatPopulationPointLabel(model, point);
-          return `<circle cx="${layout.x(point.level + stableSectorOffset(point.sectorId)).toFixed(2)}" cy="${layout.y(point.score).toFixed(2)}" r="5" role="button" tabindex="${highlighted || (!model.highlightedSectorId && index === 0) ? 0 : -1}" class="heat-population-point ${highlighted ? "is-selected" : ""}" data-scatter-sector="${escapeHtml(point.sectorId)}" data-scatter-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></circle>`;
+          return `<circle cx="${layout.x(point.densityBand + stableSectorOffset(point.sectorId)).toFixed(2)}" cy="${layout.y(point.score).toFixed(2)}" r="5" role="button" tabindex="${highlighted || (!model.highlightedSectorId && index === 0) ? 0 : -1}" class="heat-population-point ${highlighted ? "is-selected" : ""}" data-scatter-sector="${escapeHtml(point.sectorId)}" data-scatter-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></circle>`;
         }).join("")}
       </g>
     </svg>
@@ -1264,8 +1267,6 @@ function renderLandsatTemperature(model) {
           <div class="section-heading"><p class="section-kicker">${escapeHtml(t("layers.landsatTemperature"))}</p><h3 id="landsat-summary-title">${escapeHtml(t("landsat.summaryTitle"))}</h3></div>
           <p class="landsat-definition">${escapeHtml(t("landsat.definition"))}</p>
           ${hasTemperature ? landsatDistribution(stats) : ""}
-          <p class="landsat-coverage"><strong>${escapeHtml(t("landsat.clearCoverage"))}: ${escapeHtml(formatNumber(stats?.clearPercentage ?? 0, 1))}%</strong><span>${escapeHtml(t("landsat.coverageExplanation"))}</span></p>
-          <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("landsat.derivedNote"))}</span></p>
         </section>
         <details class="detail-accordion" data-section="landsat-observation-details">
           <summary data-focus-key="landsat-observation-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("landsat.detailsTitle"))}</span></summary>
@@ -1284,8 +1285,8 @@ function renderLandsatTemperature(model) {
           <div class="accordion-content methodology-copy">
             <p>${escapeHtml(t("landsat.methodology"))}</p>
             <p>${escapeHtml(t("landsat.referenceMethod"))}</p>
-            <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landsat.comparisonCaveat"))}</p>
-            <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landsat.asterCaveat"))}</p>
+            <p>${escapeHtml(t("landsat.missing2025"))}</p>
+            <p class="provenance-note"><strong>${escapeHtml(t("provenance.localSummary"))}</strong><span>${escapeHtml(t("landsat.derivedNote"))}</span></p>
             <p>${escapeHtml(t("landsat.sceneIds"))}</p>
             <ul>${(observation?.sceneIds ?? []).map((id) => `<li><code>${escapeHtml(id)}</code></li>`).join("")}</ul>
             ${sourceUrl ? `<p><a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landsat.officialProduct"))}</a></p>` : ""}
@@ -1572,6 +1573,14 @@ function incomeTemperatureBoxChart(model, { expanded = false, showExpand = true 
 
 function sealedUrbanScatterDialog(model) {
   const regression = model.regression;
+  const inference = regression?.inference;
+  const inferenceReason = t(`sealedUrban.inferenceStatus.${inference?.status ?? "missing"}`);
+  const unavailableInference = t("sealedUrban.notReportableWithReason", { reason: inferenceReason });
+  const pValue = inference?.status === "available" && Number.isFinite(inference.pValue)
+    ? inference.pValue < .001 ? "p < 0.001" : `p = ${formatNumber(inference.pValue, 3)}`
+    : unavailableInference;
+  const effectiveSample = Number.isFinite(inference?.effectiveSampleSize)
+    ? formatNumber(inference.effectiveSampleSize, 1) : unavailableInference;
   const count = pixelPointCount(model.pixelPoints ?? model.points ?? []);
   const analysedArea = regression?.analysedAreaHa ?? (model.pixelPoints ? count * .09 : null);
   const dialogId = `${model.comparisonId}-scatter`;
@@ -1589,10 +1598,13 @@ function sealedUrbanScatterDialog(model) {
         ${metricCard("sealedUrban.rSquared", regression.rSquared == null ? t("value.notAvailable") : formatNumber(regression.rSquared, 3), "#6d4ca0")}
         ${metricCard("sealedUrban.pearsonR", regression.pearsonR == null ? t("value.notAvailable") : formatNumber(regression.pearsonR, 3), "#315e66")}
         ${metricCard("sealedUrban.spearmanRho", regression.spearmanRho == null ? t("value.notAvailable") : formatNumber(regression.spearmanRho, 3), "#176b43")}
+        ${metricCard("sealedUrban.spatialPValue", pValue, "#6d4ca0")}
+        ${metricCard("sealedUrban.effectiveSpatialSample", effectiveSample, "#315e66")}
         ${metricCard("sealedUrban.slope", `${formatNumber(regression.slope * (model.slopeScale ?? 1), 3)} ${model.slopeUnit ?? ""}`.trim(), "#8f1d2c")}
         ${model.yKey === "temperature" ? metricCard("soilComparison.intercept", `${formatNumber(regression.intercept, 2)} °C`, "#53666b") : ""}
         ${model.secondaryYear ? metricCard("soilComparison.matchedDensityYear", String(model.secondaryYear), "#53666b") : ""}
       </div>` : ""}
+      ${regression ? `<p class="comparison-academic-note comparison-spatial-inference-note">${escapeHtml(t("sealedUrban.expandedSpatialAdjustment"))}</p>` : ""}
       ${regression ? `<p class="comparison-academic-note">${escapeHtml(t("sealedUrban.expandedStatisticsDefinition"))}</p>` : ""}
       <p class="comparison-academic-note">${escapeHtml(model.caveat)}</p>
     </div>
@@ -1853,7 +1865,7 @@ function landsatPopulationDialog(model, kind) {
   return `<dialog class="comparison-chart-dialog green-population-dialog" data-comparison-chart-dialog data-chart-dialog-id="landsat-population-${kind}" aria-label="${escapeHtml(t(titleKey, { area: panelAreaName(model.record) }))}">
     <div class="comparison-chart-dialog-content">
       <header><h3>${escapeHtml(t(titleKey, { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("greenPopulation.closeChart"))}">&times;</button></header>
-      <p class="comparison-dialog-description">${escapeHtml(t("landsatPopulation.expandedContext", { residents: formatNumber(model.totalResidents, 0), date: model.observation?.label ?? "", area: panelAreaName(model.record) }))}</p>
+      <p class="comparison-dialog-description">${escapeHtml(t("landsatPopulation.expandedContext", { residents: formatNumber(model.totalResidents, 0), date: landsatDateTime(model.observation?.acquiredAt), area: panelAreaName(model.record) }))}</p>
       ${cumulative ? landsatPopulationCumulativeChart(model, { expanded: true }) : landsatPopulationHistogram(model, { expanded: true })}
       <p class="comparison-academic-note">${escapeHtml(t("landsatPopulation.academicNote"))}</p>
     </div>
@@ -1908,6 +1920,184 @@ function renderMetricSummary(model) {
     ${model.notes?.length ? `<div class="panel-body methodology-copy">${model.notes.map((note) => `<p>${escapeHtml(note)}</p>`).join("")}</div>` : ""}`;
 }
 
+function signedTemperature(value) {
+  if (!Number.isFinite(value)) return t("value.notAvailable");
+  const formatted = formatNumber(Math.abs(value), 2);
+  return `${value > 0 ? "+" : value < 0 ? "−" : ""}${formatted}°C`;
+}
+
+const SCENARIO_GROUND_COLOURS = Object.freeze({
+  low: "#bfff00", sealed: "#e8292f", agriculture: "#ffe600", water: "#4691d0", bare: "#b09976",
+});
+
+function signedArea(value) {
+  const number = Number(value) || 0;
+  return `${number > 0 ? "+" : number < 0 ? "−" : ""}${formatNumber(Math.abs(number), 2)} ha`;
+}
+
+function scenarioCompositionBar(ground, stage, label) {
+  const entries = Object.entries(SCENARIO_GROUND_COLOURS).map(([name, colour]) => ({
+    name, colour, value: Math.max(0, Number(ground?.[name]?.[`${stage}Ha`]) || 0),
+  }));
+  const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+  const aria = entries.map((entry) => `${t(`scenario.class.${entry.name}`)} ${formatNumber(entry.value, 2)} ha`).join(", ");
+  return `<div class="scenario-composition-row">
+    <strong>${escapeHtml(label)}</strong>
+    <div class="scenario-composition-bar" role="img" aria-label="${escapeHtml(`${label}: ${aria}`)}">
+      ${entries.filter((entry) => entry.value > 0).map((entry) => `<span style="--segment:${entry.colour};--share:${total ? entry.value / total * 100 : 0}%" title="${escapeHtml(`${t(`scenario.class.${entry.name}`)}: ${formatNumber(entry.value, 2)} ha`)}"></span>`).join("")}
+    </div>
+  </div>`;
+}
+
+function scenarioCanopyBars(canopy) {
+  const maximum = Math.max(Number(canopy?.beforeHa) || 0, Number(canopy?.afterHa) || 0, .0001);
+  return ["before", "after"].map((stage) => {
+    const value = Number(canopy?.[`${stage}Ha`]) || 0;
+    return `<div class="scenario-composition-row scenario-canopy-row"><strong>${escapeHtml(t(`scenario.${stage}`))}</strong><div class="scenario-canopy-bar"><span style="--share:${value / maximum * 100}%"></span></div><em>${escapeHtml(formatNumber(value, 2))} ha</em></div>`;
+  }).join("");
+}
+
+function scenarioDeltaHistogram(stats, { expanded = false } = {}) {
+  const distribution = stats?.deltaDistribution;
+  const bins = distribution?.bins ?? [];
+  if (!bins.length || !distribution?.affectedCellCount) {
+    return `<p class="scenario-distribution-empty">${escapeHtml(t("scenario.distributionEmpty"))}</p>`;
+  }
+  const width = expanded ? 1100 : 440;
+  const height = expanded ? 610 : 330;
+  const plot = expanded
+    ? { left: 105, top: 38, width: 925, height: 440 }
+    : { left: 66, top: 28, width: 342, height: 220 };
+  const [minimum, maximum] = distribution.domainC;
+  const maximumShare = Math.max(...bins.map((bin) => Number(bin.sharePct) || 0), .1);
+  const yMagnitude = 10 ** Math.floor(Math.log10(maximumShare));
+  const yMaximum = Math.ceil(maximumShare / yMagnitude) * yMagnitude;
+  const x = (value) => plot.left + (value - minimum) / Math.max(.000001, maximum - minimum) * plot.width;
+  const y = (value) => plot.top + plot.height - value / yMaximum * plot.height;
+  const prefix = `scenario-delta-distribution-${expanded ? "expanded" : "inline"}`;
+  const xTicks = [minimum, minimum / 2, 0, maximum / 2, maximum]
+    .filter((value, index, values) => !index || Math.abs(value - values[index - 1]) > 1e-9);
+  const yTicks = [0, yMaximum / 2, yMaximum];
+  let interactiveIndex = 0;
+  const bars = bins.map((bin, binIndex) => {
+    const share = Number(bin.sharePct) || 0;
+    const left = x(bin.lowerC);
+    const right = x(bin.upperC);
+    const top = y(share);
+    const midpoint = (bin.lowerC + bin.upperC) / 2;
+    const colour = midpoint < 0 ? "#2166ac" : midpoint > 0 ? "#b2182b" : "#6f7778";
+    if (!bin.count) {
+      return `<rect x="${left}" y="${plot.top + plot.height}" width="${Math.max(1, right - left - .5)}" height="0" fill="${colour}" aria-hidden="true"/>`;
+    }
+    const tabindex = interactiveIndex++ ? "-1" : "0";
+    const label = t("scenario.distributionBinLabel", {
+      lower: signedTemperature(bin.lowerC), upper: signedTemperature(bin.upperC),
+      count: bin.count, share: formatNumber(share, 2),
+    });
+    return `<rect x="${left}" y="${top}" width="${Math.max(1, right - left - .5)}" height="${plot.top + plot.height - top}" fill="${colour}" tabindex="${tabindex}" role="graphics-symbol" data-histogram-bin data-focus-key="${prefix}-bin-${binIndex}" data-histogram-label="${escapeHtml(label)}" data-histogram-x="${(left + right) / 2}" aria-label="${escapeHtml(label)}"/>`;
+  }).join("");
+  return `<div class="scenario-delta-distribution ${expanded ? "is-expanded" : ""}" data-comparison-chart>
+    ${expanded ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart data-dialog-target="scenario-delta-distribution" aria-label="${escapeHtml(t("chart.expandNamed", { chart: t("scenario.distributionTitle") }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="${prefix}-title ${prefix}-description">
+      <title id="${prefix}-title">${escapeHtml(t("scenario.distributionTitle"))}</title>
+      <desc id="${prefix}-description">${escapeHtml(t("scenario.distributionDescription", { count: distribution.affectedCellCount }))}</desc>
+      ${yTicks.map((tick) => `<line class="chart-grid" x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(tick)}" y2="${y(tick)}"/><text class="chart-axis-label" x="${plot.left - 10}" y="${y(tick) + 4}" text-anchor="end">${escapeHtml(formatNumber(tick, tick < 1 ? 1 : 0))}%</text>`).join("")}
+      ${bars}
+      <line class="scenario-distribution-zero" x1="${x(0)}" x2="${x(0)}" y1="${plot.top}" y2="${plot.top + plot.height}"/>
+      <line class="chart-axis" x1="${plot.left}" x2="${plot.left + plot.width}" y1="${plot.top + plot.height}" y2="${plot.top + plot.height}"/>
+      ${xTicks.map((tick) => `<text class="chart-axis-label" x="${x(tick)}" y="${plot.top + plot.height + 24}" text-anchor="middle">${escapeHtml(formatNumber(tick, 2))}</text>`).join("")}
+      <text class="chart-axis-title" x="${plot.left + plot.width / 2}" y="${height - 18}" text-anchor="middle">${escapeHtml(t("scenario.distributionXAxis"))}</text>
+      <text class="chart-axis-title" transform="translate(${expanded ? 27 : 18} ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("scenario.distributionYAxis"))}</text>
+    </svg>
+    <output class="comparison-chart-output" data-histogram-output aria-live="polite">${escapeHtml(t("scenario.distributionExplore"))}</output>
+  </div>`;
+}
+
+function scenarioDeltaDistributionDialog(model) {
+  return `<dialog class="comparison-chart-dialog scenario-distribution-dialog" data-comparison-chart-dialog data-chart-dialog-id="scenario-delta-distribution" aria-label="${escapeHtml(t("scenario.distributionExpandedTitle", { area: panelAreaName(model.record) }))}">
+    <div class="comparison-chart-dialog-content">
+      <header><h3>${escapeHtml(t("scenario.distributionExpandedTitle", { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("scenario.distributionClose"))}">&times;</button></header>
+      <p class="comparison-dialog-description">${escapeHtml(t("scenario.distributionExpandedDescription", { count: model.stats?.affectedCellCount ?? 0, area: panelAreaName(model.record) }))}</p>
+      ${scenarioDeltaHistogram(model.stats, { expanded: true })}
+    </div>
+  </dialog>`;
+}
+
+function renderLandCoverScenario(model) {
+  const { record, stats, manifest, hasResult, selectedMethod = "xgboost", diagnostics, methodFallback } = model;
+  const balance = stats?.landCoverBalance;
+  const activeMethod = manifest?.methods?.[selectedMethod] ?? {};
+  const methodSuffix = `${selectedMethod[0]?.toUpperCase() ?? ""}${selectedMethod.slice(1)}`;
+  const productId = activeMethod.productId ?? selectedMethod;
+  const productSuffix = `${productId[0]?.toUpperCase() ?? ""}${productId.slice(1)}`;
+  const methodSourceUrl = activeMethod.source?.url ?? (selectedMethod === "radoux"
+    ? manifest?.source?.url ?? "https://doi.org/10.3390/rs17162815"
+    : SOURCE_PRODUCTS.xgboost.url);
+  const changedRows = balance ? [
+    ...Object.entries(balance.ground ?? {}).map(([name, values]) => ({ name, ...values })),
+    { name: "high", ...(balance.highCanopy ?? {}) },
+  ].filter((entry) => Math.abs(Number(entry.changeHa) || 0) >= .0001) : [];
+  return `
+    <article class="official-panel scenario-panel">
+      <div class="panel-hero land-cover-hero scenario-hero">
+        <p class="panel-eyebrow">${escapeHtml(panelEyebrow(record))}</p>
+        <h2 id="panel-title">${escapeHtml(panelAreaName(record))}</h2>
+        <p class="panel-source-line">${escapeHtml(t("scenario.baselineLine"))} · ${escapeHtml(t(`scenario.method.${selectedMethod}`))}</p>
+        ${methodFallback ? `<p class="panel-inline-warning">${escapeHtml(t("scenario.xgboostFallback"))}</p>` : ""}
+        ${hasResult ? `
+          <div class="scenario-primary-result">
+            <strong>${escapeHtml(formatNumber(stats?.acceptedAreaHa ?? 0, 2))} ha</strong>
+            <span>${escapeHtml(t("scenario.acceptedArea"))}</span>
+          </div>` : `<p class="scenario-empty-result">${escapeHtml(t("scenario.emptyResult"))}</p>`}
+      </div>
+      <div class="panel-body">
+        ${hasResult ? `
+          <section>
+            <div class="section-heading"><p class="section-kicker">${escapeHtml(t("scenario.resultsKicker"))}</p><h3>${escapeHtml(t("scenario.resultsTitle"))}</h3></div>
+            ${stats?.affectedCellCount ? `<div class="summary-grid">${metricCard("scenario.medianAffected", signedTemperature(stats.medianDeltaC), "#176b87")}</div>` : ""}
+            ${balance ? `<div class="scenario-balance">
+              <h4>${escapeHtml(t("scenario.groundComposition"))}</h4>
+              ${scenarioCompositionBar(balance.ground, "before", t("scenario.before"))}
+              ${scenarioCompositionBar(balance.ground, "after", t("scenario.after"))}
+              <h4>${escapeHtml(t("scenario.highCanopy"))}</h4>
+              ${scenarioCanopyBars(balance.highCanopy)}
+              ${changedRows.length ? `<table class="scenario-change-table"><thead><tr><th>${escapeHtml(t("scenario.changedClass"))}</th><th>${escapeHtml(t("scenario.before"))}</th><th>${escapeHtml(t("scenario.change"))}</th><th>${escapeHtml(t("scenario.after"))}</th></tr></thead><tbody>${changedRows.map((entry) => `<tr><th>${escapeHtml(t(`scenario.class.${entry.name}`))}</th><td>${escapeHtml(formatNumber(entry.beforeHa, 2))}</td><td class="${Number(entry.changeHa) > 0 ? "is-positive" : "is-negative"}">${escapeHtml(signedArea(entry.changeHa))}</td><td>${escapeHtml(formatNumber(entry.afterHa, 2))}</td></tr>`).join("")}</tbody></table>` : ""}
+            </div>` : ""}
+          </section>` : `<p class="panel-definition">${escapeHtml(t("scenario.panelInstruction"))}</p>`}
+        ${hasResult ? `<details class="detail-accordion details-accordion" data-section="details">
+          <summary><span>${escapeHtml(t("scenario.detailsTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy">
+            <div class="summary-grid">
+              ${metricCard("scenario.strongestCooling", Number.isFinite(stats?.strongestCoolingC) ? signedTemperature(stats.strongestCoolingC) : t("scenario.noneEstimated"), "#2166ac")}
+              ${metricCard("scenario.strongestWarming", Number.isFinite(stats?.strongestWarmingC) ? signedTemperature(stats.strongestWarmingC) : t("scenario.noneEstimated"), "#b2182b")}
+            </div>
+            ${scenarioDeltaHistogram(stats)}
+            <p>${escapeHtml(t("scenario.distributionThreshold", { count: stats?.affectedCellCount ?? 0 }))}</p>
+            ${diagnostics?.outsideTrainingRangeCellCount ? `<p>${escapeHtml(t("scenario.outsideTrainingRangeCells", {
+              count: diagnostics.outsideTrainingRangeCellCount,
+            }))}</p>` : ""}
+          </div>
+        </details>` : ""}
+        ${hasResult ? scenarioDeltaDistributionDialog(model) : ""}
+        <details class="detail-accordion methodology-accordion" data-section="methodology">
+          <summary><span>${escapeHtml(t("scenario.methodologyTitle"))}</span></summary>
+          <div class="accordion-content methodology-copy">
+            <h4>${escapeHtml(t("scenario.methodologySharedTitle"))}</h4>
+            <p>${escapeHtml(t("scenario.methodologyShared"))}</p>
+            <h4>${escapeHtml(t(`scenario.methodology${methodSuffix}Title`))}</h4>
+            <p>${escapeHtml(t(`scenario.methodology${methodSuffix}`))}</p>
+            ${methodSourceUrl ? `<p><a href="${safeHref(methodSourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t(`sources.product${productSuffix}`))}</a></p>` : ""}
+            ${selectedMethod !== "radoux" && activeMethod.available ? `<p>${escapeHtml(t("scenario.smoothingApplied", {
+              value: activeMethod.smoothingSigmaMeters ?? 0,
+            }))}</p>` : ""}
+            <h4>${escapeHtml(t("scenario.methodologyLimitationsTitle"))}</h4>
+            <p>${escapeHtml(t(`scenario.methodologyLimitations.${selectedMethod}`))}</p>
+          </div>
+        </details>
+      </div>
+    </article>`;
+}
+
 /** Render a plain panel model supplied by a layer module. */
 export function renderSectorPanelModel(model) {
   if (model.template === "heat") {
@@ -1927,6 +2117,7 @@ export function renderSectorPanelModel(model) {
   if (model.template === "sealed-urban-scatter") return renderSealedUrbanScatter(model);
   if (model.template === "groenkaart-population-comparison") return renderGroenkaartPopulationComparison(model);
   if (model.template === "landsat-population-comparison") return renderLandsatPopulationComparison(model);
+  if (model.template === "land-cover-scenario") return renderLandCoverScenario(model);
   if (model.template === "income") return renderIncome(model);
   if (model.template === "population") return renderPopulation(model);
   if (model.template === "metric-summary") return renderMetricSummary(model);

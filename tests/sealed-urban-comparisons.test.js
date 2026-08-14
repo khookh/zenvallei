@@ -6,10 +6,11 @@ import { isOfficialSealedPixel } from "../src/comparisons/exact-sealed-raster.js
 import {
   comparisonPixelOffset, greenDensityColor, incomeLevel, ordinaryLeastSquares, selectedDensity,
   surroundingAreaHa, hasUrbanSurfaceContract,
+  validateSpatialInference,
 } from "../src/comparisons/sealed-urban-shared.js";
 
 const commonLandsat = {
-  schemaVersion: 6,
+  schemaVersion: 7,
   urbanAtlasYear: 2021,
   analysisResolutionMeters: 30,
   densityNonGreenUrl: "landsat-groenkaart/green-density-non-green.png",
@@ -50,7 +51,7 @@ describe("sealed urban comparison contracts", () => {
   it("validates the three explicit products", () => {
     expect(validateLandsatGroenkaartManifest({
       ...commonLandsat,
-      schemaVersion: 6,
+      schemaVersion: 7,
       comparisonId: "landsat-groenkaart",
       primaryLayerId: "landsat-temperature",
       secondaryLayerId: "groenkaart",
@@ -61,7 +62,7 @@ describe("sealed urban comparison contracts", () => {
     }).comparisonId).toBe("landsat-groenkaart");
     expect(validateLandsatIncomeManifest({
       ...commonLandsat,
-      schemaVersion: 4,
+      schemaVersion: 5,
       comparisonId: "landsat-income",
       primaryLayerId: "landsat-temperature",
       secondaryLayerId: "income",
@@ -74,7 +75,7 @@ describe("sealed urban comparison contracts", () => {
       ...surfaceContract,
     }).comparisonId).toBe("landsat-income");
     expect(validateGroenkaartIncomeManifest({
-      schemaVersion: 4,
+      schemaVersion: 5,
       comparisonId: "groenkaart-income",
       primaryLayerId: "groenkaart",
       secondaryLayerId: "income",
@@ -139,6 +140,21 @@ describe("sealed urban comparison contracts", () => {
     expect(surroundingAreaHa(0)).toBe(0);
     expect(surroundingAreaHa(50)).toBeCloseTo(1.5708, 4);
     expect(surroundingAreaHa(100)).toBeCloseTo(3.1416, 4);
+  });
+
+  it("validates complete and explicit unavailable spatial-inference records", () => {
+    const base = {
+      method: "crh-dutilleul-modified-t", hypothesis: "pearson-r-equals-zero",
+      sidedness: "two-sided", distanceClassCount: 13, observationCount: 42,
+    };
+    expect(validateSpatialInference({
+      ...base, status: "available", pValue: .025, effectiveSampleSize: 18.5,
+    }).pValue).toBe(.025);
+    expect(validateSpatialInference({
+      ...base, status: "insufficient-effective-sample", pValue: null, effectiveSampleSize: 7.2,
+    }).status).toBe("insufficient-effective-sample");
+    expect(() => validateSpatialInference({ ...base, status: "available", pValue: null }))
+      .toThrow(/spatial-inference/i);
   });
 
   it("uses fixed income boundaries and locates browser pixels", () => {

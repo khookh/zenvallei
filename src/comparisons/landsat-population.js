@@ -1,5 +1,5 @@
 import { formatNumber, t } from "../i18n.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 import { comparisonHeatGradient, comparisonLegendItems } from "./thermal-palette.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import { fetchJsonAsset } from "./compressed-json.js";
@@ -193,12 +193,11 @@ export function createLandsatPopulationComparison({
     getActiveNote: () => t("landsatPopulation.activeNote", { area: municipality || t("controls.allMunicipalities") }),
     getContext: () => ({
       meta: t("landsatPopulation.contextMeta"), text: t("landsatPopulation.contextText"),
-      note: t("landsatPopulation.contextNote"),
       sources: [
-        authorityLink("landsat", SEALED_URBAN_SOURCE_URLS.landsat),
-        authorityLink("departmentEnvironment", SEALED_URBAN_SOURCE_URLS.jaarbak),
-        authorityLink("copernicusClms", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
-        authorityLink("departmentEnvironment", populationLayer.getDataset(POPULATION_DATASET)?.source?.pageUrl),
+        productLink("landsat", SEALED_URBAN_SOURCE_URLS.landsat),
+        productLink("jaarbak", SEALED_URBAN_SOURCE_URLS.jaarbak),
+        productLink("urbanAtlas", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
+        productLink("populationModel", populationLayer.getDataset(POPULATION_DATASET)?.source?.pageUrl),
       ],
     }),
     getLegendModel() {

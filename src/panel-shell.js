@@ -8,10 +8,6 @@ export function createDetailPanel({
   panel,
   content,
   closeButton,
-  toggleButton = document.createElement("button"),
-  peekButton = document.createElement("button"),
-  peekLabel = document.createElement("span"),
-  peekValue = document.createElement("strong"),
   getPanelModel,
   getAboutModel,
   heatMetric = DEFAULT_HEAT_METRIC,
@@ -37,37 +33,16 @@ export function createDetailPanel({
 
   const persistentCurrentView = () => Boolean(currentView && isPersistentView(currentView));
 
-  const updatePeekSummary = () => {
-    const title = content.querySelector("h2")?.textContent?.trim() ?? "";
-    const value = content.querySelector(".income-hero-metric strong, .score-orb strong, .land-cover-dominant, .panel-subtitle")
-      ?.textContent?.trim() ?? "";
-    peekLabel.textContent = title;
-    peekValue.textContent = value;
-  };
-
   const applyPresentation = (nextPresentation) => {
     if (!currentView && nextPresentation !== "closed") return;
-    presentation = nextPresentation;
+    presentation = nextPresentation === "closed" ? "closed" : "expanded";
     const visible = nextPresentation !== "closed";
-    const peek = nextPresentation === "peek";
     panel.classList.toggle("is-open", visible);
-    panel.classList.toggle("is-peek", peek);
     panel.setAttribute("aria-hidden", String(!visible));
-    content.hidden = peek;
-    peekButton.hidden = !peek;
-    toggleButton.hidden = !visible || peek;
-    toggleButton.setAttribute("aria-expanded", String(!peek));
-    const minimiseLabel = t("panel.minimise");
-    const expandLabel = t("panel.expand");
-    toggleButton.setAttribute("aria-label", minimiseLabel);
-    toggleButton.title = minimiseLabel;
-    peekButton.setAttribute("aria-label", expandLabel);
-    peekButton.title = expandLabel;
-    const closeLabel = persistentCurrentView() ? minimiseLabel : t("panel.close");
-    closeButton.setAttribute("aria-label", closeLabel);
-    closeButton.title = closeLabel;
-    closeButton.querySelector("path")?.setAttribute("d", persistentCurrentView() ? "M6 12h12" : "m6 6 12 12M18 6 6 18");
-    if (visible) updatePeekSummary();
+    content.hidden = false;
+    closeButton.setAttribute("aria-label", t("panel.close"));
+    closeButton.title = t("panel.close");
+    closeButton.querySelector("path")?.setAttribute("d", "m6 6 12 12M18 6 6 18");
   };
 
   const captureRenderState = () => {
@@ -140,7 +115,6 @@ export function createDetailPanel({
         expandedChart.querySelector("[data-close-comparison-chart]")?.focus({ preventScroll: true });
       }
     }
-    updatePeekSummary();
   };
 
   const close = ({ restoreFocus = true, force = false } = {}) => {
@@ -150,11 +124,6 @@ export function createDetailPanel({
       renderCurrentView({ preserveState: false, focusPanel: true });
       applyPresentation(suspendedPresentation);
       onPresentationRequest?.(suspendedPresentation, closeButton);
-      return;
-    }
-    if (!force && persistentCurrentView()) {
-      applyPresentation("peek");
-      onPresentationRequest?.("peek", closeButton);
       return;
     }
     const closedView = currentView;
@@ -217,8 +186,6 @@ export function createDetailPanel({
   };
 
   closeButton.addEventListener("click", () => close());
-  toggleButton.addEventListener("click", () => onPresentationRequest?.("peek", toggleButton));
-  peekButton.addEventListener("click", () => onPresentationRequest?.("expanded", peekButton));
   panel.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !content.querySelector("dialog[open]")) close();
   });
@@ -305,11 +272,16 @@ export function createDetailPanel({
       return;
     }
     const histogramBin = event.target.closest("[data-histogram-bin]");
-    if (histogramBin && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+    if (histogramBin && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      const bins = [...content.querySelectorAll("[data-histogram-bin]")];
-      const direction = event.key === "ArrowRight" ? 1 : -1;
-      bins[(bins.indexOf(histogramBin) + direction + bins.length) % bins.length]?.focus();
+      const chart = histogramBin.closest("[data-comparison-chart]") ?? content;
+      const bins = [...chart.querySelectorAll("[data-histogram-bin]")];
+      const currentIndex = bins.indexOf(histogramBin);
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? bins.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + bins.length) % bins.length;
+      bins.forEach((bin, index) => bin.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
+      bins[nextIndex]?.focus();
       return;
     }
     const button = event.target.closest("[data-panel-heat-metric]");

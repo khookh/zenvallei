@@ -61,8 +61,9 @@ def test_density_analysis_includes_zero_and_masks_clouds():
     meta = {1: {"sectorId": "sector", "municipality": "Halle"}}
     result = _density_scope_analysis(
         temperature, status, density, indexes, np.ones_like(indexes),
-        np.ones_like(indexes), meta, {"Halle": 1},
+        np.ones_like(indexes), meta, {"Halle": 1}, Affine.identity(),
     )
     assert result["region:zennevallei"]["n"] == 3
     assert result["region:zennevallei"]["slope"] == 0.1
     assert result["region:zennevallei"]["analysedAreaHa"] == 0.27
+    assert result["region:zennevallei"]["inference"]["status"] == "insufficient-observations"

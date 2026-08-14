@@ -318,8 +318,9 @@ export function createDensityMode({
         title: t("density.popupTitle"), subtitle: t("density.popupMeta", { year: result.year, radius: result.radiusMeters }),
         lines: [
           `${label}: ${formatNumber(result.percentage)}% (${formatNumber(result.areaHa)} ha)`,
-          ...result.selected.map((item) => `${item.label}: ${formatNumber(item.percentage)}%`),
-          result.coverage < 99.99 ? t("density.sourceCoverage", { value: formatNumber(result.coverage) }) : t("density.completeCoverage"),
+          ...(datasetId === "groenkaart" && result.selected.length > 1
+            ? result.selected.map((item) => `${item.label}: ${formatNumber(item.percentage)}%`) : []),
+          ...(result.coverage < 99.99 ? [t("density.sourceCoverage", { value: formatNumber(result.coverage) })] : []),
         ],
       };
     },

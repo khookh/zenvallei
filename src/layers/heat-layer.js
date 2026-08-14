@@ -9,7 +9,7 @@ import {
 } from "../heat-metric.js";
 import { formatScore, t } from "../i18n.js";
 import { defineLayer } from "./layer-contract.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 
 const MAP_LAYER_ID = "heat-sectors-fill";
 const SOURCE_URL = "https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen";
@@ -36,7 +36,7 @@ export function createHeatLayer({ scores, methodology, initialMetric = DEFAULT_H
       return {
         meta: t(keys[0], { count: sectorCount }),
         text: t(keys[1], { count: sectorCount }),
-        sources: [authorityLink("departmentCare", SOURCE_URL)],
+        sources: [productLink("heat", SOURCE_URL)],
       };
     },
     getLegendModel: () => ({

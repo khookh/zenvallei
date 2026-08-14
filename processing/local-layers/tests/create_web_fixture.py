@@ -332,6 +332,29 @@ series_stats = {
     "meanC": 34.1, "medianC": 34.0, "p10C": 31.0, "p90C": 38.0,
 }
 scope_ids = ["region:zennevallei", *[f"municipality:{name}" for name in municipalities], *[f"sector:{value}" for value in sector_ids]]
+
+def fixture_regression(scope_id, slope=.001):
+    if scope_id == "region:zennevallei":
+        count = len(sector_ids)
+    elif scope_id.startswith("municipality:"):
+        count = int(np.count_nonzero(sectors["municipality"] == scope_id.split(":", 1)[1]))
+    else:
+        count = 1
+    if count < 3:
+        return None
+    available = count >= 10
+    return {
+        "count": count, "slope": slope, "intercept": 10, "rSquared": .4,
+        "pearsonR": -.63, "spearmanRho": -.60,
+        "xMinimum": 20_000, "xMaximum": 50_000, "yMinimum": 10, "yMaximum": 50,
+        "inference": {
+            "method": "crh-dutilleul-modified-t", "hypothesis": "pearson-r-equals-zero",
+            "sidedness": "two-sided", "pValue": .023 if available else None,
+            "effectiveSampleSize": min(count, 42.5) if available else None,
+            "distanceClassCount": 13, "observationCount": count,
+            "status": "available" if available else "insufficient-observations",
+        },
+    }
 for item in landsat_items:
     encoded = np.zeros((64, 64, 4), dtype=np.uint8)
     temperature_code = int(round((35.5 + 100) * 100))
@@ -420,7 +443,16 @@ def fixture_density_scope_stats():
             "n": count, "slope": .05 if count >= 2 else None,
             "intercept": 33 if count >= 2 else None,
             "rSquared": .4 if count >= 2 else None,
+            "pearsonR": -.63 if count >= 2 else None,
+            "spearmanRho": -.60 if count >= 2 else None,
             "analysedAreaHa": round(count * .09, 2),
+            "inference": {
+                "method": "crh-dutilleul-modified-t", "hypothesis": "pearson-r-equals-zero",
+                "sidedness": "two-sided", "pValue": .023 if count >= 10 else None,
+                "effectiveSampleSize": min(count, 42.5) if count >= 10 else None,
+                "distanceClassCount": 13, "observationCount": count,
+                "status": "available" if count >= 10 else "insufficient-observations",
+            },
         }
     return output
 
@@ -438,18 +470,21 @@ for item in landsat_items:
     density_values[..., 2] = 255
     density_values[..., 3] = 255
     Image.fromarray(density_values, mode="RGBA").save(soil_root / "density-values" / f"{item['value']}.png")
-    (soil_root / "distributions" / f"{item['value']}.json").write_text(json.dumps({
-        "schemaVersion": 3, "observationId": item["value"],
+    soil_distribution = json.dumps({
+        "schemaVersion": 4, "observationId": item["value"],
         "secondaryYear": soil_years[item["value"]], "secondaryStatus": "provisional",
         "scopes": {scope_id: {"assignedAreaHa": 9.54, "series": {
             entry["key"]: series_stats for entry in soil_series
         }} for scope_id in scope_ids},
         "surfaceStats": {scope_id: surface_stats for scope_id in scope_ids},
         "densityAnalysis": fixture_density_scope_stats(),
-    }), encoding="utf-8")
+    }, separators=(",", ":")).encode("utf-8")
+    (soil_root / "distributions" / f"{item['value']}.json.gz").write_bytes(
+        gzip.compress(soil_distribution, compresslevel=9, mtime=0),
+    )
 
 soil_manifest = {
-    "schemaVersion": 3, "comparisonId": "landsat-jaarbak",
+    "schemaVersion": 4, "comparisonId": "landsat-jaarbak",
     "primaryLayerId": "landsat-temperature", "secondaryLayerId": "jaarbak",
     "defaultSeries": ["class:sealed", "class:unsealed"], "maximumSeries": 2,
     "temperatureScale": {"minimum": 15, "maximum": 50, "step": 0.5, "unit": "°C"},
@@ -472,7 +507,7 @@ soil_manifest = {
         "secondaryYear": soil_years[item["value"]], "secondaryStatus": "provisional",
         "densityPointDataUrl": f"landsat-jaarbak/density-points/{item['value']}.png",
         "densityDataUrl": f"landsat-jaarbak/density-values/{item['value']}.png",
-        "distributionUrl": f"landsat-jaarbak/distributions/{item['value']}.json",
+        "distributionUrl": f"landsat-jaarbak/distributions/{item['value']}.json.gz",
     } for item in landsat_items},
 }
 (soil_root / "manifest.json").write_text(json.dumps(soil_manifest), encoding="utf-8")
@@ -542,13 +577,21 @@ for _, row in sectors.iterrows():
         },
         "income": fiscal.get("medianNetTaxableIncome") if fiscal.get("sourceStatus") == "available" else None,
     }
-(green_income_root / "statistics.json").write_text(json.dumps({
-    "schemaVersion": 3, "sectorStats": sealed_sector_stats,
-    "regressions": {"+".join(map(str, selected)): {scope_id: None for scope_id in scope_ids}
+green_income_statistics = json.dumps({
+    "schemaVersion": 4, "sectorStats": sealed_sector_stats,
+    "regressions": {"+".join(map(str, selected)): {scope_id: fixture_regression(scope_id) for scope_id in scope_ids}
                     for selected in green_combinations},
-}), encoding="utf-8")
+    "regressionsBySurface": {
+        surface_key: {"+".join(map(str, selected)): {scope_id: fixture_regression(scope_id) for scope_id in scope_ids}
+                      for selected in green_combinations}
+        for surface_key in ("residential", "employmentInstitutional", "residential+employmentInstitutional")
+    },
+}, separators=(",", ":")).encode("utf-8")
+(green_income_root / "statistics.json.gz").write_bytes(
+    gzip.compress(green_income_statistics, compresslevel=9, mtime=0),
+)
 green_income_manifest = {
-    "schemaVersion": 4, "comparisonId": "groenkaart-income",
+    "schemaVersion": 5, "comparisonId": "groenkaart-income",
     "primaryLayerId": "groenkaart", "secondaryLayerId": "income",
     "greenMapYear": 2021, "urbanAtlasYear": 2021, "jaarbakYear": 2021, "incomeYear": 2023,
     "analysisResolutionMeters": 10, "minimumJaarbakCoverage": .95,
@@ -564,7 +607,7 @@ green_income_manifest = {
     "densityNonGreenUrl": "groenkaart-income/density-non-green.png",
     "scopeIndexUrl": "groenkaart-income/scope-index.png",
     **surface_contract,
-    "statisticsUrl": "groenkaart-income/statistics.json",
+    "statisticsUrl": "groenkaart-income/statistics.json.gz",
 }
 (green_income_root / "manifest.json").write_text(json.dumps(green_income_manifest), encoding="utf-8")
 
@@ -666,18 +709,29 @@ for observation_number, item in enumerate(landsat_items):
                     }}
         for sector_id, record in sealed_sector_stats.items()
     }
-    green_statistics_url = f"landsat-groenkaart/statistics/{item['value']}.json"
-    (ROOT / green_statistics_url).write_text(json.dumps({
-        "schemaVersion": 2, "observationId": item["value"], "pointCount": len(point_records),
+    green_statistics_url = f"landsat-groenkaart/statistics/{item['value']}.json.gz"
+    green_statistics_payload = json.dumps({
+        "schemaVersion": 3, "observationId": item["value"], "pointCount": len(point_records),
         "aggregation": "exact-masked-area",
-    }), encoding="utf-8")
-    income_statistics_url = f"landsat-income/statistics/{item['value']}.json"
+        "inferenceBySurface": {
+            surface_key: {"+".join(map(str, selected)): {
+                scope_id: fixture_density_scope_stats()[scope_id]["inference"] for scope_id in scope_ids
+            } for selected in green_combinations}
+            for surface_key in ("residential", "employmentInstitutional", "residential+employmentInstitutional")
+        },
+    }, separators=(",", ":")).encode("utf-8")
+    (ROOT / green_statistics_url).write_bytes(gzip.compress(green_statistics_payload, compresslevel=9, mtime=0))
+    income_statistics_url = f"landsat-income/statistics/{item['value']}.json.gz"
     (ROOT / income_statistics_url).parent.mkdir(parents=True, exist_ok=True)
-    (ROOT / income_statistics_url).write_text(json.dumps({
-        "schemaVersion": 3, "observationId": item["value"], "sectorStats": observation_stats,
-        "regressions": {scope_id: None for scope_id in scope_ids},
-        "regressionsBySurface": {}, "incomeCategoriesBySurface": {},
-    }), encoding="utf-8")
+    income_statistics_payload = json.dumps({
+        "schemaVersion": 4, "observationId": item["value"], "sectorStats": observation_stats,
+        "regressions": {scope_id: fixture_regression(scope_id, -.0001) for scope_id in scope_ids},
+        "regressionsBySurface": {
+            surface_key: {scope_id: fixture_regression(scope_id, -.0001) for scope_id in scope_ids}
+            for surface_key in ("residential", "employmentInstitutional", "residential+employmentInstitutional")
+        }, "incomeCategoriesBySurface": {},
+    }, separators=(",", ":")).encode("utf-8")
+    (ROOT / income_statistics_url).write_bytes(gzip.compress(income_statistics_payload, compresslevel=9, mtime=0))
     landsat_green_observations[item["value"]] = {
         "jaarbakYear": soil_years[item["value"]], "displayDataUrl": display_url,
         "pointDataUrl": point_url,
@@ -721,7 +775,7 @@ sealed_landsat_common = {
     "scopeIndexUrl": "landsat-groenkaart/scope-index.png",
 }
 landsat_green_manifest = {
-    **sealed_landsat_common, "schemaVersion": 6, "comparisonId": "landsat-groenkaart",
+    **sealed_landsat_common, "schemaVersion": 7, "comparisonId": "landsat-groenkaart",
     "primaryLayerId": "landsat-temperature", "secondaryLayerId": "groenkaart",
     "greenMapYear": 2021, "defaultGreenClasses": [1, 2], "greenClasses": green_classes,
     "densityGridUrl": "landsat-groenkaart/green-density-grid.png",
@@ -737,7 +791,7 @@ landsat_green_manifest = {
 landsat_income_root = ROOT / "landsat-income"
 landsat_income_root.mkdir(parents=True, exist_ok=True)
 landsat_income_manifest = {
-    **sealed_landsat_common, "schemaVersion": 4, "comparisonId": "landsat-income",
+    **sealed_landsat_common, "schemaVersion": 5, "comparisonId": "landsat-income",
     "primaryLayerId": "landsat-temperature", "secondaryLayerId": "income",
     "incomeYear": 2023, "displayResolutionMeters": 1,
     **surface_contract,
@@ -762,6 +816,92 @@ landsat_population_manifest = {
 (landsat_population_root / "manifest.json").write_text(
     json.dumps(landsat_population_manifest), encoding="utf-8"
 )
+
+scenario_root = ROOT / "land-cover-scenario"
+(scenario_root / "runtime" / "fixture").mkdir(parents=True, exist_ok=True)
+for method, delta_c in (("radoux", -.50), ("xgboost", -.20)):
+    delta_code = int(round(delta_c * 100)) + 32768
+    encoded_delta = np.zeros((64, 64, 4), dtype=np.uint8)
+    encoded_delta[..., 0] = delta_code >> 8
+    encoded_delta[..., 1] = delta_code & 255
+    encoded_delta[..., 3] = 255
+    Image.fromarray(encoded_delta).save(scenario_root / "runtime" / "fixture" / f"delta-{method}.png")
+scenario_change = np.zeros((64, 64, 4), dtype=np.uint8)
+scenario_change[16:48, 16:48] = [31, 127, 0, 255]
+Image.fromarray(scenario_change).save(scenario_root / "runtime" / "fixture" / "vegetation.png")
+analysis_water_source = scenario_root / "analysis-water-fixture.tif"
+with rasterio.open(
+    analysis_water_source, "w", driver="GTiff", width=512, height=512, count=4, dtype="uint8",
+    crs="EPSG:3857", transform=from_bounds(minx, miny, maxx, maxy, 512, 512),
+) as dataset:
+    rgba = np.zeros((4, 512, 512), dtype=np.uint8)
+    rgba[0, 8:24, 8:24] = 255
+    rgba[3, 8:24, 8:24] = 255
+    dataset.write(rgba)
+analysis_water_archive = scenario_root / "analysis-water-landgebruik-2025.pmtiles"
+_pmtiles(analysis_water_source, analysis_water_archive, cutline, "9..14")
+scenario_manifest = {
+    "schemaVersion": 6, "datasetId": "land-cover-scenario", "kind": "scenario",
+    "baselineYears": {
+        "greenMap": 2021, "urbanAtlas": 2021, "soilSealing": 2024,
+        "landUseWater": 2025,
+    },
+    "available": True,
+    "source": {"name": "Radoux et al. (2025)", "url": "https://doi.org/10.3390/rs17162815"},
+    "coefficientsC": {"high": -7.42, "low": -2.07, "sealed": 3.20},
+    "stateContract": {
+        "ground": ["low", "sealed", "agriculture", "water", "bare", "locked"],
+        "latentOverlap": "high-canopy-over-ground-for-editing-only",
+        "analysisSurface": "mutually-exclusive-upper-surface-v5-landgebruik-water",
+    },
+    "urbanAtlasClassMaskUrl": "../shared/urban-atlas-classes-2021.pmtiles",
+    "urbanAtlasClassIndexes": urban_class_indexes,
+    "analysisWaterMask": {
+        "url": "land-cover-scenario/analysis-water-landgebruik-2025.pmtiles",
+        "sha256": "fixture", "rendered": False, "editable": False,
+        "landUseYear": 2025, "landUseWaterCode": 17,
+    },
+    "psf": {"sigmaMeters": 79.5, "gridResolutionMeters": 15, "kernelSize": 41},
+    "maskResolutionMeters": 1, "temperatureGridResolutionMeters": 30,
+    "affectedThresholdC": .01,
+    "methodOrder": ["radoux", "xgboost"],
+    "methods": {
+        "radoux": {"available": True, "productId": "radoux", "source": {
+            "name": "Radoux et al. (2025) daylight LST model", "url": "https://doi.org/10.3390/rs17162815",
+        }},
+        "xgboost": {
+            "available": True, "productId": "xgboost", "modelContractVersion": 5,
+            "modelSha256": "fixture-model", "featureArtifactSha256": "fixture-features",
+            "catalogManifestSha256": "fixture-catalog",
+            "inferenceGrid": {"sha256": "fixture-grid", "validCentreCount": 4096},
+            "source": {
+                "name": "2026 Heatwave XGBoost training notebook",
+                "url": "https://github.com/khookh/zenvallei/blob/main/playground/xgboost_2026_heatwave_regression_zennevallei.ipynb",
+            },
+        },
+    },
+    "limits": {"operations": 100, "vertices": 10_000, "submittedAreaHa": 500},
+    "sourceGrid": {"width": 64, "height": 64},
+    "outputGrid": {"width": 64, "height": 64},
+}
+(scenario_root / "manifest.json").write_text(json.dumps(scenario_manifest), encoding="utf-8")
+
+# The general browser fixture intercepts scenario calculations with the
+# deterministic rasters above; scientific runtime tests use the real worker.
+descriptors["land-cover-scenario"] = {
+    "datasetId": "land-cover-scenario",
+    "manifestUrl": "land-cover-scenario/manifest.json",
+    "kind": "scenario",
+    "available": True,
+    "baselineYears": {
+        "greenMap": 2021, "urbanAtlas": 2021, "soilSealing": 2024,
+        "landUseWater": 2025,
+    },
+    "source": {
+        "name": "Radoux et al. (2025) land-cover linear mixture model",
+        "url": "https://doi.org/10.3390/rs17162815",
+    },
+}
 
 (ROOT / "index.json").write_text(json.dumps({
     "schemaVersion": 3, "datasets": descriptors,

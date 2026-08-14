@@ -1,5 +1,6 @@
 import { formatNumber, t } from "../i18n.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
+import { fetchJsonAsset } from "./compressed-json.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import { hideComparisonVeil, showComparisonVeil } from "./map-veil.js";
 import {
@@ -7,14 +8,14 @@ import {
   GREEN_DENSITY_STOPS, greenClassSelector, hasUrbanSurfaceContract, hideIncomeSymbols, incomeLegend,
   loadImageData, mountIncomeSymbols, ordinaryLeastSquares, safeAsset,
   SEALED_URBAN_SOURCE_URLS, sectorPointLabel, selectedUrbanClassIndexes, surroundingAreaHa,
-  urbanSurfaceSelector,
+  urbanSurfaceSelector, validateSpatialInference,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "groenkaart-income-density";
 const SYMBOL_LAYER_ID = "sealed-urban-income-symbols-green";
 const BEFORE_LAYER = "heat-sectors-hit-area";
 export function validateGroenkaartIncomeManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 4 || manifest.comparisonId !== "groenkaart-income"
+  if (!manifest || manifest.schemaVersion !== 5 || manifest.comparisonId !== "groenkaart-income"
     || manifest.primaryLayerId !== "groenkaart" || manifest.secondaryLayerId !== "income"
     || manifest.greenMapYear !== 2021 || manifest.urbanAtlasYear !== 2021
     || manifest.jaarbakYear !== 2021 || manifest.incomeYear !== 2023
@@ -55,15 +56,20 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     manifest.densityGridUrl = safeAsset(descriptor.assetRoot, manifest.densityGridUrl, ".png");
     manifest.densityNonGreenUrl = safeAsset(descriptor.assetRoot, manifest.densityNonGreenUrl, ".png");
     manifest.scopeIndexUrl = safeAsset(descriptor.assetRoot, manifest.scopeIndexUrl, ".png");
-    manifest.statisticsUrl = safeAsset(descriptor.assetRoot, manifest.statisticsUrl, ".json");
+    manifest.statisticsUrl = safeAsset(descriptor.assetRoot, manifest.statisticsUrl, ".json.gz");
     manifest.urbanAtlasClassMaskUrl = safeAsset(descriptor.assetRoot, manifest.urbanAtlasClassMaskUrl, ".pmtiles");
-    const [statsResponse, loadedGrid, loadedNonGreenGrid] = await Promise.all([
-      fetch(manifest.statisticsUrl),
+    const [loadedStatistics, loadedGrid, loadedNonGreenGrid] = await Promise.all([
+      fetchJsonAsset(manifest.statisticsUrl, "Green Map-income statistics"),
       loadImageData(manifest.densityGridUrl, manifest.imageSize),
       loadImageData(manifest.densityNonGreenUrl, manifest.imageSize),
     ]);
-    if (!statsResponse.ok) throw new Error(`Comparison statistics HTTP ${statsResponse.status}.`);
-    statistics = await statsResponse.json();
+    statistics = loadedStatistics;
+    if (statistics.schemaVersion !== 4 || !statistics.regressionsBySurface) {
+      throw new TypeError("Unsupported Green Map-income statistics.");
+    }
+    Object.values(statistics.regressionsBySurface).forEach((byGreen) => Object.values(byGreen)
+      .forEach((byScope) => Object.values(byScope).filter(Boolean)
+        .forEach((regression) => validateSpatialInference(regression.inference))));
     grid = loadedGrid;
     nonGreenGrid = loadedNonGreenGrid;
     selectedGreen = new Set(manifest.defaultGreenClasses);
@@ -172,12 +178,12 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     getLabel: () => t("greenIncome.title"),
     getActiveNote: () => t("greenIncome.activeNote", { area: municipality || t("controls.allMunicipalities") }),
     getContext: () => ({
-      meta: t("greenIncome.contextMeta"), text: t("greenIncome.contextText"), note: t("greenIncome.contextNote"),
+      meta: t("greenIncome.contextMeta"), text: t("greenIncome.contextText"),
       sources: [
-        authorityLink("natureForests", SEALED_URBAN_SOURCE_URLS.greenMap),
-        authorityLink("departmentEnvironment", SEALED_URBAN_SOURCE_URLS.jaarbak),
-        authorityLink("copernicusClms", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
-        authorityLink("statbel", SEALED_URBAN_SOURCE_URLS.income),
+        productLink("greenMap", SEALED_URBAN_SOURCE_URLS.greenMap),
+        productLink("jaarbak", SEALED_URBAN_SOURCE_URLS.jaarbak),
+        productLink("urbanAtlas", SEALED_URBAN_SOURCE_URLS.urbanAtlas),
+        productLink("income", SEALED_URBAN_SOURCE_URLS.income),
       ],
     }),
     getLegendModel: () => ({
@@ -222,12 +228,18 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
     getPanelModel(record) {
       const current = points();
       const areaRecord = comparisonAreaRecord(record, municipality);
+      const surfaceKey = manifest.urbanSurfaceGroups.filter(({ id }) => selectedUrban.has(id))
+        .map(({ id }) => id).join("+");
+      const greenKey = [...selectedGreen].sort((left, right) => left - right).join("+");
+      const regression = statistics.regressionsBySurface?.[surfaceKey]?.[greenKey]?.[
+        areaRecord.scope === "municipality" ? `municipality:${areaRecord.municipality}` : "region:zennevallei"
+      ] ?? ordinaryLeastSquares(current, "income", "density");
       return {
         template: "sealed-urban-scatter", comparisonId: "groenkaart-income", record: areaRecord,
         title: t("greenIncome.chartTitle"), definition: t("greenIncome.definition"),
         xLabel: t("sealedUrban.axisIncome"), yLabel: t("sealedUrban.axisGreenDensity"),
         xKey: "income", yKey: "density", points: current,
-        regression: ordinaryLeastSquares(current, "income", "density"),
+        regression,
         slopeScale: 10_000, slopeUnit: t("greenIncome.slopeUnit"),
         highlightedSectorId, selectedClasses: [...selectedGreen],
         selectedClassLabels: greenClassSelector(manifest, selectedGreen).items.filter((item) => item.selected).map((item) => item.label),

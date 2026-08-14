@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  LOCAL_ONLY_LAYER_IDS,
   PUBLIC_COMPARISON_IDS,
   LAYER_ACTIONS,
   PUBLIC_LAYER_IDS,
@@ -37,6 +38,14 @@ describe("release product contract", () => {
     const layers = new Map([...PUBLIC_LAYER_IDS, "notebook-test"].map((id) => [id, {}]));
     const comparisons = new Map(PUBLIC_COMPARISON_IDS.map((id) => [id, {}]));
     expect(validateProductContract(layers, comparisons, { playground: true })).toBe(true);
+  });
+
+  it("allows the scenario layer only in local-data mode", () => {
+    expect(LOCAL_ONLY_LAYER_IDS).toEqual(["land-cover-scenario"]);
+    const layers = new Map([...PUBLIC_LAYER_IDS, ...LOCAL_ONLY_LAYER_IDS].map((id) => [id, {}]));
+    const comparisons = new Map(PUBLIC_COMPARISON_IDS.map((id) => [id, {}]));
+    expect(validateProductContract(layers, comparisons, { localData: true })).toBe(true);
+    expect(() => validateProductContract(layers, comparisons)).toThrow("land-cover-scenario");
   });
 
   it("requires every functional comparison in every public mode", () => {

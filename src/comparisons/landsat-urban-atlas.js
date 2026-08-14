@@ -1,5 +1,5 @@
 import { t } from "../i18n.js";
-import { authorityLink } from "../source-authorities.js";
+import { productLink } from "../source-authorities.js";
 import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-raster.js";
 import { fetchJsonAsset } from "./compressed-json.js";
 import { loadImageData, safeAsset } from "./sealed-urban-shared.js";
@@ -294,10 +294,9 @@ export function createLandsatUrbanAtlasComparison({ descriptor, landsatLayer, ur
       return {
         meta: t("comparison.contextMeta"),
         text: t("comparison.contextText"),
-        note: `${t("comparison.exactMaskNote")} ${t("landsat.missing2025")}`,
         sources: [
-          authorityLink("landsat", runtime.manifest?.source?.productUrl),
-          authorityLink("copernicusClms", urbanAtlas?.source?.productUrl),
+          productLink("landsat", runtime.manifest?.source?.productUrl),
+          productLink("urbanAtlas", urbanAtlas?.source?.productUrl),
         ],
       };
     },

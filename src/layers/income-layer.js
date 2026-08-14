@@ -2,7 +2,7 @@
 import { formatCurrency, t } from "../i18n.js";
 import { escapeHtml, safeExternalUrl } from "../security.js";
 import { defineLayer } from "./layer-contract.js";
-import { authorityLink, authorityName } from "../source-authorities.js";
+import { authorityName, productLink } from "../source-authorities.js";
 
 const LAYER_ID = "statbel-income-fill";
 const YEARS = Object.freeze([2019, 2020, 2021, 2022, 2023]);
@@ -57,7 +57,7 @@ export function createIncomeLayer({ income: input }) {
     getContext: () => ({
       meta: t("income.contextMeta", { year: activeYear }),
       text: t("income.contextText"),
-      sources: [authorityLink("statbel", income.source.pageUrl)],
+      sources: [productLink("income", income.source.pageUrl)],
     }),
     getLegendModel: () => ({
       title: t("income.legendTitle"),

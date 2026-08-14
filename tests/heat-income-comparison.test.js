@@ -117,6 +117,8 @@ describe("heat-income comparison", () => {
     expect(english.match(/data-scatter-sector=/g)).toHaveLength(280);
     expect(english).toContain("heat-income-boxplots");
     expect(english).toContain("data-expand-comparison-chart");
+    expect(english).toContain('aria-label="Expand chart: Vulnerability versus median taxable income"');
+    expect(english).not.toContain("undefined");
     expect(english).toContain("Median net taxable income per declaration, 2023");
     expect(english).toContain("€20k");
     expect(english).not.toContain("€25,000");

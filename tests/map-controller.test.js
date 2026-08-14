@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampViewportPadding } from "../src/map-controller.js";
+import { clampViewportPadding, interactionCursor } from "../src/map-controller.js";
 
 describe("responsive map camera padding", () => {
   it("preserves ordinary padding", () => {
@@ -27,5 +27,16 @@ describe("responsive map camera padding", () => {
       390,
       780,
     )).toEqual({ top: 0, right: 0, bottom: 0, left: 12 });
+  });
+});
+
+describe("map interaction cursor", () => {
+  it("uses a crosshair only while drawing and a pointer while inspecting", () => {
+    expect(interactionCursor({ isDrawingActive: () => true, isPointInspectionActive: () => true })).toBe("crosshair");
+    expect(interactionCursor({
+      isDrawingActive: () => false, isPointInspectionActive: () => true,
+      getInspectionCursor: () => "pointer",
+    })).toBe("pointer");
+    expect(interactionCursor({ isDrawingActive: () => false, isPointInspectionActive: () => false })).toBe("");
   });
 });

@@ -56,6 +56,12 @@ export function clampViewportPadding(padding, width, height, minimumMapSize = 12
   return result;
 }
 
+export function interactionCursor(layer) {
+  if (layer?.isDrawingActive?.()) return "crosshair";
+  if (layer?.isPointInspectionActive?.()) return layer.getInspectionCursor?.() ?? "pointer";
+  return "";
+}
+
 function renderPopup(model) {
   const wrapper = document.createElement("div");
   wrapper.className = "sector-tooltip";
@@ -132,7 +138,12 @@ export function createMapController({
           { signal: controller.signal },
         );
         if (controller.signal.aborted || layer !== (pointInspectionProvider ?? currentLayer())) return;
-        popup.setLngLat(lngLat).setDOMContent(renderPopup(layer.getPointPopupModel(result))).addTo(map);
+        const popupModel = layer.getPointPopupModel(result);
+        if (!popupModel) {
+          popup.remove();
+          return;
+        }
+        popup.setLngLat(lngLat).setDOMContent(renderPopup(popupModel)).addTo(map);
       } catch (error) {
         if (error.name !== "AbortError") popup.remove();
       } finally {
@@ -174,6 +185,9 @@ export function createMapController({
   map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), "bottom-right");
 
   const currentLayer = () => layers.get(activeLayerId);
+  const refreshInteractionCursor = () => {
+    map.getCanvas().style.cursor = interactionCursor(currentLayer());
+  };
 
   const updateMapAccessibility = () => {
     const translatedControls = [
@@ -266,7 +280,13 @@ export function createMapController({
         map.on("mousemove", COMMON_LAYER_IDS.hit, (event) => {
           const feature = event.features?.[0];
           if (!feature) return;
-          map.getCanvas().style.cursor = currentLayer()?.isPointInspectionActive?.() ? "crosshair" : "pointer";
+          if (currentLayer()?.isDrawingActive?.()) {
+            popup.remove();
+            map.getCanvas().style.cursor = "crosshair";
+            return;
+          }
+          map.getCanvas().style.cursor = currentLayer()?.isPointInspectionActive?.()
+            ? (currentLayer()?.getInspectionCursor?.() ?? "crosshair") : "pointer";
           if (hoveredId && hoveredId !== feature.id) {
             map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
           }
@@ -279,15 +299,34 @@ export function createMapController({
           }
         });
         map.on("mouseleave", COMMON_LAYER_IDS.hit, () => {
+          // A tap is followed by a synthetic pointer leave on coarse-pointer
+          // browsers.  Aborting here used to cancel the inspection request and
+          // made scenario/density popups disappear before they could be read.
+          const retainTappedInspection = window.matchMedia("(pointer: coarse)").matches
+            && currentLayer()?.isPointInspectionActive?.();
+          if (retainTappedInspection) {
+            if (hoveredId) map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
+            hoveredId = null;
+            refreshInteractionCursor();
+            return;
+          }
           clearInspection();
-          map.getCanvas().style.cursor = "";
+          refreshInteractionCursor();
           if (hoveredId) map.setFeatureState({ source: SECTOR_SOURCE_ID, id: hoveredId }, { hover: false });
           hoveredId = null;
           popup.remove();
         });
+        // Drawing belongs to the map surface, not to the invisible sector hit
+        // layer. A general handler allows polygons to cross sector or region
+        // boundaries so the worker can account for outside-scope area.
+        map.on("click", (event) => {
+          const layer = currentLayer();
+          if (layer?.isDrawingActive?.()) layer.handleMapClick?.(event);
+        });
         map.on("click", COMMON_LAYER_IDS.hit, async (event) => {
           const feature = event.features?.[0];
           const layer = currentLayer();
+          if (layer?.isDrawingActive?.()) return;
           const inspectedFeature = await layer?.inspectFeature?.(map, event);
           if (inspectedFeature) {
             popup.setLngLat(event.lngLat).setDOMContent(renderPopup(inspectedFeature)).addTo(map);
@@ -297,6 +336,9 @@ export function createMapController({
             || window.matchMedia("(pointer: coarse)").matches;
           if (isTouch && inspectPoint(event.lngLat, { immediate: true })) return;
           if (feature) onSectorSelect(feature.properties.sectorId, { source: "map" });
+        });
+        map.on("dblclick", (event) => {
+          currentLayer()?.handleMapDoubleClick?.(event);
         });
 
         // Vite compiles the MapLibre worker on first use in development mode.
@@ -390,6 +432,7 @@ export function createMapController({
   return {
     map,
     ready,
+    refreshInteractionCursor,
     openSourceDialog(triggerElement = null) { sourceDialog.open(triggerElement); },
     setMunicipality(municipality) {
       activeMunicipality = municipality;
@@ -478,6 +521,7 @@ export function createMapController({
       layers.forEach((layer) => layer.setVisible(map, layer.id === activeLayerId));
       applyLayerFilter();
       updateMapAccessibility();
+      refreshInteractionCursor();
       map.jumpTo(camera);
       return true;
     },

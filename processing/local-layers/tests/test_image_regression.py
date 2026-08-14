@@ -20,6 +20,7 @@ from greenwave_local_layers.image_regression import (
     UA_WATER,
     _signature_is_current,
     _source_signature,
+    _xgboost_input_contract,
     annular_profiles,
     center_is_eligible,
     make_sector_folds,
@@ -44,12 +45,16 @@ def _synthetic_catalog(tmp_path):
     green[:, 200:] = 1
     urban = np.full(shape, UA_VALID | UA_URBAN_FABRIC, dtype=np.uint8)
     urban[:200] |= UA_WATER
-    soil_path, green_path, urban_path = (
+    water = ((urban & UA_WATER) != 0).astype(np.uint8)
+    water[180:220, 240:280] |= np.uint8(2)
+    soil_path, green_path, urban_path, water_path = (
         tmp_path / "soil.tif", tmp_path / "green.tif", tmp_path / "urban.tif",
+        tmp_path / "water.tif",
     )
     _write_raster(soil_path, soil)
     _write_raster(green_path, green)
     _write_raster(urban_path, urban)
+    _write_raster(water_path, water)
     samples = pd.DataFrame([{
         "sample_id": "obs:1:2", "site_id": "1:2", "observation_id": "obs",
         "sector_id": "A", "municipality": "Example", "landsat_row": 1,
@@ -63,16 +68,36 @@ def _synthetic_catalog(tmp_path):
     return RegressionCatalog(
         observation_id="obs", samples=samples, manifest={}, cache_dir=tmp_path,
         soil_path=soil_path, green_path=green_path, urban_context_path=urban_path,
+        water_context_path=water_path,
     )
 
 
-def test_center_eligibility_requires_clear_lst_sealed_soil_and_urban_fabric():
+def test_center_eligibility_uses_all_clear_finite_landsat_cells():
     urban = int(UA_VALID | UA_URBAN_FABRIC)
     assert center_is_eligible(1, urban, 1, 32.0)
-    assert not center_is_eligible(0, urban, 1, 32.0)
-    assert not center_is_eligible(1, int(UA_VALID), 1, 32.0)
+    assert center_is_eligible(0, urban, 1, 32.0)
+    assert center_is_eligible(1, int(UA_VALID), 1, 32.0)
     assert not center_is_eligible(1, urban, 2, 32.0)
     assert not center_is_eligible(1, urban, 1, np.nan)
+
+
+def test_xgboost_contract_has_five_channels_and_twenty_radial_features():
+    assert _xgboost_input_contract() == {
+        "channels": ["soil_sealing", "high_green", "low_green", "agriculture", "water"],
+        "radialBandEdgesMeters": [0, 25, 50, 75, 100],
+        "featureCount": 20,
+        "implicitRemainder": "other-unsealed-bare-soil-proxy",
+        "surfaceContract": "mutually-exclusive-upper-surface-v5-landgebruik-water",
+        "priority": [
+            "water", "agriculture", "high_green", "soil_sealing",
+            "low_green", "other_unsealed",
+        ],
+        "waterContract": {
+            "rule": "urban-atlas-water-union-landgebruik-2025-water",
+            "urbanAtlasCode": "50000", "landUseYear": 2025,
+            "landUseCode": 17, "landUseResampling": "nearest",
+        },
+    }
 
 
 def test_lazy_spatial_dataset_reads_aligned_binary_channels_and_masks_disk(tmp_path):
@@ -104,9 +129,11 @@ def test_land_cover_patch_adds_low_green_and_agriculture_channels(tmp_path):
         "soil_sealing", "high_green", "low_green", "agriculture", "water",
     )
     assert patch.shape == (5, PATCH_SIZE, PATCH_SIZE)
-    assert np.all(patch[0, SUPPORT_MASK] == 1)
+    # Every explicit predictor is one mutually exclusive upper-surface class.
+    assert np.all(patch.sum(axis=0)[SUPPORT_MASK] <= 1)
+    assert patch[0, SUPPORT_MASK].sum() > 0
     assert patch[1, SUPPORT_MASK].sum() > 0
-    assert patch[2, SUPPORT_MASK].sum() > 0
+    assert patch[2, SUPPORT_MASK].sum() == 0
     assert patch[3, SUPPORT_MASK].sum() > 0
     assert np.all(patch[:, ~SUPPORT_MASK] == 0)
     features = radial_band_fractions(patch)

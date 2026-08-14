@@ -52,12 +52,14 @@ def _catalog_and_fold(tmp_path):
     soil = np.ones(shape, dtype=np.uint8)
     green = np.full(shape, 4, dtype=np.uint8)
     urban = np.ones(shape, dtype=np.uint8)
-    soil_path, green_path, urban_path = (
+    soil_path, green_path, urban_path, water_path = (
         tmp_path / "soil.tif", tmp_path / "green.tif", tmp_path / "urban.tif",
+        tmp_path / "water.tif",
     )
     _write_raster(soil_path, soil)
     _write_raster(green_path, green)
     _write_raster(urban_path, urban)
+    _write_raster(water_path, np.zeros(shape, dtype=np.uint8))
     records = []
     for index, target in enumerate((30.0, 32.0, 100.0, 50.0)):
         records.append({
@@ -74,6 +76,7 @@ def _catalog_and_fold(tmp_path):
     catalog = RegressionCatalog(
         observation_id="obs", samples=pd.DataFrame(records), manifest={}, cache_dir=tmp_path,
         soil_path=soil_path, green_path=green_path, urban_context_path=urban_path,
+        water_context_path=water_path,
     )
     fold = SpatialFold(
         fold=0, train_indices=np.array([0, 1]), test_indices=np.array([2]),

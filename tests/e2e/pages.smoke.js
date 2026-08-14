@@ -24,9 +24,8 @@ async function showControls(page) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const panel = page.locator("#detail-panel");
   const adaptive = await page.locator(".map-shell").getAttribute("data-surface-mode") !== "expanded";
-  if (adaptive && await panel.getAttribute("aria-hidden") === "false"
-    && !await panel.evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-toggle").click();
+  if (adaptive && await panel.getAttribute("aria-hidden") === "false") {
+    await page.locator("#panel-close").click();
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
   if (await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
@@ -37,15 +36,11 @@ async function showControls(page) {
 
 async function showResults(page) {
   const panel = page.locator("#detail-panel");
-  if (!await panel.evaluate((element) => element.classList.contains("is-peek"))) return;
-  if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
-    await page.locator("#map-controls-toggle").click();
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  }
-  if (await panel.evaluate((element) => element.classList.contains("is-peek"))) {
-    await expect(page.locator("#panel-peek")).toBeVisible();
-    await page.locator("#panel-peek").click();
-  }
+  if (await panel.getAttribute("aria-hidden") === "false") return;
+  await page.locator("#municipality-select").evaluate((element) => {
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(panel).toHaveAttribute("aria-hidden", "false");
 }
 
 async function rasterVisibility(page) {
@@ -173,16 +168,16 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await expect(page.locator('[data-secondary-option="statbel-2025"]')).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/population/population-grid-2025.geojson"))).toBe(true);
   if (testInfo.project.name.includes("mobile")) await showControls(page);
-  await page.locator("#reset-view").click();
+  await page.locator("#municipality-select").evaluate((element) => element.dispatchEvent(new Event("change", { bubbles: true })));
   await expect(page.locator("#detail-panel")).toContainText("140,122");
   await expect(page.locator("#detail-panel")).toContainText("7.7 inhabitants/ha");
   await page.locator("#panel-close").click();
   await expect(page.locator('[data-secondary-option="flanders-2019"]')).toBeVisible();
   await page.locator('[data-secondary-option="flanders-2019"]').click();
   await expect(page.locator('[data-secondary-option="flanders-2019"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#layer-context-copy")).toContainText("100 m cell");
+  await expect(page.locator("#layer-context-copy")).toContainText("uniform but older and modelled");
   if (testInfo.project.name.includes("mobile")) await showControls(page);
-  await page.locator("#reset-view").click();
+  await page.locator("#municipality-select").evaluate((element) => element.dispatchEvent(new Event("change", { bubbles: true })));
   await expect(page.locator("#detail-panel")).toContainText("132,216");
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/population/population-density-2019.png"))).toBe(true);
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/landsat-temperature/manifest.json"))).toBe(true);

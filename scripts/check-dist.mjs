@@ -16,6 +16,7 @@ const forbiddenExperimentalAsset = /(?:^|\/)(?:__playground__|notebook-test)(?:\
 const permittedOfficialAsset = /(?:^|\/)data\/(?:official-layers\/(?:[a-z0-9/_-]+\.(?:geojson|json|pmtiles|tif))|population\/population-density-2019\.tif)$/i;
 const forbiddenLocalDataAsset = /(?:^|\/)__local-data__(?:\/|$)|(?:^|\/)\.cache(?:\/|$)/i;
 const retiredPublicAsset = /(?:^|\/)data\/(?:land-cover(?:\.json|\/)|vegetation(?:\.json|\/))/i;
+const forbiddenScenarioAsset = /(?:^|\/)data\/official-layers\/land-cover-scenario(?:\/|$)/i;
 
 async function filesBelow(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -35,6 +36,7 @@ for (const file of files) {
     throw new Error(`${relativePath} is an unapproved binary data asset.`);
   }
   if (retiredPublicAsset.test(relativePath)) throw new Error(`${relativePath} belongs to a retired public layer.`);
+  if (forbiddenScenarioAsset.test(relativePath)) throw new Error(`${relativePath} belongs to the local-only scenario layer.`);
 }
 for (const file of files.filter((entry) => textExtensions.has(path.extname(entry)))) {
   const contents = await fs.readFile(file, "utf8");
@@ -44,7 +46,7 @@ for (const file of files.filter((entry) => textExtensions.has(path.extname(entry
   if (path.extname(file) === ".html" && /<script[^>]+src=["']https?:/i.test(contents)) {
     throw new Error(`${path.relative(distRoot, file)} loads an unexpected external script.`);
   }
-  if (/\/__local-data(?:-query)?__\//.test(contents)) throw new Error(`${path.relative(distRoot, file)} references a local-data endpoint.`);
+  if (/\/__local-data(?:-query|-scenario)?__\//.test(contents)) throw new Error(`${path.relative(distRoot, file)} references a local-data endpoint.`);
 }
 
 const budget = async (relativePath, maximumBytes) => {

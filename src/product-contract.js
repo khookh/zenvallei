@@ -14,6 +14,10 @@ export const PUBLIC_LAYER_IDS = Object.freeze([
   "income",
 ]);
 
+export const LOCAL_ONLY_LAYER_IDS = Object.freeze([
+  "land-cover-scenario",
+]);
+
 export const PUBLIC_COMPARISON_IDS = Object.freeze([
   "heat-income",
   "heat-population",
@@ -33,8 +37,10 @@ export const LAYER_ACTIONS = Object.freeze({
   groenkaart: "density",
 });
 
-export function validateProductContract(registry, comparisons, { playground = false } = {}) {
-  const expectedLayers = playground ? [...PUBLIC_LAYER_IDS, "notebook-test"] : PUBLIC_LAYER_IDS;
+export function validateProductContract(registry, comparisons, { playground = false, localData = false } = {}) {
+  const expectedLayers = playground
+    ? [...PUBLIC_LAYER_IDS, "notebook-test"]
+    : localData ? [...PUBLIC_LAYER_IDS, ...LOCAL_ONLY_LAYER_IDS] : PUBLIC_LAYER_IDS;
   const observedLayers = [...registry.keys()];
   const missingLayers = expectedLayers.filter((id) => !observedLayers.includes(id));
   const unexpectedLayers = observedLayers.filter((id) => !expectedLayers.includes(id));

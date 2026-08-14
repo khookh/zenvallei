@@ -15,9 +15,8 @@ async function expandControls(page) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const adaptive = await page.locator(".map-shell").getAttribute("data-surface-mode") !== "expanded";
   const panel = page.locator("#detail-panel");
-  if (adaptive && await panel.getAttribute("aria-hidden") === "false"
-    && !await panel.evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-toggle").click();
+  if (adaptive && await panel.getAttribute("aria-hidden") === "false") {
+    await page.locator("#panel-close").click();
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
   if (await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
@@ -34,13 +33,21 @@ async function closePanelIfOpen(page) {
   await expect(panel).toHaveAttribute("aria-hidden", "true");
 }
 
+async function reopenCurrentScope(page) {
+  const panel = page.locator("#detail-panel");
+  if (await panel.getAttribute("aria-hidden") === "false") return;
+  await page.locator("#municipality-select").evaluate((element) => {
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(panel).toHaveAttribute("aria-hidden", "false");
+}
+
 async function expandComparisonLegend(page) {
   const legend = page.locator("#legend");
   if (!await legend.evaluate((element) => element.open)) {
     const panel = page.locator("#detail-panel");
-    if (await panel.getAttribute("aria-hidden") === "false"
-      && !await panel.evaluate((element) => element.classList.contains("is-peek"))) {
-      await page.locator("#panel-toggle").click();
+    if (await panel.getAttribute("aria-hidden") === "false") {
+      await page.locator("#panel-close").click();
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
     if (!await legend.evaluate((element) => element.open)) await legend.locator("summary").click();
@@ -76,17 +83,6 @@ async function activateComparison(page, fromLayer, targetLayer, readySelector = 
   await page.locator(`[data-layer="${targetLayer}"]`).click();
   await expect(page.locator("#active-layer-title")).toContainText("×", { timeout: 20_000 });
   await expect(page.locator(readySelector)).toHaveCount(1, { timeout: 20_000 });
-  const panel = page.locator("#detail-panel");
-  if (await panel.evaluate((element) => element.classList.contains("is-peek"))) {
-    if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
-      await page.locator("#map-controls-toggle").click();
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    }
-    if (await panel.evaluate((element) => element.classList.contains("is-peek"))) {
-      await expect(page.locator("#panel-peek")).toBeVisible();
-      await page.locator("#panel-peek").click();
-    }
-  }
 }
 
 test("compares heat vulnerability with authoritative sector population", async ({ page }) => {
@@ -98,7 +94,7 @@ test("compares heat vulnerability with authoritative sector population", async (
     status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
   }));
   await page.goto("/");
-  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 120_000 });
   await page.locator("#project-intro-primary").click();
 
   await expandControls(page);
@@ -107,9 +103,6 @@ test("compares heat vulnerability with authoritative sector population", async (
   await page.locator('[data-layer="population"]').click();
   await expect(page.locator("#active-layer-title")).toHaveText("Heat vulnerability × population");
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
-  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-peek").click();
-  }
 
   const inlineBox = page.locator("[data-heat-population-box-chart]:not(.is-expanded)");
   const inlineBars = page.locator("[data-heat-population-bar-chart]:not(.is-expanded)");
@@ -139,10 +132,7 @@ test("compares heat vulnerability with authoritative sector population", async (
   await expect(page.locator("#legend-content")).toContainText(/2,000/);
   await expect(page.locator(".legend-comparison-section div > span").last())
     .toHaveAttribute("aria-label", /Five-person symbol.*2,000 residents or more/i);
-
-  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-peek").click();
-  }
+  await reopenCurrentScope(page);
   await page.locator('[data-panel-heat-metric="vulnerability"]').click();
   await expect(page.locator("#detail-panel")).toContainText("Vulnerability score (0–10)");
   await expect(inlineBox.locator("[data-scatter-sector]")).toHaveCount(140);
@@ -187,9 +177,6 @@ test("compares heat vulnerability with authoritative sector population", async (
 
   await expandControls(page);
   await page.locator("#municipality-select").selectOption("Halle");
-  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-peek").click();
-  }
   await expect(inlineBox.locator("[data-scatter-sector]")).toHaveCount(39);
   await expect(page.locator("#detail-panel")).toContainText("42,846 of 42,877 residents are represented");
   expect(await page.evaluate(() => window.__heatMap.map.getFilter("heat-population-symbols")))
@@ -297,7 +284,7 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
       await page.locator("#sector-search").press("Enter");
       await expect(page.locator("#detail-panel")).toContainText("5 eligible clear Landsat observations are plotted.");
       await expandControls(page);
-      await page.locator("#reset-view").click();
+      await page.locator("#municipality-select").evaluate((element) => element.dispatchEvent(new Event("change", { bubbles: true })));
       await expect(page.locator("#detail-panel")).toContainText("770 eligible clear Landsat observations are plotted.");
     }
     if (!checkedLandsatGreenControls && [fromLayer, targetLayer].includes("landsat-temperature")
@@ -342,11 +329,10 @@ test("opens every sealed urban-fabric comparison from both layers", async ({ pag
     });
     expect(bounds.left).toBeGreaterThanOrEqual(bounds.parentLeft - 1);
     expect(bounds.right).toBeLessThanOrEqual(bounds.parentRight + 1);
-    if (!await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-      await page.locator("[data-expand-comparison-chart]").first().click();
-      await expect(page.locator("[data-comparison-chart-dialog]:visible")).toBeVisible();
-      await page.locator("[data-comparison-chart-dialog]:visible [data-close-comparison-chart]").click();
-    }
+    await reopenCurrentScope(page);
+    await page.locator("[data-expand-comparison-chart]").first().click();
+    await expect(page.locator("[data-comparison-chart-dialog]:visible")).toBeVisible();
+    await page.locator("[data-comparison-chart-dialog]:visible [data-close-comparison-chart]").click();
     await expandControls(page);
     await page.locator("#analysis-pair-remove").click();
     await expect(page.locator("#analysis-pair-result")).toBeHidden({ timeout: 20_000 });
@@ -429,7 +415,248 @@ test("profiles selected sealed-surface Landsat temperature across the 2019 model
   await expect(page.locator("#secondary-control")).toContainText("Current grid · 2025");
 });
 
-test("serves all eight layers from the prepared working catalogue in local-data mode", async ({ page }, testInfo) => {
+test("paints a local land-cover scenario and switches between both estimates", async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
+  const isMobile = testInfo.project.name.includes("mobile");
+  const coordinates = [[3.95, 50.88], [4.55, 50.88], [4.55, 50.60], [3.95, 50.60]];
+  const areaStats = {
+    submittedAreaHa: 1.2, acceptedAreaHa: .8, ignoredAreaHa: .2,
+    noChangeAreaHa: .2, outsideScopeAreaHa: 0,
+    transitions: { "low-to-high": .8 }, affectedCellCount: 6,
+    medianDeltaC: -.5, p10DeltaC: -.8, p90DeltaC: -.2,
+    minimumDeltaC: -.9, maximumDeltaC: -.1,
+    strongestCoolingC: -.9, strongestWarmingC: null,
+    deltaDistribution: {
+      affectedThresholdC: .01, affectedCellCount: 6, domainC: [-1, 1], binWidthC: .5,
+      bins: [
+        { lowerC: -1, upperC: -.5, count: 2, sharePct: 33.3333 },
+        { lowerC: -.5, upperC: 0, count: 4, sharePct: 66.6667 },
+        { lowerC: 0, upperC: .5, count: 0, sharePct: 0 },
+        { lowerC: .5, upperC: 1, count: 0, sharePct: 0 },
+      ],
+    },
+    landCoverBalance: {
+      ground: {
+        low: { beforeHa: 10, changeHa: 0, afterHa: 10 },
+        sealed: { beforeHa: 5, changeHa: 0, afterHa: 5 },
+        agriculture: { beforeHa: 4, changeHa: 0, afterHa: 4 },
+        water: { beforeHa: 1, changeHa: 0, afterHa: 1 },
+        bare: { beforeHa: 2, changeHa: 0, afterHa: 2 },
+      },
+      highCanopy: { beforeHa: 7, changeHa: .8, afterHa: 7.8 },
+      validAnalysedAreaHa: 22,
+      lockedUnavailableAreaHa: .2,
+    },
+  };
+  const scope = { region: areaStats, municipalities: {}, sectors: {} };
+  const scenarioRequests = [];
+  await page.route("**/__local-data-scenario__/simulate", async (route) => {
+    const request = route.request().postDataJSON();
+    scenarioRequests.push(request);
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      schemaVersion: 6, sessionId: request.sessionId, revision: request.revision,
+      deltaRasters: {
+        radoux: { url: "land-cover-scenario/runtime/fixture/delta-radoux.png", coordinates },
+        xgboost: { url: "land-cover-scenario/runtime/fixture/delta-xgboost.png", coordinates },
+      },
+      scopeStats: scope,
+      scopeStatsByMethod: { radoux: scope, xgboost: {
+        region: { ...areaStats, medianDeltaC: -.2 }, municipalities: {}, sectors: {},
+      } },
+      diagnosticsByMethod: {
+        radoux: { method: "radoux-linear-mixture" },
+        xgboost: { outsideTrainingRangeCellCount: 0 },
+      },
+    }) });
+  });
+  await page.route("**/__local-data-scenario__/inspect", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({
+      status: "available", baselineClass: "sealed", simulatedClass: "high", editable: true,
+      baselineGround: "sealed", simulatedGround: "sealed",
+      baselineHighCanopy: false, simulatedHighCanopy: true,
+      changed: true, deltaCByMethod: { radoux: -.5, xgboost: -.2 },
+      selectedMethod: "xgboost", outsideTrainingRange: false, urbanAtlasClassCode: "12100",
+    }),
+  }));
+  await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
+    status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
+  }));
+  await page.goto("/");
+  // The local-data fixture builds several analytical assets on first startup.
+  // Allow slower developer machines to reach the app before exercising drawing.
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 120_000 });
+  await page.locator("#project-intro-primary").click();
+  await page.locator('[data-layer="land-cover-scenario"]').click();
+  await expect.poll(() => page.evaluate(() => window.__heatMap.getActiveLayer())).toBe("land-cover-scenario");
+  await closePanelIfOpen(page);
+  await expandControls(page);
+  await expect(page.locator("#scenario-editor")).toBeVisible();
+  await page.locator("#scenario-draw").click();
+  await expect.poll(() => page.evaluate(() => window.__heatMap.map.getCanvas().style.cursor)).toBe("crosshair");
+  // Leave the whole map available on narrow viewports before placing vertices.
+  // The interaction itself remains a real MapLibre pointer click.
+  if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
+    await page.locator("#map-controls-toggle").click();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  }
+  const findDrawPoints = () => page.evaluate((mobile) => {
+    const map = window.__heatMap.map;
+    const canvas = map.getCanvas();
+    const rectangle = map.getCanvas().getBoundingClientRect();
+    const size = mobile ? 36 : 64;
+    for (let y = 64; y < rectangle.height - size - 24; y += 20) {
+      for (let x = 80; x < rectangle.width - size - 24; x += 20) {
+        const positions = [[x, y], [x + size, y], [x + size, y + size], [x, y + size]];
+        if (positions.every(([px, py]) => document.elementFromPoint(
+          rectangle.left + px, rectangle.top + py,
+        ) === canvas)) {
+          return positions.map(([px, py]) => [rectangle.left + px, rectangle.top + py]);
+        }
+      }
+    }
+    return null;
+  }, isMobile);
+  const points = await findDrawPoints();
+  expect(points).not.toBeNull();
+  for (const [x, y] of points) {
+    if (isMobile) await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
+  }
+  const draftPresentation = await page.evaluate(() => {
+    const map = window.__heatMap.map;
+    const order = map.getStyle().layers.map((layer) => layer.id);
+    return {
+      fill: map.getPaintProperty("lst-scenario-drawing-fill", "fill-color"),
+      casing: map.getPaintProperty("lst-scenario-drawing-casing", "line-color"),
+      casingWidth: map.getPaintProperty("lst-scenario-drawing-casing", "line-width"),
+      line: map.getPaintProperty("lst-scenario-drawing-line", "line-color"),
+      lineWidth: map.getPaintProperty("lst-scenario-drawing-line", "line-width"),
+      vertex: map.getPaintProperty("lst-scenario-drawing-vertices", "circle-color"),
+      draftIndex: order.indexOf("lst-scenario-drawing-vertices"),
+      deltaIndex: order.indexOf("lst-scenario-delta-layer"),
+      boundaryIndex: order.indexOf("heat-sectors-hit-area"),
+    };
+  });
+  expect(draftPresentation).toMatchObject({
+    fill: "#ffffff", casing: "#123b43", casingWidth: 7,
+    line: "#ffffff", lineWidth: 4, vertex: "#ffffff",
+  });
+  expect(draftPresentation.draftIndex).toBeGreaterThan(draftPresentation.deltaIndex);
+  expect(draftPresentation.draftIndex).toBeGreaterThan(draftPresentation.boundaryIndex);
+  await testInfo.attach("scenario-white-drawing", {
+    body: await page.screenshot(), contentType: "image/png",
+  });
+  await expandControls(page);
+  await expect(page.locator("#scenario-finish")).toBeEnabled();
+  await page.locator("#scenario-finish").click();
+  await expect(page.locator("#scenario-editor-state")).toHaveText("Ready", { timeout: 20_000 });
+  await page.locator('[data-scenario-target="remove-high"]').click();
+  await expect(page.locator('[data-scenario-target="remove-high"]')).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#scenario-draw").click();
+  if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
+    await page.locator("#map-controls-toggle").click();
+  }
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const removePoints = await findDrawPoints();
+  expect(removePoints).not.toBeNull();
+  for (const [x, y] of removePoints) {
+    if (isMobile) await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
+  }
+  await expandControls(page);
+  await page.locator("#scenario-finish").click();
+  await expect(page.locator("#scenario-editor-state")).toHaveText("Ready", { timeout: 20_000 });
+  expect(scenarioRequests.at(-1).operations.at(-1)).toMatchObject({ action: "remove-high", target: null });
+  await expandComparisonLegend(page);
+  await expect(page.locator('[data-scenario-delta]')).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.evaluate(() => {
+    const map = window.__heatMap.map;
+    const cover = map.getStyle().layers.find((layer) => /^lst-scenario-cover-[01]$/.test(layer.id)
+      && map.getLayoutProperty(layer.id, "visibility") !== "none");
+    return {
+      coverOpacity: cover ? map.getPaintProperty(cover.id, "raster-opacity") : null,
+      deltaOpacity: map.getPaintProperty("lst-scenario-delta-layer", "raster-opacity"),
+    };
+  })).toEqual({ coverOpacity: .48, deltaOpacity: 1 });
+  await page.locator('[data-scenario-delta]').click();
+  await expect.poll(() => page.evaluate(() => {
+    const map = window.__heatMap.map;
+    const cover = map.getStyle().layers.find((layer) => /^lst-scenario-cover-[01]$/.test(layer.id)
+      && map.getLayoutProperty(layer.id, "visibility") !== "none");
+    return cover ? map.getPaintProperty(cover.id, "raster-opacity") : null;
+  })).toBe(.78);
+  await page.locator('[data-scenario-delta]').click();
+  await expect(page.locator('[data-scenario-category="sealed"]')).toHaveAttribute("aria-pressed", "true");
+  await page.locator('[data-scenario-category="sealed"]').click();
+  await expect(page.locator('[data-scenario-category="sealed"]')).toHaveAttribute("aria-pressed", "false");
+  await page.locator('[data-scenario-category="sealed"]').click();
+  await expect(page.locator('[data-scenario-method="xgboost"]')).toBeEnabled();
+  await expect(page.locator('[data-scenario-method]')).toHaveCount(2);
+  await page.locator('[data-scenario-method="radoux"]').click();
+  await expect(page.locator('[data-scenario-method="radoux"]')).toHaveAttribute("aria-pressed", "true");
+  await page.locator('[data-scenario-method="xgboost"]').click();
+  await testInfo.attach("scenario-visible-delta", {
+    body: await page.screenshot(), contentType: "image/png",
+  });
+  const scenarioAccessibility = await new AxeBuilder({ page })
+    .include("#scenario-editor")
+    .include("#legend")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(scenarioAccessibility.violations).toEqual([]);
+  if (await page.locator("#legend").evaluate((element) => element.open)) {
+    await page.locator("#legend summary").click();
+  }
+  if (await page.locator("#detail-panel").getAttribute("aria-hidden") === "true") {
+    await reopenCurrentScope(page);
+  }
+  await expect(page.locator("#detail-panel")).toContainText("2026 Heatwave XGBoost");
+  await expect(page.locator("#detail-panel")).toContainText("−0.2°C");
+  await expect(page.locator("#detail-panel")).toContainText("Ground composition");
+  await expect(page.locator("#detail-panel")).toContainText("High-vegetation canopy");
+  await expect(page.locator("#detail-panel .scenario-change-table")).toContainText("+0.8 ha");
+  const scenarioMethod = page.locator('#detail-panel details[data-section="methodology"]');
+  await scenarioMethod.locator("summary").click();
+  await expect(scenarioMethod).toContainText("Shared calculation");
+  await expect(scenarioMethod).toContainText("2026 Heatwave XGBoost");
+  await expect(scenarioMethod.locator('a[href*="xgboost_2026_heatwave_regression_zennevallei.ipynb"]')).toHaveCount(1);
+  await expect(scenarioMethod).not.toContainText("Radoux et al. (2025) estimated");
+  await expect(scenarioMethod).toContainText("22 June 2026 at 12:33 CEST");
+  await expect(scenarioMethod).toContainText("Limitations");
+  await page.locator("#panel-close").click();
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
+    await page.locator("#map-controls-toggle").click();
+  }
+  await expect(page.locator("#map-controls")).toHaveClass(/is-collapsed/);
+  await page.evaluate(() => {
+    window.__heatMap.resetView();
+    return new Promise((resolve) => window.__heatMap.map.once("moveend", resolve));
+  });
+  const inspectionPoint = await page.evaluate(() => {
+    const map = window.__heatMap.map;
+    const canvas = map.getCanvas();
+    const rectangle = map.getCanvas().getBoundingClientRect();
+    for (let y = 80; y < rectangle.height - 80; y += 20) {
+      for (let x = 100; x < rectangle.width - 100; x += 20) {
+        if (document.elementFromPoint(rectangle.left + x, rectangle.top + y) === canvas
+          && map.queryRenderedFeatures([x, y], { layers: ["heat-sectors-hit-area"] }).length) {
+          return [rectangle.left + x, rectangle.top + y];
+        }
+      }
+    }
+    return null;
+  });
+  expect(inspectionPoint).not.toBeNull();
+  if (isMobile) await page.touchscreen.tap(...inspectionPoint);
+  else await page.mouse.move(...inspectionPoint);
+  await expect(page.locator(".maplibregl-popup")).toContainText("Urban Atlas:");
+  await expect(page.locator(".maplibregl-popup")).toContainText("2026 Heatwave XGBoost: -0.2°C ΔLST");
+  await expect(page.locator(".maplibregl-popup")).not.toContainText("Radoux et al. model");
+  expect(await page.evaluate(() => window.__heatMap.map.getCanvas().style.cursor)).toBe("pointer");
+});
+
+test("serves all nine layers from the prepared working catalogue in local-data mode", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const isMobile = testInfo.project.name.includes("mobile");
   const errors = [];
@@ -447,7 +674,8 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
   await page.locator("#project-intro-primary").click();
-  await expect(page.locator("[data-layer]")).toHaveCount(8);
+  await expect(page.locator("[data-layer]")).toHaveCount(9);
+  await expect(page.locator('[data-layer="land-cover-scenario"]')).toHaveCount(1);
   await expect(page.locator('[data-layer="land-cover"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="vegetation"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="tree-cover-density"]')).toHaveCount(0);
@@ -462,7 +690,8 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   }
   await expect(page.locator("#temporal-control")).toBeVisible();
   await expect(page.locator("#temporal-output")).toHaveText("2024");
-  await expect(page.locator("#layer-context-note")).toContainText(/provisional/i);
+  await expect(page.locator("#layer-context-note")).not.toContainText(/provisional/i);
+  await expect(page.locator('details[data-section="local-raster-methodology"]')).toContainText(/provisional/i);
   expect(localRequests.some((url) => url.includes("/jaarbak/manifest.json"))).toBe(true);
   expect(localRequests.some((url) => url.endsWith("jaarbak-2024-density.tif"))).toBe(false);
   expect(localRequests.some((url) => url.includes("/groenkaart/manifest.json"))).toBe(false);
@@ -492,8 +721,8 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(page.locator("#detail-panel")).toContainText("Missing coverage");
   await page.locator("#detail-panel").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   if (isMobile) {
-    await page.locator("#panel-toggle").click();
-    await page.locator("#map-controls-toggle").click();
+    await page.locator("#panel-close").click();
+    await expandControls(page);
   }
 
   await page.locator('[data-layer="groenkaart"]').click();
@@ -574,12 +803,15 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await page.locator('[data-comparison-series="class:11100"]').click();
   await expect(page.locator('[data-comparison-series="family:artificialSurfaces"]')).toHaveAttribute("aria-pressed", "false");
   await page.locator('[data-comparison-series="family:agriculture"]').click();
+  await expect(page.locator('[data-comparison-series="family:agriculture"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator('[data-comparison-series="family:forestSemiNatural"]').click();
+  await expect(page.locator('[data-comparison-series="family:forestSemiNatural"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator('[data-comparison-series="family:sportsLeisure"]').click();
+  await expect(page.locator('[data-comparison-series="family:sportsLeisure"]')).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("[data-comparison-feedback]")).toContainText("no more than four");
   await page.locator('[data-comparison-series="family:water"]').click();
   await expect(page.locator('[data-comparison-series="family:water"]')).toHaveAttribute("aria-pressed", "false");
-  await expect(page.locator("[data-comparison-feedback]")).toContainText("no more than four");
-  if (isMobile) await page.locator("#panel-peek").click();
+  if (isMobile) await reopenCurrentScope(page);
   const visibleHistogram = page.locator("#detail-panel .comparison-chart:not(.is-expanded)");
   const firstHistogramBin = visibleHistogram.locator("[data-histogram-bin]").first();
   await expect(visibleHistogram.locator(".comparison-axis-y")).toHaveText("Surface share (%)");
@@ -591,7 +823,8 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   expect(chartSpacing.outputTop).toBeGreaterThan(chartSpacing.axisBottom);
   await firstHistogramBin.focus();
   await firstHistogramBin.press("ArrowRight");
-  expect(await visibleHistogram.locator("[data-histogram-bin]").nth(1).evaluate((element) => element === document.activeElement)).toBe(true);
+  await expect.poll(() => visibleHistogram.locator("[data-histogram-bin]").nth(1)
+    .evaluate((element) => element === document.activeElement)).toBe(true);
   await page.locator("[data-expand-comparison-chart]").click();
   await expect(page.locator("[data-comparison-chart-dialog]")).toBeVisible();
   await expect(page.locator("[data-comparison-chart-dialog]")).toContainText("Land-surface temperature by Urban Atlas surface");
@@ -663,7 +896,7 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(page.locator(".timeline-marker.is-reference")).toHaveCount(0);
   await expect(page.locator("#temporal-output")).toContainText(/12:|12\./);
   await expect(page.locator("#legend-note")).toContainText("exact selected Urban Atlas polygons");
-  await expect(page.locator("#layer-context-note")).toContainText("28 June to 2 July 2025");
+  await expect(page.locator("#layer-context-note")).not.toContainText("28 June to 2 July 2025");
   await expect(page.locator("#detail-panel")).toContainText("not air temperature");
   await expect(page.locator("#detail-panel")).toContainText("Landsat observations");
   await expect(page.locator("#detail-panel")).toContainText("P10 to P90");
@@ -678,12 +911,7 @@ test("serves all eight layers from the prepared working catalogue in local-data 
     .analyze();
   expect(accessibilityResults.violations).toEqual([]);
   await page.locator("#panel-close").click();
-  if (isMobile) {
-    await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
-    await expect(page.locator("#panel-title")).toHaveText("Entire Zennevallei");
-  } else {
-    await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
-  }
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
   if (isMobile) await expandControls(page);
   await page.locator("#municipality-select").selectOption("Halle");
   await expect(page.locator("#panel-title")).toHaveText("Halle");
@@ -692,7 +920,7 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await page.locator("#language-toggle").click();
   await expect(page.locator('[data-layer="landsat-temperature"]')).toContainText("Landsat-oppervlaktetemperatuur");
   await expect(page.locator("#detail-panel")).toContainText("Temperatuurverdeling per oppervlak");
-  await expect(page.locator("#detail-panel")).toContainText("niet de luchttemperatuur");
+  await expect(page.locator("#detail-panel")).toContainText("geen luchttemperatuur");
   if (isMobile) {
     await closePanelIfOpen(page);
     await expandControls(page);
@@ -708,15 +936,14 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
   await expect(page.locator("#panel-title")).toHaveText("Halle");
   if (isMobile) await expandControls(page);
-  await page.locator("#sector-search").fill("23003A001");
-  await page.locator("#sector-search").press("Enter");
-  if (isMobile) await expandControls(page);
   await expect(page.locator("#active-layer-title")).toHaveText("Landgebruik Vlaanderen");
   await expect(page.locator("#temporal-output")).toHaveText("2025");
   await expect(page.locator("#secondary-control")).toBeVisible();
   expect(localRequests.some((url) => url.endsWith("agpa-2025.geojson"))).toBe(false);
   await page.locator('[data-secondary-option="agriculture"]').click();
-  if (isMobile) await page.locator("#panel-peek").click();
+  await page.locator("#sector-search").fill("23003A001");
+  await page.locator("#sector-search").press("Enter");
+  await expect(page.locator("#detail-panel")).toContainText("23003A001");
   await expect(page.locator("#legend-title")).toContainText("Landbouwgebruikspercelen 2025");
   await expect.poll(() => localRequests.some((url) => url.endsWith("agpa-2025.geojson"))).toBe(true);
   await expect(page.locator("#detail-panel")).toContainText("20%");
@@ -774,9 +1001,6 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await expect(inlineHeatIncomeChart.locator('[data-scatter-sector="23027C091"]')).toHaveClass(/is-selected/);
   await expect(inlineHeatIncomeChart).toBeVisible();
 
-  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-peek").click();
-  }
   await page.locator('[data-panel-heat-metric="vulnerability"]').click();
   await expect(page.locator("#detail-panel")).toContainText("Kwetsbaarheid tegenover mediaan belastbaar inkomen");
   const firstPoint = inlineHeatIncomeChart.locator("[data-scatter-sector]").first();
@@ -789,21 +1013,14 @@ test("serves all eight layers from the prepared working catalogue in local-data 
   await page.locator("#municipality-select").selectOption("Halle");
   await expect(inlineHeatIncomeChart.locator("[data-scatter-sector]")).toHaveCount(39);
   await expect(page.locator("#detail-panel")).toContainText("39 vergelijkbare sectoren");
-  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-peek").click();
-  }
-  await expandControls(page);
   await page.locator("#about-button").click();
   await expect(page.locator("#panel-title")).toHaveText("Over deze kaart");
   await page.locator("#panel-close").click();
-  if (await page.locator("#detail-panel").evaluate((element) => element.classList.contains("is-peek"))) {
-    await page.locator("#panel-peek").click();
-  }
   await expect(inlineHeatIncomeChart).toBeVisible();
   await page.locator("#panel-close").click();
-  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
-  await expect(page.locator("#detail-panel")).toHaveClass(/is-peek/);
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
   await expandControls(page);
+  await expect(page.locator("#analysis-pair-result")).toBeVisible();
   await page.locator("#analysis-pair-remove").click();
   expect(await page.evaluate(() => ({
     heat: window.__heatMap.map.getLayoutProperty("heat-sectors-fill", "visibility"),

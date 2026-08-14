@@ -465,11 +465,21 @@ def _can_reuse_year(entry: dict, dataset_id: str) -> bool:
 
 def update_index():
     datasets = {}
-    for dataset_id in ("jaarbak", "groenkaart", "landgebruik", "landsat-temperature"):
+    for dataset_id in ("jaarbak", "groenkaart", "landgebruik", "landsat-temperature", "land-cover-scenario"):
         manifest_path = CACHE_ROOT / dataset_id / "manifest.json"
         if not manifest_path.exists():
             continue
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if dataset_id == "land-cover-scenario":
+            datasets[dataset_id] = {
+                "datasetId": dataset_id,
+                "manifestUrl": f"{dataset_id}/manifest.json",
+                "kind": "scenario",
+                "available": True,
+                "baselineYears": manifest["baselineYears"],
+                "source": manifest["source"],
+            }
+            continue
         datasets[dataset_id] = {
             "datasetId": dataset_id,
             "manifestUrl": f"{dataset_id}/manifest.json",

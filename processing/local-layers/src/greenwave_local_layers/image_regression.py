@@ -27,12 +27,21 @@ from rasterio.windows import Window
 from rasterio.warp import transform as transform_coordinates, transform_bounds
 from shapely import contains_xy
 
+from .analysis_water import (
+    DEFAULT_LAND_USE_PATH,
+    LAND_USE_WATER_CODE,
+    LAND_USE_YEAR,
+    analysis_water_metadata,
+    analysis_water_union,
+    prepare_analysis_water_context,
+)
 from .constants import CACHE_ROOT, PROJECT_ROOT, SECTORS_PATH
 from .landsat_jaarbak import YEAR_BY_OBSERVATION
+from .scenario_land_cover import xgboost_land_cover_channels
 from .sources import file_hash
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 5
 DEFAULT_OBSERVATION_ID = "landsat-2026-06-22"
 PATCH_RADIUS_METERS = 100
 PATCH_RESOLUTION_METERS = 1
@@ -54,6 +63,24 @@ UA_WATER = np.uint8(4)
 CATALOG_ROOT = CACHE_ROOT / "image-regression"
 
 
+def _xgboost_input_contract():
+    return {
+        "channels": list(LAND_COVER_CHANNEL_NAMES),
+        "radialBandEdgesMeters": list(RADIAL_BAND_EDGES_METERS),
+        "featureCount": len(LAND_COVER_CHANNEL_NAMES) * (len(RADIAL_BAND_EDGES_METERS) - 1),
+        "implicitRemainder": "other-unsealed-bare-soil-proxy",
+        "surfaceContract": "mutually-exclusive-upper-surface-v5-landgebruik-water",
+        "priority": ["water", "agriculture", "high_green", "soil_sealing", "low_green", "other_unsealed"],
+        "waterContract": {
+            "rule": "urban-atlas-water-union-landgebruik-2025-water",
+            "urbanAtlasCode": WATER_CODE,
+            "landUseYear": LAND_USE_YEAR,
+            "landUseCode": LAND_USE_WATER_CODE,
+            "landUseResampling": "nearest",
+        },
+    }
+
+
 @dataclass(frozen=True)
 class RegressionCatalog:
     """Prepared sample metadata and the aligned rasters used by the loader."""
@@ -65,6 +92,7 @@ class RegressionCatalog:
     soil_path: Path
     green_path: Path
     urban_context_path: Path
+    water_context_path: Path
 
 
 @dataclass(frozen=True)
@@ -81,14 +109,9 @@ class SpatialFold:
 
 
 def center_is_eligible(soil_value, urban_value, landsat_status, temperature) -> bool:
-    """Return whether one Landsat centre satisfies the experiment contract."""
-    return bool(
-        int(landsat_status) == 1
-        and np.isfinite(temperature)
-        and int(soil_value) == 1
-        and (int(urban_value) & int(UA_VALID))
-        and (int(urban_value) & int(UA_URBAN_FABRIC))
-    )
+    """Use every clear finite Landsat centre; disk validity is checked later."""
+    del soil_value, urban_value
+    return bool(int(landsat_status) == 1 and np.isfinite(temperature))
 
 
 @lru_cache(maxsize=None)
@@ -278,14 +301,16 @@ def _validate_aligned_sources(soil_path: Path, green_path: Path):
 
 def _prepare_urban_context(
         source: Path, source_sha256: str, soil_path: Path, sectors: gpd.GeoDataFrame,
-        *, force: bool = False) -> Path:
+        *, force: bool = False, destination: Path | None = None,
+        radius_m: int = PATCH_RADIUS_METERS) -> Path:
     """Rasterise full-product validity, urban fabric and water as bit flags."""
-    destination = CATALOG_ROOT / "shared" / "urban-atlas-2021-context.tif"
+    destination = destination or CATALOG_ROOT / "shared" / "urban-atlas-2021-context.tif"
     expected_tags = {
         "source_sha256": source_sha256,
         "urban_fabric_codes": ",".join(URBAN_FABRIC_CODES),
         "water_code": WATER_CODE,
         "encoding": "bit0-valid_bit1-urban-fabric_bit2-water",
+        "radius_halo_m": str(radius_m),
     }
     if destination.exists() and not force:
         with rasterio.open(destination) as prepared, rasterio.open(soil_path) as soil:
@@ -304,7 +329,7 @@ def _prepare_urban_context(
         raster_bounds = array_bounds(soil.height, soil.width, soil.transform)
         profile = soil.profile.copy()
         target_crs = str(soil.crs)
-    analysis_area = sectors.to_crs(target_crs).geometry.union_all().buffer(PATCH_RADIUS_METERS + 2)
+    analysis_area = sectors.to_crs(target_crs).geometry.union_all().buffer(radius_m + 2)
     query_bounds = transform_bounds(
         target_crs, str(header.crs), *analysis_area.bounds, densify_pts=21,
     )
@@ -473,17 +498,6 @@ def _build_sample_index(
         target = temperature[rows, columns].astype(np.float32)
         uncertainty_values = uncertainty[rows, columns].astype(np.float32)
 
-    soil_values = _sample_points(soil_path, x_lambert, y_lambert, fill=255)
-    urban_values = _sample_points(urban_path, x_lambert, y_lambert, fill=0)
-    eligible = np.fromiter((
-        center_is_eligible(soil, urban, 1, value)
-        for soil, urban, value in zip(soil_values, urban_values, target)
-    ), dtype=bool, count=len(target))
-    rows, columns = rows[eligible], columns[eligible]
-    x_utm, y_utm = x_utm[eligible], y_utm[eligible]
-    x_lambert, y_lambert = x_lambert[eligible], y_lambert[eligible]
-    target, uncertainty_values = target[eligible], uncertainty_values[eligible]
-
     with rasterio.open(soil_path) as ground:
         patch_columns = np.rint((x_lambert - ground.transform.c) / ground.transform.a).astype(np.int32)
         patch_rows = np.rint((ground.transform.f - y_lambert) / abs(ground.transform.e)).astype(np.int32)
@@ -549,6 +563,14 @@ def prepare_regression_catalog(
     root, manifest_path, samples_path = _catalog_paths(observation_id)
     if manifest_path.exists() and samples_path.exists() and not force:
         try:
+            # Schema 2 existed briefly before the XGBoost radial-band metadata
+            # was added. Upgrade that metadata without rebuilding identical
+            # sample coordinates or source rasters.
+            cached_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if cached_manifest.get("schemaVersion") == SCHEMA_VERSION \
+                    and cached_manifest.get("xgboostInput") is None:
+                cached_manifest["xgboostInput"] = _xgboost_input_contract()
+                _atomic_json(manifest_path, cached_manifest)
             catalog = load_regression_catalog(observation_id)
             manifest_source = _resolve_path(catalog.manifest["sources"]["urbanAtlas"]["path"]).resolve()
             if manifest_source == source.resolve():
@@ -573,6 +595,10 @@ def prepare_regression_catalog(
     urban_context = _prepare_urban_context(
         source, urban_signature["sha256"], soil_path, sectors, force=force,
     )
+    print(f"Preparing additive Urban Atlas/Flanders water context for {observation_id}â€¦", flush=True)
+    water_context = prepare_analysis_water_context(
+        urban_context, soil_path, sectors_path=SECTORS_PATH, force=force,
+    )
     print(f"Indexing eligible Landsat centres for {observation_id}…", flush=True)
     samples = _build_sample_index(
         observation_id, soil_year, landsat_path, soil_path, green_path, urban_context, sectors,
@@ -591,6 +617,8 @@ def prepare_regression_catalog(
         "sectors": _source_signature(SECTORS_PATH),
         "urbanAtlas": urban_signature,
         "urbanContext": _source_signature(urban_context),
+        "landUseWater": _source_signature(DEFAULT_LAND_USE_PATH),
+        "waterContext": _source_signature(water_context),
     }
     manifest = {
         "schemaVersion": SCHEMA_VERSION,
@@ -599,12 +627,16 @@ def prepare_regression_catalog(
         "channels": [
             {"id": "soil_sealing", "year": soil_year, "sourceValue": 1},
             {"id": "high_green", "year": GREEN_YEAR, "sourceValue": 1},
-            {"id": "water", "year": URBAN_ATLAS_YEAR, "sourceCode": WATER_CODE},
+            {"id": "low_green", "year": GREEN_YEAR, "sourceValue": 2},
+            {"id": "agriculture", "year": GREEN_YEAR, "sourceValue": 3},
+            {
+                "id": "water", "years": [URBAN_ATLAS_YEAR, LAND_USE_YEAR],
+                "sourceCodes": {"urbanAtlas": WATER_CODE, "landUse": LAND_USE_WATER_CODE},
+                "rule": "additive-union-with-land-use-priority",
+            },
         ],
         "eligibility": {
-            "rule": "landsat-cell-centre",
-            "urbanFabricCodes": list(URBAN_FABRIC_CODES),
-            "soilSealingValue": 1,
+            "rule": "all-clear-finite-centres-in-zennevallei",
             "completeGroundDiskRequired": True,
         },
         "spatialInput": {
@@ -617,6 +649,8 @@ def prepare_regression_catalog(
             "lineTensorShape": [len(CHANNEL_NAMES), RADIAL_IMAGE_HEIGHT, RADIAL_BINS],
             "value": "active fraction of valid pixels in each 1 m annulus",
         },
+        "xgboostInput": _xgboost_input_contract(),
+        "analysisWater": analysis_water_metadata(water_context),
         "sampleIndex": _relative_path(samples_path),
         "sampleCount": int(len(samples)),
         "sectorCount": int(samples["sector_id"].nunique()),
@@ -635,6 +669,13 @@ def load_regression_catalog(observation_id: str = DEFAULT_OBSERVATION_ID) -> Reg
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("schemaVersion") != SCHEMA_VERSION or manifest.get("observationId") != observation_id:
         raise ValueError("The image-regression catalog schema or observation is incompatible.")
+    if manifest.get("xgboostInput") != _xgboost_input_contract():
+        raise ValueError("The image-regression XGBoost predictor contract is incompatible.")
+    if [item.get("id") for item in manifest.get("channels", [])] != list(LAND_COVER_CHANNEL_NAMES):
+        raise ValueError("The image-regression land-cover channel contract is incompatible.")
+    if manifest.get("eligibility", {}).get("rule") != "all-clear-finite-centres-in-zennevallei" \
+            or manifest.get("eligibility", {}).get("completeGroundDiskRequired") is not True:
+        raise ValueError("The image-regression eligibility contract is incompatible.")
     stale = [name for name, signature in manifest["sources"].items() if not _signature_is_current(signature)]
     if stale:
         raise ValueError(f"The image-regression catalog has stale sources: {stale}")
@@ -650,6 +691,7 @@ def load_regression_catalog(observation_id: str = DEFAULT_OBSERVATION_ID) -> Reg
         soil_path=_resolve_path(sources["soilSealing"]["path"]),
         green_path=_resolve_path(sources["greenMap"]["path"]),
         urban_context_path=_resolve_path(sources["urbanContext"]["path"]),
+        water_context_path=_resolve_path(sources["waterContext"]["path"]),
     )
 
 
@@ -676,6 +718,7 @@ class ImageRegressionDataset(Sequence):
                 "soil": rasterio.open(self.catalog.soil_path),
                 "green": rasterio.open(self.catalog.green_path),
                 "urban": rasterio.open(self.catalog.urban_context_path),
+                "water": rasterio.open(self.catalog.water_context_path),
             }
         return self._handles
 
@@ -702,17 +745,19 @@ class ImageRegressionDataset(Sequence):
         catalog_index = int(self.indices[index])
         row = self.catalog.samples.iloc[catalog_index]
         sources = self._sources()
-        soil, green, urban = _read_ground_arrays(
-            (sources["soil"], sources["green"], sources["urban"]),
+        soil, green, urban, water_context = _read_ground_arrays(
+            (sources["soil"], sources["green"], sources["urban"], sources["water"]),
             int(row.patch_center_row), int(row.patch_center_col),
         )
         if soil.shape != (PATCH_SIZE, PATCH_SIZE) or not _ground_valid(soil, green, urban)[SUPPORT_MASK].all():
             raise ValueError(f"Sample {row.sample_id} no longer has complete ground coverage.")
-        channels = [soil == 1, green == 1]
-        if include_all_green_classes:
-            channels.extend((green == 2, green == 3))
-        channels.append((urban & UA_WATER) != 0)
-        patch = np.stack(channels).astype(np.float32)
+        # The legacy CNN experiment is intentionally unchanged. Only the
+        # production XGBoost contract adopts the corrected ground plane.
+        patch = xgboost_land_cover_channels(
+            green, soil, analysis_water_union(water_context),
+        ) if include_all_green_classes else np.stack([
+            soil == 1, green == 1, (urban & UA_WATER) != 0,
+        ]).astype(np.float32)
         patch[:, ~SUPPORT_MASK] = 0.0
         return patch
 

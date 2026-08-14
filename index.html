@@ -85,6 +85,28 @@
             </div>
             <div class="timeline-markers" id="timeline-markers" aria-hidden="true"></div>
           </div>
+          <section class="scenario-editor" id="scenario-editor" hidden aria-labelledby="scenario-editor-title">
+            <div class="scenario-editor-heading">
+              <div>
+                <p class="scenario-editor-kicker" data-i18n="scenario.editorKicker">Scenario editor</p>
+                <h3 id="scenario-editor-title" data-i18n="scenario.editorTitle">Paint a land-cover conversion</h3>
+              </div>
+              <span class="scenario-editor-state" id="scenario-editor-state" aria-live="polite"></span>
+            </div>
+            <div class="scenario-targets" id="scenario-targets" role="group" aria-label="Scenario target"></div>
+            <div class="scenario-draw-actions">
+              <button id="scenario-draw" type="button" data-i18n="scenario.draw">Draw polygon</button>
+              <button id="scenario-finish" type="button" data-i18n="scenario.finish" hidden>Finish</button>
+              <button id="scenario-cancel" type="button" data-i18n="scenario.cancel" hidden>Cancel</button>
+              <button id="scenario-retry" type="button" data-i18n="scenario.retry" hidden>Retry</button>
+            </div>
+            <div class="scenario-history-actions">
+              <button id="scenario-undo" type="button" data-i18n="scenario.undo">Undo</button>
+              <button id="scenario-redo" type="button" data-i18n="scenario.redo">Redo</button>
+              <button id="scenario-reset" type="button" data-i18n="scenario.reset">Reset</button>
+            </div>
+            <p class="scenario-editor-help" id="scenario-editor-help" aria-live="polite" data-i18n="scenario.editorHelp">Choose a target, draw a polygon, then finish it to recalculate the estimate.</p>
+          </section>
           <div class="analysis-pairing" id="analysis-pairing" hidden>
             <button class="analysis-compare-button map-mode-button" id="map-mode-action" type="button" hidden aria-pressed="false"></button>
             <button class="analysis-compare-button" id="analysis-compare" type="button">
@@ -120,7 +142,7 @@
             </select>
           </div>
 
-          <label class="field-label" for="sector-search" data-i18n="controls.sectorSearch">Search for a statistical sector</label>
+          <label class="field-label" for="sector-search" data-i18n="controls.sectorSearch">Search for a Statbel statistical sector</label>
           <div class="search-wrap">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
             <input
@@ -134,13 +156,9 @@
             />
             <datalist id="sector-options"></datalist>
           </div>
-          <p class="field-help" id="sector-search-help" data-i18n="controls.searchHelp">Choose from the list or press Enter after entering a sector code.</p>
+          <p class="field-help" id="sector-search-help" data-i18n="controls.searchHelp">Statistical sectors are official areas defined by Statbel. Choose one from the list or press Enter after entering its name or code.</p>
 
           <div class="control-actions">
-            <button class="secondary-button" id="reset-view" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68" /></svg>
-              <span data-i18n="controls.reset">Overview</span>
-            </button>
             <span id="visible-count" class="visible-count">Loading sectors…</span>
           </div>
           </div>
@@ -156,17 +174,10 @@
 
         <aside class="detail-panel" id="detail-panel" aria-hidden="true" aria-labelledby="panel-title" tabindex="-1">
           <div class="panel-actions">
-            <button class="panel-toggle" id="panel-toggle" type="button" aria-expanded="true" aria-label="Minimise results" title="Minimise results">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-            </button>
             <button class="panel-close" id="panel-close" type="button" aria-label="Close details" data-i18n-aria-label="panel.close">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
             </button>
           </div>
-          <button class="panel-peek" id="panel-peek" type="button" aria-label="Expand results" hidden>
-            <span id="panel-peek-label"></span>
-            <strong id="panel-peek-value"></strong>
-          </button>
           <div id="panel-content"></div>
         </aside>
 

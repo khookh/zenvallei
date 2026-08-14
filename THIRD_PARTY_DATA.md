@@ -37,6 +37,14 @@ Raw source rasters and analytical caches remain ignored. The validated clipped b
 
 The standalone Python playground can request Sentinel-2 L2A bands through Copernicus Data Space. Its raw files and experimental outputs stay in ignored caches and are not active public datasets.
 
+## Radoux land-cover temperature model
+
+The local-only scenario uses the land-cover linear mixture coefficients and thermal point-spread method documented by Radoux et al. (2025), [*Land Cover Types Drive the Surface Temperature for Upscaling Surface Urban Heat Islands with Daylight Images*](https://doi.org/10.3390/rs17162815). The implementation identifies high and low Green Map classes as documented proxies for the paper's broadleaf-tree and permanent-herbaceous classes. It estimates a change in daytime land-surface temperature, not air temperature, and does not relicense the paper or its underlying Walloon data.
+
+An optional local XGBoost model is trained only from the already documented NASA/USGS Landsat 22 June 2026 observation, Green Map 2021, Urban Atlas 2021 and Soil sealing 2024 sources. Its cached model is not public data and is excluded from normal and GitHub Pages distributions.
+
+A second optional local XGBoost model uses the same documented land-cover sources and the strict arithmetic mean of the six documented clear Landsat heatwave acquisitions from 2020–2026. Every retained location requires all six values. Its target catalog, model, held-out predictions and baseline inference cache are local derived artifacts and are likewise excluded from distributions.
+
 ## OpenStreetMap
 
 The configured basemap uses standard OpenStreetMap tiles for this modest POC and displays `© OpenStreetMap contributors`. Tiles are neither packaged nor prefetched. See [copyright and ODbL](https://www.openstreetmap.org/copyright) and the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
