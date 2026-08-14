@@ -19,12 +19,12 @@ import {
 import { setLanguage } from "../src/i18n.js";
 import { renderSectorPanelModel } from "../src/panel.js";
 
-describe("local land-cover scenario contract", () => {
-  it("accepts only the pinned mixed-year local descriptor", () => {
+describe("public land-cover scenario contract", () => {
+  it("accepts only the pinned mixed-year descriptor", () => {
     const descriptor = {
       datasetId: "land-cover-scenario", kind: "scenario",
       baselineYears: { greenMap: 2021, urbanAtlas: 2021, soilSealing: 2024, landUseWater: 2025 },
-      manifestUrl: "/__local-data__/land-cover-scenario/manifest.json",
+      manifestUrl: "/data/official-layers/land-cover-scenario/manifest.json",
     };
     expect(validateScenarioDescriptor(descriptor)).toBe(descriptor);
     expect(() => validateScenarioDescriptor({ ...descriptor, baselineYears: { ...descriptor.baselineYears, soilSealing: 2021 } })).toThrow();
@@ -33,7 +33,7 @@ describe("local land-cover scenario contract", () => {
 
   it("pins the Radoux thermal support in the manifest", () => {
     const manifest = {
-      schemaVersion: 6, datasetId: "land-cover-scenario",
+      schemaVersion: 7, datasetId: "land-cover-scenario",
       baselineYears: { greenMap: 2021, urbanAtlas: 2021, soilSealing: 2024, landUseWater: 2025 },
       maskResolutionMeters: 1, temperatureGridResolutionMeters: 30,
       psf: { sigmaMeters: 79.5, gridResolutionMeters: 15, kernelSize: 41 },
@@ -53,6 +53,12 @@ describe("local land-cover scenario contract", () => {
         url: "land-cover-scenario/analysis-water-landgebruik-2025.pmtiles",
         sha256: "abc", rendered: false, editable: false,
       },
+      browserRuntime: {
+        protocolVersion: 1,
+        baseline: { url: "land-cover-scenario/scenario-baseline-1m.tif" },
+        outputScopes: { url: "land-cover-scenario/scenario-output-scopes.bin.gz" },
+      },
+      limits: { submittedAreaHa: 200 },
     };
     expect(validateScenarioManifest(manifest)).toBe(manifest);
     expect(() => validateScenarioManifest({ ...manifest, psf: { ...manifest.psf, sigmaMeters: 80 } })).toThrow();
@@ -60,8 +66,8 @@ describe("local land-cover scenario contract", () => {
 
   it("rejects stale or legacy scenario calculation responses", () => {
     const result = {
-      schemaVersion: 6, sessionId: "session-123", revision: 2,
-      deltaRasters: { radoux: { url: "delta.png" } },
+      schemaVersion: 7, sessionId: "session-123", revision: 2,
+      deltaRasters: { radoux: { values: new ArrayBuffer(4) } },
       scopeStats: { region: { acceptedAreaHa: 1, deltaDistribution: {
         affectedThresholdC: .01, affectedCellCount: 0, bins: [],
       } } },

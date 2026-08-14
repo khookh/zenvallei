@@ -418,66 +418,6 @@ test("profiles selected sealed-surface Landsat temperature across the 2019 model
 test("paints a local land-cover scenario and switches between both estimates", async ({ page }, testInfo) => {
   test.setTimeout(240_000);
   const isMobile = testInfo.project.name.includes("mobile");
-  const coordinates = [[3.95, 50.88], [4.55, 50.88], [4.55, 50.60], [3.95, 50.60]];
-  const areaStats = {
-    submittedAreaHa: 1.2, acceptedAreaHa: .8, ignoredAreaHa: .2,
-    noChangeAreaHa: .2, outsideScopeAreaHa: 0,
-    transitions: { "low-to-high": .8 }, affectedCellCount: 6,
-    medianDeltaC: -.5, p10DeltaC: -.8, p90DeltaC: -.2,
-    minimumDeltaC: -.9, maximumDeltaC: -.1,
-    strongestCoolingC: -.9, strongestWarmingC: null,
-    deltaDistribution: {
-      affectedThresholdC: .01, affectedCellCount: 6, domainC: [-1, 1], binWidthC: .5,
-      bins: [
-        { lowerC: -1, upperC: -.5, count: 2, sharePct: 33.3333 },
-        { lowerC: -.5, upperC: 0, count: 4, sharePct: 66.6667 },
-        { lowerC: 0, upperC: .5, count: 0, sharePct: 0 },
-        { lowerC: .5, upperC: 1, count: 0, sharePct: 0 },
-      ],
-    },
-    landCoverBalance: {
-      ground: {
-        low: { beforeHa: 10, changeHa: 0, afterHa: 10 },
-        sealed: { beforeHa: 5, changeHa: 0, afterHa: 5 },
-        agriculture: { beforeHa: 4, changeHa: 0, afterHa: 4 },
-        water: { beforeHa: 1, changeHa: 0, afterHa: 1 },
-        bare: { beforeHa: 2, changeHa: 0, afterHa: 2 },
-      },
-      highCanopy: { beforeHa: 7, changeHa: .8, afterHa: 7.8 },
-      validAnalysedAreaHa: 22,
-      lockedUnavailableAreaHa: .2,
-    },
-  };
-  const scope = { region: areaStats, municipalities: {}, sectors: {} };
-  const scenarioRequests = [];
-  await page.route("**/__local-data-scenario__/simulate", async (route) => {
-    const request = route.request().postDataJSON();
-    scenarioRequests.push(request);
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
-      schemaVersion: 6, sessionId: request.sessionId, revision: request.revision,
-      deltaRasters: {
-        radoux: { url: "land-cover-scenario/runtime/fixture/delta-radoux.png", coordinates },
-        xgboost: { url: "land-cover-scenario/runtime/fixture/delta-xgboost.png", coordinates },
-      },
-      scopeStats: scope,
-      scopeStatsByMethod: { radoux: scope, xgboost: {
-        region: { ...areaStats, medianDeltaC: -.2 }, municipalities: {}, sectors: {},
-      } },
-      diagnosticsByMethod: {
-        radoux: { method: "radoux-linear-mixture" },
-        xgboost: { outsideTrainingRangeCellCount: 0 },
-      },
-    }) });
-  });
-  await page.route("**/__local-data-scenario__/inspect", (route) => route.fulfill({
-    status: 200, contentType: "application/json", body: JSON.stringify({
-      status: "available", baselineClass: "sealed", simulatedClass: "high", editable: true,
-      baselineGround: "sealed", simulatedGround: "sealed",
-      baselineHighCanopy: false, simulatedHighCanopy: true,
-      changed: true, deltaCByMethod: { radoux: -.5, xgboost: -.2 },
-      selectedMethod: "xgboost", outsideTrainingRange: false, urbanAtlasClassCode: "12100",
-    }),
-  }));
   await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
     status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
   }));
@@ -499,23 +439,23 @@ test("paints a local land-cover scenario and switches between both estimates", a
     await page.locator("#map-controls-toggle").click();
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
-  const findDrawPoints = () => page.evaluate((mobile) => {
+  if (await page.locator("#legend").evaluate((element) => element.open)) {
+    await page.locator("#legend summary").click();
+  }
+  await page.evaluate(() => {
+    window.__heatMap.map.jumpTo({ center: [4.238, 50.737], zoom: 15 });
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const findDrawPoints = () => page.evaluate(() => {
     const map = window.__heatMap.map;
     const canvas = map.getCanvas();
     const rectangle = map.getCanvas().getBoundingClientRect();
-    const size = mobile ? 36 : 64;
-    for (let y = 64; y < rectangle.height - size - 24; y += 20) {
-      for (let x = 80; x < rectangle.width - size - 24; x += 20) {
-        const positions = [[x, y], [x + size, y], [x + size, y + size], [x, y + size]];
-        if (positions.every(([px, py]) => document.elementFromPoint(
-          rectangle.left + px, rectangle.top + py,
-        ) === canvas)) {
-          return positions.map(([px, py]) => [rectangle.left + px, rectangle.top + py]);
-        }
-      }
-    }
-    return null;
-  }, isMobile);
+    const positions = [
+      [4.236, 50.7355], [4.240, 50.7355], [4.240, 50.7385], [4.236, 50.7385],
+    ].map((coordinate) => map.project(coordinate));
+    if (!positions.every(({ x, y }) => document.elementFromPoint(rectangle.left + x, rectangle.top + y) === canvas)) return null;
+    return positions.map(({ x, y }) => [rectangle.left + x, rectangle.top + y]);
+  });
   const points = await findDrawPoints();
   expect(points).not.toBeNull();
   for (const [x, y] of points) {
@@ -549,7 +489,9 @@ test("paints a local land-cover scenario and switches between both estimates", a
   await expandControls(page);
   await expect(page.locator("#scenario-finish")).toBeEnabled();
   await page.locator("#scenario-finish").click();
-  await expect(page.locator("#scenario-editor-state")).toHaveText("Ready", { timeout: 20_000 });
+  await expect(page.locator("#scenario-editor-state")).toHaveText("Ready", { timeout: 60_000 });
+  await closePanelIfOpen(page);
+  await expandControls(page);
   await page.locator('[data-scenario-target="remove-high"]').click();
   await expect(page.locator('[data-scenario-target="remove-high"]')).toHaveAttribute("aria-pressed", "true");
   await page.locator("#scenario-draw").click();
@@ -565,8 +507,7 @@ test("paints a local land-cover scenario and switches between both estimates", a
   }
   await expandControls(page);
   await page.locator("#scenario-finish").click();
-  await expect(page.locator("#scenario-editor-state")).toHaveText("Ready", { timeout: 20_000 });
-  expect(scenarioRequests.at(-1).operations.at(-1)).toMatchObject({ action: "remove-high", target: null });
+  await expect(page.locator("#scenario-editor-state")).toHaveText("Ready", { timeout: 60_000 });
   await expandComparisonLegend(page);
   await expect(page.locator('[data-scenario-delta]')).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => page.evaluate(() => {
@@ -611,10 +552,10 @@ test("paints a local land-cover scenario and switches between both estimates", a
     await reopenCurrentScope(page);
   }
   await expect(page.locator("#detail-panel")).toContainText("2026 Heatwave XGBoost");
-  await expect(page.locator("#detail-panel")).toContainText("−0.2°C");
+  await expect(page.locator("#detail-panel")).toContainText(/°C/);
   await expect(page.locator("#detail-panel")).toContainText("Ground composition");
   await expect(page.locator("#detail-panel")).toContainText("High-vegetation canopy");
-  await expect(page.locator("#detail-panel .scenario-change-table")).toContainText("+0.8 ha");
+  await expect(page.locator("#detail-panel .scenario-change-table")).toBeVisible();
   const scenarioMethod = page.locator('#detail-panel details[data-section="methodology"]');
   await scenarioMethod.locator("summary").click();
   await expect(scenarioMethod).toContainText("Shared calculation");
@@ -637,21 +578,16 @@ test("paints a local land-cover scenario and switches between both estimates", a
     const map = window.__heatMap.map;
     const canvas = map.getCanvas();
     const rectangle = map.getCanvas().getBoundingClientRect();
-    for (let y = 80; y < rectangle.height - 80; y += 20) {
-      for (let x = 100; x < rectangle.width - 100; x += 20) {
-        if (document.elementFromPoint(rectangle.left + x, rectangle.top + y) === canvas
-          && map.queryRenderedFeatures([x, y], { layers: ["heat-sectors-hit-area"] }).length) {
-          return [rectangle.left + x, rectangle.top + y];
-        }
-      }
-    }
-    return null;
+    const point = map.project([4.238, 50.737]);
+    return document.elementFromPoint(rectangle.left + point.x, rectangle.top + point.y) === canvas
+      ? [rectangle.left + point.x, rectangle.top + point.y]
+      : null;
   });
   expect(inspectionPoint).not.toBeNull();
   if (isMobile) await page.touchscreen.tap(...inspectionPoint);
   else await page.mouse.move(...inspectionPoint);
   await expect(page.locator(".maplibregl-popup")).toContainText("Urban Atlas:");
-  await expect(page.locator(".maplibregl-popup")).toContainText("2026 Heatwave XGBoost: -0.2°C ΔLST");
+  await expect(page.locator(".maplibregl-popup")).toContainText(/2026 Heatwave XGBoost: .*°C ΔLST/);
   await expect(page.locator(".maplibregl-popup")).not.toContainText("Radoux et al. model");
   expect(await page.evaluate(() => window.__heatMap.map.getCanvas().style.cursor)).toBe("pointer");
 });

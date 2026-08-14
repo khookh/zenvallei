@@ -1,7 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
 
 const DEFAULT_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
@@ -39,155 +38,6 @@ function localDataPlugin(root) {
   const allowedExtensions = new Set([".json", ".geojson", ".pmtiles", ".png", ".tif", ".gz"]);
   const landsatCache = new Map();
   let geospatialLibraries;
-  let scenarioProcess = null;
-  let scenarioBuffer = "";
-  let scenarioRequestId = 0;
-  const scenarioPending = new Map();
-  const projectRoot = path.resolve(root, "..", "..");
-  const localPython = process.platform === "win32"
-    ? path.join(projectRoot, "processing", "local-layers", ".venv", "Scripts", "python.exe")
-    : path.join(projectRoot, "processing", "local-layers", ".venv", "bin", "python");
-
-  const stopScenarioWorker = () => {
-    scenarioProcess?.kill();
-    scenarioProcess = null;
-    scenarioPending.forEach(({ reject, timeout }) => {
-      clearTimeout(timeout);
-      reject(new Error("The scenario worker stopped."));
-    });
-    scenarioPending.clear();
-    fs.rmSync(path.join(root, "land-cover-scenario", "runtime"), { recursive: true, force: true });
-  };
-
-  const scenarioWorker = () => {
-    if (scenarioProcess && !scenarioProcess.killed) return scenarioProcess;
-    const executable = process.env.GREENWAVE_LOCAL_PYTHON || (fs.existsSync(localPython) ? localPython : "python");
-    scenarioBuffer = "";
-    scenarioProcess = spawn(executable, ["-m", "greenwave_local_layers.lst_scenario", "--worker"], {
-      cwd: projectRoot,
-      windowsHide: true,
-      env: { ...process.env, PYTHONUNBUFFERED: "1" },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    scenarioProcess.stdout.setEncoding("utf8");
-    scenarioProcess.stdout.on("data", (chunk) => {
-      scenarioBuffer += chunk;
-      for (;;) {
-        const lineEnd = scenarioBuffer.indexOf("\n");
-        if (lineEnd < 0) break;
-        const line = scenarioBuffer.slice(0, lineEnd).trim();
-        scenarioBuffer = scenarioBuffer.slice(lineEnd + 1);
-        if (!line) continue;
-        try {
-          const message = JSON.parse(line);
-          const pending = scenarioPending.get(message.requestId);
-          if (!pending) continue;
-          scenarioPending.delete(message.requestId);
-          clearTimeout(pending.timeout);
-          if (message.ok) pending.resolve(message.result);
-          else pending.reject(new Error(message.error || "Scenario calculation failed."));
-        } catch (error) {
-          console.error("Invalid scenario-worker response", error);
-        }
-      }
-    });
-    scenarioProcess.stderr.setEncoding("utf8");
-    scenarioProcess.stderr.on("data", (message) => console.error(String(message).trim()));
-    scenarioProcess.on("exit", () => {
-      scenarioProcess = null;
-      scenarioPending.forEach(({ reject, timeout }) => {
-        clearTimeout(timeout);
-        reject(new Error("The scenario worker exited unexpectedly."));
-      });
-      scenarioPending.clear();
-    });
-    return scenarioProcess;
-  };
-
-  const callScenarioWorker = (command, payload) => new Promise((resolve, reject) => {
-    const processHandle = scenarioWorker();
-    const requestId = ++scenarioRequestId;
-    const timeout = setTimeout(() => {
-      scenarioPending.delete(requestId);
-      reject(new Error("The scenario calculation timed out."));
-    }, command === "simulate" ? 30_000 : 8_000);
-    scenarioPending.set(requestId, { resolve, reject, timeout });
-    processHandle.stdin.write(`${JSON.stringify({ requestId, command, payload })}\n`, (error) => {
-      if (!error) return;
-      clearTimeout(timeout);
-      scenarioPending.delete(requestId);
-      reject(error);
-    });
-  });
-
-  const readJsonBody = (request, maximumBytes = 2 * 1024 * 1024) => new Promise((resolve, reject) => {
-    let size = 0;
-    let exceeded = false;
-    const chunks = [];
-    request.on("data", (chunk) => {
-      if (exceeded) return;
-      size += chunk.length;
-      if (size > maximumBytes) {
-        exceeded = true;
-        chunks.length = 0;
-        reject(new Error("Scenario payload is too large."));
-        return;
-      }
-      chunks.push(chunk);
-    });
-    request.on("end", () => {
-      if (exceeded) return;
-      try { resolve(JSON.parse(Buffer.concat(chunks).toString("utf8"))); }
-      catch { reject(new Error("Scenario payload is not valid JSON.")); }
-    });
-    request.on("error", reject);
-  });
-
-  const scenarioMiddleware = async (request, response) => {
-    response.setHeader("Content-Type", "application/json; charset=utf-8");
-    response.setHeader("Cache-Control", "no-store");
-    const scenarioManifest = path.join(root, "land-cover-scenario", "manifest.json");
-    if (!fs.existsSync(scenarioManifest)) {
-      response.statusCode = 404;
-      return response.end(JSON.stringify({ error: "Prepare the land-cover scenario first." }));
-    }
-    if (request.method !== "POST" || !/^application\/json\b/i.test(request.headers["content-type"] ?? "")) {
-      response.statusCode = 405;
-      return response.end(JSON.stringify({ error: "The scenario endpoint accepts JSON POST requests only." }));
-    }
-    const origin = request.headers.origin;
-    if (origin) {
-      try {
-        const originUrl = new URL(origin);
-        const requestProtocol = request.socket.encrypted ? "https:" : "http:";
-        if (originUrl.host !== request.headers.host || originUrl.protocol !== requestProtocol) {
-          response.statusCode = 403;
-          return response.end(JSON.stringify({ error: "Cross-origin scenario requests are forbidden." }));
-        }
-      } catch {
-        response.statusCode = 403;
-        return response.end(JSON.stringify({ error: "Invalid request origin." }));
-      }
-    }
-    try {
-      const payload = await readJsonBody(request);
-      const route = (request.url ?? "").split("?")[0].replace(/^\/+/, "");
-      const command = route === "inspect" ? "inspect" : route === "simulate" ? "simulate" : null;
-      if (!command) {
-        response.statusCode = 404;
-        return response.end(JSON.stringify({ error: "Unknown scenario endpoint." }));
-      }
-      const result = await callScenarioWorker(command, payload);
-      return response.end(JSON.stringify(result));
-    } catch (error) {
-      response.statusCode = /Invalid|unsupported|at most|exceeds|payload|polygon|revision/i.test(error.message) ? 400 : 503;
-      return response.end(JSON.stringify({ error: error.message }));
-    }
-  };
-  const startScenarioWorkerIfPrepared = () => {
-    if (process.env.GREENWAVE_DISABLE_SCENARIO_WORKER !== "1"
-      && fs.existsSync(path.join(root, "land-cover-scenario", "manifest.json"))) scenarioWorker();
-  };
   const loadGeospatialLibraries = () => {
     geospatialLibraries ??= Promise.all([import("geotiff"), import("proj4")]).then(([geotiff, proj4Module]) => {
       const project = proj4Module.default;
@@ -309,16 +159,10 @@ function localDataPlugin(root) {
     configureServer(server) {
       server.middlewares.use("/__local-data__", middleware);
       server.middlewares.use("/__local-data-query__/landsat-temperature", queryLandsat);
-      server.middlewares.use("/__local-data-scenario__", scenarioMiddleware);
-      startScenarioWorkerIfPrepared();
-      server.httpServer?.once("close", stopScenarioWorker);
     },
     configurePreviewServer(server) {
       server.middlewares.use("/__local-data__", middleware);
       server.middlewares.use("/__local-data-query__/landsat-temperature", queryLandsat);
-      server.middlewares.use("/__local-data-scenario__", scenarioMiddleware);
-      startScenarioWorkerIfPrepared();
-      server.httpServer?.once("close", stopScenarioWorker);
     },
   };
 }

@@ -11,10 +11,12 @@ observation.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import math
 import re
 import shutil
+import struct
 import sys
 import uuid
 from pathlib import Path
@@ -73,7 +75,7 @@ PSF_SIZE = 41
 PSF_HALO_METERS = 300
 MAX_OPERATIONS = 100
 MAX_VERTICES = 10_000
-MAX_SUBMITTED_AREA_HA = 500.0
+MAX_SUBMITTED_AREA_HA = 200.0
 PROCESSING_TILE_SIZE = 900  # divisible by the 15 m mixture grid
 DELTA_ENCODING_SCALE = 100
 DELTA_ENCODING_OFFSET = 32768
@@ -106,6 +108,11 @@ COEFFICIENTS = {
 RUNTIME_ROOT = CACHE_ROOT / DATASET_ID / "runtime"
 BASELINE_AREA_STATS_PATH = CACHE_ROOT / DATASET_ID / "baseline-area-statistics.json"
 SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9-]{8,80}$")
+
+BROWSER_BASELINE_PATH = CACHE_ROOT / DATASET_ID / "scenario-baseline-1m.tif"
+BROWSER_SCOPE_PATH = CACHE_ROOT / DATASET_ID / "scenario-output-scopes.bin.gz"
+BROWSER_XGBOOST_GRID_PATH = CACHE_ROOT / DATASET_ID / "xgboost-inference-grid.bin.gz"
+BROWSER_XGBOOST_MODEL_PATH = CACHE_ROOT / DATASET_ID / "xgboost-model.json"
 
 
 def radoux_kernel(sigma_m=PSF_SIGMA_METERS, size=PSF_SIZE, resolution=MIXTURE_RESOLUTION):
@@ -446,6 +453,159 @@ def _prepare_analysis_water_browser_mask(water_context_path, destination_root):
         "url": f"{DATASET_ID}/{archive.name}",
         "sha256": metadata["archiveSha256"],
         "sourceSha256": source_sha256,
+    }
+
+
+def _write_deterministic_gzip(path, payload):
+    """Write a reproducible gzip member for immutable Pages assets."""
+    temporary = Path(path).with_suffix(Path(path).suffix + ".partial")
+    with temporary.open("wb") as raw:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=9, mtime=0) as stream:
+            stream.write(payload)
+    temporary.replace(path)
+
+
+def _prepare_browser_scenario_assets(
+        green_path, sealing_path, water_context_path, urban_path, sectors_path,
+        landsat_path, model_root):
+    """Prepare the exact static inputs consumed by the public Web Worker.
+
+    Band 1 packs the ground code, canopy and editability into one byte. Band 2
+    stores the authoritative Statbel sector index and band 3 the Urban Atlas
+    class index. Keeping these values on the common native 1 m grid makes the
+    browser calculation use the same state transition as the Python oracle.
+    """
+    destination = CACHE_ROOT / DATASET_ID
+    destination.mkdir(parents=True, exist_ok=True)
+    sectors = gpd.read_file(sectors_path).to_crs(SOURCE_CRS).reset_index(drop=True)
+    urban = gpd.read_file(urban_path).to_crs(SOURCE_CRS)
+    class_codes = sorted(str(value) for value in urban["classCode"].dropna().unique())
+    class_indexes = {code: index + 1 for index, code in enumerate(class_codes)}
+
+    with rasterio.open(green_path) as green, rasterio.open(sealing_path) as sealing, \
+            rasterio.open(water_context_path) as water_source:
+        profile = green.profile.copy()
+        profile.update(
+            driver="GTiff", count=3, dtype="uint8", nodata=None,
+            tiled=True, blockxsize=512, blockysize=512, compress="DEFLATE",
+            predictor=1, BIGTIFF="IF_SAFER",
+        )
+        temporary = BROWSER_BASELINE_PATH.with_suffix(".partial.tif")
+        with rasterio.open(temporary, "w", **profile) as output:
+            output.set_band_description(1, "ground-3bit canopy-bit3 editable-bit4")
+            output.set_band_description(2, "statbel-sector-index")
+            output.set_band_description(3, "urban-atlas-class-index")
+            for _, window in output.block_windows(1):
+                height, width = int(window.height), int(window.width)
+                transform = green.window_transform(window)
+                tile_bounds = window_bounds(window, green.transform)
+                tile = box(*tile_bounds)
+                sector_candidates = list(sectors.sindex.query(tile, predicate="intersects"))
+                sector_index = rasterize(
+                    [(sectors.geometry.iloc[index], index + 1) for index in sector_candidates],
+                    out_shape=(height, width), transform=transform, fill=0, dtype="uint8",
+                )
+                urban_candidates = list(urban.sindex.query(tile, predicate="intersects"))
+                urban_index = rasterize(
+                    [(urban.geometry.iloc[index], class_indexes[str(urban.iloc[index]["classCode"])])
+                     for index in urban_candidates],
+                    out_shape=(height, width), transform=transform, fill=0, dtype="uint8",
+                )
+                inside = sector_index > 0
+                water = analysis_water_union(water_source.read(1, window=window))
+                ground, canopy, editable = baseline_land_cover(
+                    green.read(1, window=window), sealing.read(1, window=window), water, inside,
+                )
+                packed = ground.astype(np.uint8) \
+                    | (canopy.astype(np.uint8) << np.uint8(3)) \
+                    | (editable.astype(np.uint8) << np.uint8(4))
+                output.write(packed, 1, window=window)
+                output.write(sector_index, 2, window=window)
+                output.write(urban_index, 3, window=window)
+        temporary.replace(BROWSER_BASELINE_PATH)
+
+    with rasterio.open(landsat_path) as landsat:
+        scope_index = rasterize_scope_index(
+            sectors, landsat.crs, landsat.shape, landsat.transform,
+        ).astype(np.uint8)
+        scope_header = struct.pack(
+            "<8sIII", b"GWSCOPE1", landsat.height, landsat.width, len(sectors),
+        )
+        _write_deterministic_gzip(BROWSER_SCOPE_PATH, scope_header + scope_index.tobytes(order="C"))
+        transformer = Transformer.from_crs(landsat.crs, "EPSG:4326", always_xy=True)
+        left, bottom, right, top = landsat.bounds
+        output_coordinates = [
+            list(transformer.transform(left, top)), list(transformer.transform(right, top)),
+            list(transformer.transform(right, bottom)), list(transformer.transform(left, bottom)),
+        ]
+
+    report_path = Path(model_root) / "report.json"
+    model_path = Path(model_root) / "model.json"
+    inference_path = Path(model_root) / "baseline-inference-grid.npz"
+    xgboost_browser = None
+    if report_path.exists() and model_path.exists() and inference_path.exists():
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        model = json.loads(model_path.read_text(encoding="utf-8"))
+        learner = model["learner"]
+        trees = learner["gradient_booster"]["model"]["trees"]
+        compact_model = {
+            "schemaVersion": 1,
+            "baseScore": float(learner["learner_model_param"]["base_score"].strip("[]")),
+            "featureNames": learner["feature_names"],
+            "trees": [{
+                "left": tree["left_children"], "right": tree["right_children"],
+                "feature": tree["split_indices"], "threshold": tree["split_conditions"],
+                "defaultLeft": tree["default_left"],
+            } for tree in trees],
+        }
+        BROWSER_XGBOOST_MODEL_PATH.write_text(
+            json.dumps(compact_model, ensure_ascii=False, separators=(",", ":")), encoding="utf-8",
+        )
+        with np.load(inference_path, allow_pickle=False) as inference:
+            positions = np.asarray(inference["positions"], dtype="<i4")
+            features = np.asarray(inference["features"], dtype="<f4")
+            raw_predictions = np.asarray(inference["raw_predictions"], dtype="<f4")
+            names = tuple(inference["feature_names"].tolist())
+        header = struct.pack(
+            "<8sIIII", b"GWXGB001", len(positions), features.shape[1],
+            int(report["final"]["ringWidthMeters"]), int(report["final"]["smoothingSigmaMeters"]),
+        )
+        _write_deterministic_gzip(
+            BROWSER_XGBOOST_GRID_PATH,
+            header + positions.tobytes(order="C") + features.tobytes(order="C")
+            + raw_predictions.tobytes(order="C"),
+        )
+        xgboost_browser = {
+            "modelUrl": f"{DATASET_ID}/{BROWSER_XGBOOST_MODEL_PATH.name}",
+            "modelSha256": file_hash(BROWSER_XGBOOST_MODEL_PATH),
+            "inferenceGridUrl": f"{DATASET_ID}/{BROWSER_XGBOOST_GRID_PATH.name}",
+            "inferenceGridSha256": file_hash(BROWSER_XGBOOST_GRID_PATH),
+            "validCentreCount": len(positions), "featureCount": features.shape[1],
+            "featureNames": list(names), "ringWidthMeters": int(report["final"]["ringWidthMeters"]),
+            "smoothingSigmaMeters": int(report["final"]["smoothingSigmaMeters"]),
+            "trainingRanges": report["final"].get("trainingRanges", {}),
+        }
+
+    return {
+        "baseline": {
+            "url": f"{DATASET_ID}/{BROWSER_BASELINE_PATH.name}",
+            "sha256": file_hash(BROWSER_BASELINE_PATH), "bands": {
+                "state": 1, "sectorIndex": 2, "urbanAtlasClassIndex": 3,
+            },
+        },
+        "outputScopes": {
+            "url": f"{DATASET_ID}/{BROWSER_SCOPE_PATH.name}",
+            "sha256": file_hash(BROWSER_SCOPE_PATH),
+        },
+        "sectorIndex": {
+            str(index + 1): {
+                "sectorId": str(row["sectorId"]), "sectorName": str(row["sectorName"]),
+                "municipality": str(row["municipality"]),
+            } for index, row in sectors.iterrows()
+        },
+        "urbanAtlasClassIndexes": class_indexes,
+        "outputCoordinates": output_coordinates,
+        "xgboost": xgboost_browser,
     }
 
 
@@ -1282,9 +1442,13 @@ def prepare_lst_scenario():
     urban_class_mask = _prepare_urban_atlas_class_mask()
     browser_water_mask = _prepare_analysis_water_browser_mask(water_context_path, destination)
     water_metadata = analysis_water_metadata(water_context_path)
+    browser_runtime = _prepare_browser_scenario_assets(
+        dependencies[0], dependencies[1], water_context_path, dependencies[3],
+        dependencies[4], dependencies[2], model_specs["xgboost"]["root"],
+    )
     with rasterio.open(dependencies[0]) as source, rasterio.open(dependencies[2]) as landsat:
         manifest = {
-            "schemaVersion": 6,
+            "schemaVersion": 7,
             "datasetId": DATASET_ID,
             "kind": "scenario",
             "baselineYears": {
@@ -1307,6 +1471,14 @@ def prepare_lst_scenario():
                 "url": f"{DATASET_ID}/{BASELINE_AREA_STATS_PATH.name}",
                 "sha256": file_hash(BASELINE_AREA_STATS_PATH),
                 "resolutionMeters": SOURCE_RESOLUTION,
+            },
+            "browserRuntime": {
+                "protocolVersion": 1,
+                "engine": "web-worker-exact-area",
+                "baseline": browser_runtime["baseline"],
+                "outputScopes": browser_runtime["outputScopes"],
+                "sectorIndex": browser_runtime["sectorIndex"],
+                "xgboost": browser_runtime["xgboost"],
             },
             "urbanAtlasClassMaskUrl": urban_class_mask["url"],
             "urbanAtlasClassIndexes": urban_class_mask["classIndexes"],
@@ -1384,10 +1556,13 @@ def prepare_lst_scenario():
             "sourceGrid": {
                 "crs": str(source.crs), "width": source.width, "height": source.height,
                 "bounds": list(source.bounds),
+                "transform": list(tuple(source.transform)[:6]),
             },
             "outputGrid": {
                 "crs": str(landsat.crs), "width": landsat.width, "height": landsat.height,
                 "bounds": list(landsat.bounds),
+                "transform": list(tuple(landsat.transform)[:6]),
+                "coordinates": browser_runtime["outputCoordinates"],
             },
             "provenance": {
                 "greenMapSha256": file_hash(dependencies[0]),

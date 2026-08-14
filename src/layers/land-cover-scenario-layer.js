@@ -2,6 +2,7 @@ import { formatNumber, t } from "../i18n.js";
 import { productLink } from "../source-authorities.js";
 import { defineLayer } from "./layer-contract.js";
 import { createScenarioCoverRaster } from "./scenario-cover-raster.js";
+import { createScenarioRuntime } from "./scenario-runtime.js";
 
 const DATASET_ID = "land-cover-scenario";
 const DRAW_SOURCE = "lst-scenario-drawing-source";
@@ -52,7 +53,7 @@ export function validateScenarioDescriptor(descriptor) {
 }
 
 export function validateScenarioManifest(manifest) {
-  if (!manifest || manifest.schemaVersion !== 6 || manifest.datasetId !== DATASET_ID
+  if (!manifest || manifest.schemaVersion !== 7 || manifest.datasetId !== DATASET_ID
     || manifest.baselineYears?.greenMap !== 2021 || manifest.baselineYears?.urbanAtlas !== 2021
     || manifest.baselineYears?.soilSealing !== 2024 || manifest.baselineYears?.landUseWater !== 2025
     || manifest.psf?.sigmaMeters !== 79.5
@@ -72,7 +73,10 @@ export function validateScenarioManifest(manifest) {
     || Object.keys(manifest.methods).length !== 2
     || !manifest.analysisWaterMask?.url || !manifest.analysisWaterMask?.sha256
     || manifest.analysisWaterMask.rendered !== false || manifest.analysisWaterMask.editable !== false
-    || !manifest.urbanAtlasClassMaskUrl || !manifest.urbanAtlasClassIndexes?.["50000"]) {
+    || !manifest.urbanAtlasClassMaskUrl || !manifest.urbanAtlasClassIndexes?.["50000"]
+    || manifest.browserRuntime?.protocolVersion !== 1
+    || !manifest.browserRuntime?.baseline?.url || !manifest.browserRuntime?.outputScopes?.url
+    || manifest.limits?.submittedAreaHa !== 200) {
     throw new TypeError("Unsupported land-cover scenario manifest.");
   }
   return manifest;
@@ -80,7 +84,7 @@ export function validateScenarioManifest(manifest) {
 
 export function validateScenarioResult(result, sessionId, revision) {
   const distribution = result?.scopeStats?.region?.deltaDistribution;
-  if (!result || result.schemaVersion !== 6 || result.sessionId !== sessionId
+  if (!result || result.schemaVersion !== 7 || result.sessionId !== sessionId
     || result.revision !== revision || !result.deltaRasters?.radoux
     || !result.scopeStats?.region || !distribution
     || distribution.affectedThresholdC !== .01
@@ -154,37 +158,22 @@ function deltaScaleGradient() {
   }).join(",")})`;
 }
 
-async function imageData(url) {
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Scenario raster HTTP ${response.status}.`);
-  const bitmap = await createImageBitmap(await response.blob());
-  const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const context = canvas.getContext("2d", { willReadFrequently: true });
-  context.drawImage(bitmap, 0, 0);
-  bitmap.close();
-  return context.getImageData(0, 0, canvas.width, canvas.height);
-}
-
-function renderDelta(encoded) {
-  const output = new Uint8ClampedArray(encoded.data.length);
-  for (let offset = 0; offset < output.length; offset += 4) {
-    if (!encoded.data[offset + 3]) continue;
-    const code = (encoded.data[offset] << 8) | encoded.data[offset + 1];
-    const delta = (code - 32768) / 100;
+function renderDelta(values, width, height) {
+  const output = new Uint8ClampedArray(width * height * 4);
+  for (let index = 0; index < values.length; index += 1) {
+    const delta = values[index];
+    const offset = index * 4;
     const { colour, alpha } = scenarioDeltaStyle(delta);
     output[offset] = colour[0];
     output[offset + 1] = colour[1];
     output[offset + 2] = colour[2];
     output[offset + 3] = alpha;
   }
-  return new ImageData(output, encoded.width, encoded.height);
+  return new ImageData(output, width, height);
 }
 
 export function createLandCoverScenarioLayer({ descriptor: inputDescriptor, groenkaartLayer, jaarbakLayer }) {
-  // Revisions belong to one page session. The worker outlives browser reloads,
-  // so a fresh identifier prevents an earlier page's revision from blocking it.
+  // Revisions and edits are intentionally limited to one page session.
   const sessionId = globalThis.crypto?.randomUUID?.()
     ?? `scenario-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   let descriptor;
@@ -217,6 +206,7 @@ export function createLandCoverScenarioLayer({ descriptor: inputDescriptor, groe
   let calculating = false;
   let canvas;
   let canvasContext;
+  let runtime;
   const listeners = new Set();
   const notify = () => listeners.forEach((listener) => listener());
 
@@ -281,13 +271,13 @@ export function createLandCoverScenarioLayer({ descriptor: inputDescriptor, groe
   };
 
   const renderSelectedDelta = () => {
-    const encoded = deltaImages.get(selectedMethod) ?? deltaImages.get("radoux");
+    const values = deltaImages.get(selectedMethod) ?? deltaImages.get("radoux");
     const raster = result?.deltaRasters?.[selectedMethod] ?? result?.deltaRasters?.radoux;
-    if (!encoded || !raster) return;
-    canvas.width = encoded.width;
-    canvas.height = encoded.height;
+    if (!values || !raster) return;
+    canvas.width = raster.width;
+    canvas.height = raster.height;
     canvasContext = canvas.getContext("2d", { alpha: true });
-    canvasContext.putImageData(renderDelta(encoded), 0, 0);
+    canvasContext.putImageData(renderDelta(values, raster.width, raster.height), 0, 0);
     const source = map.getSource(DELTA_SOURCE);
     source.setCoordinates(raster.coordinates);
     source.play?.();
@@ -296,9 +286,9 @@ export function createLandCoverScenarioLayer({ descriptor: inputDescriptor, groe
   };
 
   const renderResult = async (nextResult, requestGeneration, operationSnapshot) => {
-    const images = await Promise.all(Object.entries(nextResult.deltaRasters ?? {}).map(async ([method, raster]) => (
-      [method, await imageData(`${descriptor.assetRoot}${raster.url}`)]
-    )));
+    const images = Object.entries(nextResult.deltaRasters ?? {}).map(([method, raster]) => (
+      [method, new Float32Array(raster.values)]
+    ));
     if (requestGeneration !== generation) return;
     // The cover source remains on its last validated generation until every
     // replacement tile is ready. Updating the delta canvas immediately after
@@ -328,15 +318,10 @@ export function createLandCoverScenarioLayer({ descriptor: inputDescriptor, groe
     const operationSnapshot = operations.map((operation) => ({ ...operation }));
     notify();
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}__local-data-scenario__/simulate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-        signal: requestController.signal,
-        body: JSON.stringify({ schemaVersion: 1, sessionId, revision, operations: operationSnapshot }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || `Scenario HTTP ${response.status}.`);
+      const payload = await runtime.simulate(
+        { schemaVersion: 1, sessionId, revision, operations: operationSnapshot },
+        requestController.signal,
+      );
       await renderResult(
         validateScenarioResult(payload, sessionId, revision), requestGeneration, operationSnapshot,
       );
@@ -449,6 +434,7 @@ export function createLandCoverScenarioLayer({ descriptor: inputDescriptor, groe
     async mount(nextMap, context) {
       map = nextMap;
       await Promise.all([ensureManifest(), groenkaartLayer.ensureManifest(), jaarbakLayer.ensureManifest()]);
+      runtime ??= createScenarioRuntime({ manifest, assetRoot: descriptor.assetRoot });
       greenArchive = await groenkaartLayer.resolveArchive(2021, activeMunicipality);
       soilArchive = await jaarbakLayer.resolveArchive(2024, activeMunicipality);
       urbanArchive = new URL(
@@ -576,13 +562,9 @@ export function createLandCoverScenarioLayer({ descriptor: inputDescriptor, groe
     getInspectionCursor: () => "pointer",
     async inspectPoint(point, { signal } = {}) {
       if (!result) return { status: "empty" };
-      const response = await fetch(`${import.meta.env.BASE_URL}__local-data-scenario__/inspect`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store", signal,
-        body: JSON.stringify({ sessionId, revision: result.revision, method: selectedMethod, lng: point.lng, lat: point.lat }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || `Scenario inspection HTTP ${response.status}.`);
-      return payload;
+      return runtime.inspect({
+        sessionId, revision: result.revision, method: selectedMethod, lng: point.lng, lat: point.lat,
+      }, signal);
     },
     getPointPopupModel(value) {
       return scenarioPointPopupModel(value, selectedMethod);

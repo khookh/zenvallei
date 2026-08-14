@@ -12,11 +12,10 @@ export const PUBLIC_LAYER_IDS = Object.freeze([
   "landgebruik",
   "population",
   "income",
-]);
-
-export const LOCAL_ONLY_LAYER_IDS = Object.freeze([
   "land-cover-scenario",
 ]);
+
+export const LOCAL_ONLY_LAYER_IDS = Object.freeze([]);
 
 export const PUBLIC_COMPARISON_IDS = Object.freeze([
   "heat-income",

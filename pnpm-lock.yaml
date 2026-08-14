@@ -8,12 +8,18 @@ importers:
 
   .:
     dependencies:
+      geotiff:
+        specifier: ^2.1.4-beta.1
+        version: 2.1.4-beta.1
       maplibre-gl:
         specifier: ^6.1.0
         version: 6.1.0
       pmtiles:
         specifier: 4.4.1
         version: 4.4.1
+      proj4:
+        specifier: ^2.21.0
+        version: 2.21.0(geotiff@2.1.4-beta.1)
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.12.1
@@ -30,9 +36,6 @@ importers:
       flatgeobuf:
         specifier: 4.4.0
         version: 4.4.0
-      geotiff:
-        specifier: ^2.1.4-beta.1
-        version: 2.1.4-beta.1
       globals:
         specifier: ^17.9.0
         version: 17.9.0
@@ -42,9 +45,6 @@ importers:
       polygon-clipping:
         specifier: 0.15.7
         version: 0.15.7
-      proj4:
-        specifier: ^2.21.0
-        version: 2.21.0(geotiff@2.1.4-beta.1)
       sharp:
         specifier: ^0.35.3
         version: 0.35.3

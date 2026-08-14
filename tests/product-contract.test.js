@@ -8,10 +8,11 @@ import {
 } from "../src/product-contract.js";
 
 describe("release product contract", () => {
-  it("pins eight public layers, nine comparisons and only relevant action rows", () => {
+  it("pins nine public layers, nine comparisons and only relevant action rows", () => {
     expect(PUBLIC_LAYER_IDS).toEqual([
       "heat", "landsat-temperature", "urban-atlas", "jaarbak",
       "groenkaart", "landgebruik", "population", "income",
+      "land-cover-scenario",
     ]);
     expect(PUBLIC_COMPARISON_IDS).toEqual([
       "heat-income", "heat-population", "landsat-urban-atlas",
@@ -40,12 +41,12 @@ describe("release product contract", () => {
     expect(validateProductContract(layers, comparisons, { playground: true })).toBe(true);
   });
 
-  it("allows the scenario layer only in local-data mode", () => {
-    expect(LOCAL_ONLY_LAYER_IDS).toEqual(["land-cover-scenario"]);
+  it("publishes the scenario without a mode-specific layer branch", () => {
+    expect(LOCAL_ONLY_LAYER_IDS).toEqual([]);
     const layers = new Map([...PUBLIC_LAYER_IDS, ...LOCAL_ONLY_LAYER_IDS].map((id) => [id, {}]));
     const comparisons = new Map(PUBLIC_COMPARISON_IDS.map((id) => [id, {}]));
     expect(validateProductContract(layers, comparisons, { localData: true })).toBe(true);
-    expect(() => validateProductContract(layers, comparisons)).toThrow("land-cover-scenario");
+    expect(validateProductContract(layers, comparisons)).toBe(true);
   });
 
   it("requires every functional comparison in every public mode", () => {

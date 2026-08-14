@@ -1,10 +1,19 @@
 # Land-cover change tool
 
-The local tool estimates how a user-drawn land-cover conversion is associated
+The tool estimates how a user-drawn land-cover conversion is associated
 with daytime land-surface temperature (ΔLST). It is a counterfactual comparison,
 not a causal forecast, air-temperature model or heat-exposure model.
 
-## Run locally
+## Runtime
+
+The public and local applications use the same module Web Worker. It reads
+only the required windows from a tiled, DEFLATE-compressed 1 m state raster.
+The XGBoost model and baseline inference grid are loaded lazily on the first
+edit. Calculated fields and polygon history remain in memory and are discarded
+when the page closes or reloads; no server endpoint, account or browser storage
+is used.
+
+## Prepare locally
 
 ```powershell
 pnpm local-data:setup
@@ -54,10 +63,10 @@ older model contract; Radoux remains available when XGBoost is absent.
 
 ## Results and limitations
 
-The service returns accepted edit area, before/change/after composition,
+The worker returns accepted edit area, before/change/after composition,
 method-specific delta rasters, strongest cooling/warming, a complete affected-
-centre distribution and outside-training-range diagnostics. Session rasters are
-temporary and never published.
+centre distribution and outside-training-range diagnostics. The public session
+accepts at most 100 polygons, 10,000 vertices and 200 ha of submitted area.
 
 Predictor years differ from the Landsat target year. The model captures spatial
 association within its training domain and may omit building form, materials,

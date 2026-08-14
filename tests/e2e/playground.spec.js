@@ -15,9 +15,9 @@ test("shows the latest Python export only in the opt-in local Test layer", async
   }), { timeout: 80_000 }).toEqual({ ready: "true", errors: [] });
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.locator("#project-intro-primary").click();
-  await expect(page.locator("[data-layer]")).toHaveCount(9);
+  await expect(page.locator("[data-layer]")).toHaveCount(10);
   expect((await page.locator("[data-layer]").evaluateAll((elements) => elements.map((element) => element.dataset.layer))).sort())
-    .toEqual(["groenkaart", "heat", "income", "jaarbak", "landgebruik", "landsat-temperature", "notebook-test", "population", "urban-atlas"]);
+    .toEqual(["groenkaart", "heat", "income", "jaarbak", "land-cover-scenario", "landgebruik", "landsat-temperature", "notebook-test", "population", "urban-atlas"]);
 
   const testLayer = page.locator('[data-layer="notebook-test"]');
   await expect(testLayer).toHaveText("Test");

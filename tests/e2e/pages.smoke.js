@@ -108,9 +108,9 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await expect(page.locator("#project-intro")).toBeVisible();
   await expect(page.locator(".project-intro-heading img")).toHaveAttribute("src", "/zenvallei/assets/zennevallei-river-mark.png");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.locator("[data-layer]")).toHaveCount(8);
+  await expect(page.locator("[data-layer]")).toHaveCount(9);
   expect((await page.locator("[data-layer]").evaluateAll((elements) => elements.map((element) => element.dataset.layer))).sort())
-    .toEqual(["groenkaart", "heat", "income", "jaarbak", "landgebruik", "landsat-temperature", "population", "urban-atlas"]);
+    .toEqual(["groenkaart", "heat", "income", "jaarbak", "land-cover-scenario", "landgebruik", "landsat-temperature", "population", "urban-atlas"]);
   await expect(page.locator('[data-layer="land-cover"], [data-layer="vegetation"], [data-layer="tree-cover-density"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="notebook-test"]')).toHaveCount(0);
   await expect(page.locator("#visible-count")).toHaveText("154 sectors");
@@ -241,6 +241,69 @@ test("serves the complete application below the GitHub Pages project path", asyn
     expect(ownResponses.some((url) => url.endsWith("/landsat-temperature/query/landsat-2026-06-22.tif"))).toBe(true);
   }
   expect(failedOwnRequests).toEqual([]);
+});
+
+test("runs the land-cover scenario entirely in the compiled Pages build", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "The full public worker calculation is exercised once; mobile layout is covered separately.");
+  test.setTimeout(180_000);
+  const responses = [];
+  const failures = [];
+  page.on("response", (response) => {
+    if (!response.url().startsWith("http://127.0.0.1:4181/zenvallei/")) return;
+    responses.push(response.url());
+    if (response.status() >= 400) failures.push(`${response.status()} ${response.url()}`);
+  });
+
+  await page.goto(".");
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 60_000 });
+  expect(responses.some((url) => url.includes("scenario-baseline-1m.tif"))).toBe(false);
+  expect(responses.some((url) => url.includes("xgboost-inference-grid.bin.gz"))).toBe(false);
+  await page.locator("#project-intro-primary").click();
+  await page.locator('[data-layer="land-cover-scenario"]').click();
+  await expect.poll(() => page.evaluate(() => window.__heatMap.getActiveLayer())).toBe("land-cover-scenario");
+  await expect.poll(() => responses.some((url) => url.includes("scenario-baseline-1m.tif")), { timeout: 60_000 }).toBe(true);
+  expect(responses.some((url) => url.includes("xgboost-inference-grid.bin.gz"))).toBe(false);
+
+  if (await page.locator("#detail-panel").getAttribute("aria-hidden") === "false") {
+    await page.locator("#panel-close").click();
+  }
+  await showControls(page);
+  await page.locator('[data-scenario-target="unseal"]').click();
+  await page.locator("#scenario-draw").click();
+  if (!await page.locator("#map-controls").evaluate((element) => element.classList.contains("is-collapsed"))) {
+    await page.locator("#map-controls-toggle").click();
+  }
+  if (await page.locator("#legend").evaluate((element) => element.open)) {
+    await page.locator("#legend summary").click();
+  }
+  await page.evaluate(() => {
+    window.__heatMap.map.jumpTo({ center: [4.238, 50.737], zoom: 15 });
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const points = await page.evaluate(() => {
+    const map = window.__heatMap.map;
+    const canvas = map.getCanvas();
+    const rectangle = canvas.getBoundingClientRect();
+    // Central Halle contains a stable mix of sealed and unsealed urban land,
+    // so converting this small polygon always exercises a real public edit.
+    const positions = [
+      [4.236, 50.7355], [4.240, 50.7355], [4.240, 50.7385], [4.236, 50.7385],
+    ].map((coordinate) => map.project(coordinate));
+    if (!positions.every(({ x, y }) => document.elementFromPoint(rectangle.left + x, rectangle.top + y) === canvas)) return null;
+    return positions.map(({ x, y }) => [rectangle.left + x, rectangle.top + y]);
+  });
+  expect(points).not.toBeNull();
+  for (const [x, y] of points) await page.mouse.click(x, y);
+  await showControls(page);
+  await expect(page.locator("#scenario-finish")).toBeEnabled();
+  await page.locator("#scenario-finish").click();
+  await expect(page.locator("#scenario-editor-state")).toHaveText("Ready", { timeout: 90_000 });
+  await expect.poll(() => responses.some((url) => url.includes("xgboost-inference-grid.bin.gz")), { timeout: 60_000 }).toBe(true);
+  await expect.poll(() => responses.some((url) => url.includes("xgboost-model.json"))).toBe(true);
+  await expect(page.locator('[data-scenario-delta]')).toHaveAttribute("aria-pressed", "true");
+  await showResults(page);
+  await expect(page.locator("#detail-panel")).toContainText("Converted area");
+  expect(failures).toEqual([]);
 });
 
 test("keeps classification visible when density loading fails", async ({ page }, testInfo) => {

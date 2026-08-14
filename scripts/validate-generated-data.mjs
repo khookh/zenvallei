@@ -110,7 +110,7 @@ await fs.access(browserAssetPath(urbanAtlas.geojsonUrl));
 const officialRoot = path.join(dataRoot, "official-layers");
 const officialIndex = JSON.parse(await fs.readFile(path.join(officialRoot, "index.json"), "utf8"));
 const officialIds = Object.keys(officialIndex.datasets ?? {});
-const expectedOfficialIds = ["groenkaart", "jaarbak", "landgebruik", "landsat-temperature"];
+const expectedOfficialIds = ["groenkaart", "jaarbak", "land-cover-scenario", "landgebruik", "landsat-temperature"];
 const expectedComparisonIds = [
   "groenkaart-income", "groenkaart-population", "landsat-groenkaart", "landsat-income",
   "landsat-jaarbak", "landsat-population", "landsat-urban-atlas",
@@ -135,6 +135,21 @@ for (const datasetId of officialIds) {
     if (observation.queryRaster) referencedAssets.push(observation.queryRaster);
   });
   if (manifest.agriculturalDetail?.geojsonUrl) referencedAssets.push(manifest.agriculturalDetail.geojsonUrl);
+  if (datasetId === "land-cover-scenario") {
+    if (manifest.schemaVersion !== 7 || manifest.browserRuntime?.protocolVersion !== 1
+      || manifest.limits?.submittedAreaHa !== 200 || !manifest.browserRuntime?.xgboost) {
+      throw new Error("land-cover-scenario: published browser runtime is incompatible.");
+    }
+    referencedAssets.push(
+      manifest.baselineAreaStatistics.url,
+      manifest.analysisWaterMask.url,
+      manifest.urbanAtlasClassMaskUrl,
+      manifest.browserRuntime.baseline.url,
+      manifest.browserRuntime.outputScopes.url,
+      manifest.browserRuntime.xgboost.modelUrl,
+      manifest.browserRuntime.xgboost.inferenceGridUrl,
+    );
+  }
   if (manifest.density) {
     if (manifest.density.radiusMeters !== 100 || manifest.density.denominator !== "complete-circle"
       || manifest.density.analysisResolutionMeters !== 10 || manifest.density.validCoverageThreshold !== 95) {
@@ -313,4 +328,4 @@ if (JSON.stringify(publishedLandsatObservations) !== JSON.stringify(expectedLand
   throw new Error(`Published Landsat timeline must contain the six clearest approved heatwave observations: ${publishedLandsatObservations.join(", ")}.`);
 }
 
-console.log(`Validated ${sectorIds.size} sectors, eight application layers and all prepared browser assets.`);
+console.log(`Validated ${sectorIds.size} sectors, nine application layers and all prepared browser assets.`);

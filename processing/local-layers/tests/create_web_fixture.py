@@ -818,76 +818,13 @@ landsat_population_manifest = {
 )
 
 scenario_root = ROOT / "land-cover-scenario"
-(scenario_root / "runtime" / "fixture").mkdir(parents=True, exist_ok=True)
-for method, delta_c in (("radoux", -.50), ("xgboost", -.20)):
-    delta_code = int(round(delta_c * 100)) + 32768
-    encoded_delta = np.zeros((64, 64, 4), dtype=np.uint8)
-    encoded_delta[..., 0] = delta_code >> 8
-    encoded_delta[..., 1] = delta_code & 255
-    encoded_delta[..., 3] = 255
-    Image.fromarray(encoded_delta).save(scenario_root / "runtime" / "fixture" / f"delta-{method}.png")
-scenario_change = np.zeros((64, 64, 4), dtype=np.uint8)
-scenario_change[16:48, 16:48] = [31, 127, 0, 255]
-Image.fromarray(scenario_change).save(scenario_root / "runtime" / "fixture" / "vegetation.png")
-analysis_water_source = scenario_root / "analysis-water-fixture.tif"
-with rasterio.open(
-    analysis_water_source, "w", driver="GTiff", width=512, height=512, count=4, dtype="uint8",
-    crs="EPSG:3857", transform=from_bounds(minx, miny, maxx, maxy, 512, 512),
-) as dataset:
-    rgba = np.zeros((4, 512, 512), dtype=np.uint8)
-    rgba[0, 8:24, 8:24] = 255
-    rgba[3, 8:24, 8:24] = 255
-    dataset.write(rgba)
-analysis_water_archive = scenario_root / "analysis-water-landgebruik-2025.pmtiles"
-_pmtiles(analysis_water_source, analysis_water_archive, cutline, "9..14")
-scenario_manifest = {
-    "schemaVersion": 6, "datasetId": "land-cover-scenario", "kind": "scenario",
-    "baselineYears": {
-        "greenMap": 2021, "urbanAtlas": 2021, "soilSealing": 2024,
-        "landUseWater": 2025,
-    },
-    "available": True,
-    "source": {"name": "Radoux et al. (2025)", "url": "https://doi.org/10.3390/rs17162815"},
-    "coefficientsC": {"high": -7.42, "low": -2.07, "sealed": 3.20},
-    "stateContract": {
-        "ground": ["low", "sealed", "agriculture", "water", "bare", "locked"],
-        "latentOverlap": "high-canopy-over-ground-for-editing-only",
-        "analysisSurface": "mutually-exclusive-upper-surface-v5-landgebruik-water",
-    },
-    "urbanAtlasClassMaskUrl": "../shared/urban-atlas-classes-2021.pmtiles",
-    "urbanAtlasClassIndexes": urban_class_indexes,
-    "analysisWaterMask": {
-        "url": "land-cover-scenario/analysis-water-landgebruik-2025.pmtiles",
-        "sha256": "fixture", "rendered": False, "editable": False,
-        "landUseYear": 2025, "landUseWaterCode": 17,
-    },
-    "psf": {"sigmaMeters": 79.5, "gridResolutionMeters": 15, "kernelSize": 41},
-    "maskResolutionMeters": 1, "temperatureGridResolutionMeters": 30,
-    "affectedThresholdC": .01,
-    "methodOrder": ["radoux", "xgboost"],
-    "methods": {
-        "radoux": {"available": True, "productId": "radoux", "source": {
-            "name": "Radoux et al. (2025) daylight LST model", "url": "https://doi.org/10.3390/rs17162815",
-        }},
-        "xgboost": {
-            "available": True, "productId": "xgboost", "modelContractVersion": 5,
-            "modelSha256": "fixture-model", "featureArtifactSha256": "fixture-features",
-            "catalogManifestSha256": "fixture-catalog",
-            "inferenceGrid": {"sha256": "fixture-grid", "validCentreCount": 4096},
-            "source": {
-                "name": "2026 Heatwave XGBoost training notebook",
-                "url": "https://github.com/khookh/zenvallei/blob/main/playground/xgboost_2026_heatwave_regression_zennevallei.ipynb",
-            },
-        },
-    },
-    "limits": {"operations": 100, "vertices": 10_000, "submittedAreaHa": 500},
-    "sourceGrid": {"width": 64, "height": 64},
-    "outputGrid": {"width": 64, "height": 64},
-}
-(scenario_root / "manifest.json").write_text(json.dumps(scenario_manifest), encoding="utf-8")
-
-# The general browser fixture intercepts scenario calculations with the
-# deterministic rasters above; scientific runtime tests use the real worker.
+# The scenario is now a public, browser-only product. Reuse the exact published
+# worker contract here so integration tests exercise the deployed computation
+# instead of a server-side fixture that could drift from GitHub Pages.
+published_scenario = PROJECT_ROOT / "public" / "data" / "official-layers" / "land-cover-scenario"
+if scenario_root.exists():
+    shutil.rmtree(scenario_root)
+shutil.copytree(published_scenario, scenario_root)
 descriptors["land-cover-scenario"] = {
     "datasetId": "land-cover-scenario",
     "manifestUrl": "land-cover-scenario/manifest.json",

@@ -1,7 +1,8 @@
 # Deployment
 
-GitHub Pages serves a static `/zenvallei/` build. The local land-cover scenario,
-private caches and model files are not part of that distribution.
+GitHub Pages serves a static `/zenvallei/` build. The land-cover scenario runs
+entirely in a browser worker from immutable, hash-recorded public derivatives.
+Python caches, raw sources and runtime edits are not part of the distribution.
 
 ## Release gate
 
@@ -31,7 +32,9 @@ pnpm data:validate
 
 The publisher copies an explicit allow-list from `.cache/local-layers` into
 `public/data/official-layers`. Distribution checks reject local paths, signed
-URLs, credentials, local endpoints and scenario artifacts.
+URLs, credentials and local endpoints. Scenario publication is separately
+allow-listed and capped at 90 MiB; the complete official bundle is capped at
+650 MiB.
 
 ## Deploy Pages
 

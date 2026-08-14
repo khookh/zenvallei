@@ -630,7 +630,7 @@ async function start() {
         descriptor: data.officialLayers["landsat-temperature"],
       }));
     }
-    if (import.meta.env.MODE === "local-data" && data.officialLayers["land-cover-scenario"]) {
+    if (data.officialLayers["land-cover-scenario"]) {
       const groenkaartLayer = officialRasterLayers.find(({ id }) => id === "groenkaart");
       const jaarbakLayer = officialRasterLayers.find(({ id }) => id === "jaarbak");
       if (groenkaartLayer && jaarbakLayer) {

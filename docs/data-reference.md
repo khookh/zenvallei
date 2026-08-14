@@ -16,7 +16,7 @@ derivatives are published.
 | `groenkaart` | Flanders Green Map, 2018 and 2021, native 1 m EPSG:31370 | Four official classes remain categorical. Sector shares use complete area; selected high/low-green density is calculated inside 100 m | Categorical PMTiles or optional selected-class density |
 | `landgebruik` | Flanders Land Use, 2019/2022/2025, 10 m EPSG:31370; 2025 agricultural parcels | Nineteen classes use nearest-neighbour categorical alignment. Parcel intersections and crop groups are calculated separately | Temporal land-use raster plus detailed 2025 parcel geometry |
 | `landsat-temperature` | NASA/USGS Landsat 8/9 Collection 2 Level-2 via Planetary Computer; six heatwave acquisitions from 2020-2026 | Scale/offset convert ST_B10 to °C. QA_PIXEL, ST_QA, saturation, nodata and scene support determine clear versus obscured cells on an aligned 30 m EPSG:32631 grid | Daytime land-surface temperature, never air temperature; clear and cloud-obscured coverage are distinguished |
-| `land-cover-scenario` | Local-only combination of Green Map 2021, Soil sealing 2024, Urban Atlas 2021, Flanders Land Use 2025 water and Landsat 22 June 2026 | Mutually exclusive 1 m upper-surface states feed Radoux or the verified 2026 XGBoost model; outputs are method-specific ΔLST on 30 m centres | Interactive edits and session-only delta rasters in `dev:local-data`; never included in GitHub Pages |
+| `land-cover-scenario` | Green Map 2021, Soil sealing 2024, Urban Atlas 2021, Flanders Land Use 2025 water and Landsat 22 June 2026 | Exact 1 m upper-surface edits feed Radoux or the verified 2026 XGBoost model; outputs are method-specific ΔLST on 30 m centres | Public browser worker; edits and calculated fields remain session-only |
 
 ## Comparisons
 

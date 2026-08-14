@@ -528,12 +528,12 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator(".brand-mark")).toBeVisible();
   await expect(page.locator(".brand-mark")).toHaveAttribute("src", /assets\/zennevallei-river-mark\.png$/);
   await expect(page.locator(".eyebrow")).toHaveText("Zennevallei");
-  await expect(page.locator("[data-layer]")).toHaveCount(8);
+  await expect(page.locator("[data-layer]")).toHaveCount(9);
   await expect(page.locator(".layer-category")).toHaveCount(3);
   await expect(page.locator('[data-layer-category="heat"]')).toContainText("Hitte");
   await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik");
   await expect(page.locator('[data-layer-category="demography"]')).toContainText("Demografie");
-  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(2);
+  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(3);
   await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(4);
   await expect(page.locator('[data-layer-category="demography"] [data-layer]')).toHaveCount(2);
   await expect(page.locator("[data-heat-metric]")).toHaveCount(3);
@@ -1057,7 +1057,7 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   await expect(panel).toContainText("What each layer tells you");
   await expect(panel).toContainText("Land use");
   await expect(panel).toContainText("154 statistical sectors in seven Zennevallei municipalities");
-  await expect(panel.locator(".about-layer-row")).toHaveCount(8);
+  await expect(panel.locator(".about-layer-row")).toHaveCount(9);
   await expect(panel).toContainText("A personal and open V0.1 project");
   await expect(panel.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
   await expect(panel).toContainText("No cookies, analytics, accounts or persistent map choices are used");

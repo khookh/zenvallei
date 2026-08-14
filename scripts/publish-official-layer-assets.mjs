@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(projectRoot, ".cache", "local-layers");
 const outputRoot = path.join(projectRoot, "public", "data", "official-layers");
-const datasetIds = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature"];
+const datasetIds = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature", "land-cover-scenario"];
 const comparisonIds = [
   "landsat-urban-atlas", "landsat-jaarbak", "landsat-groenkaart",
   "groenkaart-income", "landsat-income",
@@ -85,6 +85,16 @@ async function publishDataset(datasetId, descriptor) {
   }
   if (datasetId === "landgebruik") {
     await copyAsset(manifest.agriculturalDetail.geojsonUrl, ".geojson");
+  } else if (datasetId === "land-cover-scenario") {
+    await copyAsset(manifest.baselineAreaStatistics.url, ".json");
+    await copyAsset(manifest.analysisWaterMask.url, ".pmtiles");
+    await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
+    await copyAsset(manifest.browserRuntime.baseline.url, ".tif");
+    await copyAsset(manifest.browserRuntime.outputScopes.url, ".bin.gz");
+    if (manifest.browserRuntime.xgboost) {
+      await copyAsset(manifest.browserRuntime.xgboost.modelUrl, ".json");
+      await copyAsset(manifest.browserRuntime.xgboost.inferenceGridUrl, ".bin.gz");
+    }
   }
   await writeJson(path.join(outputRoot, datasetId, "manifest.json"), manifest);
 }
@@ -211,7 +221,13 @@ async function collect(directory) {
 await collect(outputRoot);
 const bytes = (await Promise.all(files.map(async (file) => (await fs.stat(file)).size)))
   .reduce((sum, size) => sum + size, 0);
-if (bytes > 550 * 1024 * 1024) {
-  throw new Error(`Official browser bundle exceeds the 550 MiB budget (${(bytes / 1024 / 1024).toFixed(1)} MiB).`);
+const scenarioFiles = files.filter((file) => file.includes(`${path.sep}land-cover-scenario${path.sep}`));
+const scenarioBytes = (await Promise.all(scenarioFiles.map(async (file) => (await fs.stat(file)).size)))
+  .reduce((sum, size) => sum + size, 0);
+if (scenarioBytes > 90 * 1024 * 1024) {
+  throw new Error(`Scenario derivatives exceed the 90 MiB budget (${(scenarioBytes / 1024 / 1024).toFixed(1)} MiB).`);
+}
+if (bytes > 650 * 1024 * 1024) {
+  throw new Error(`Official browser bundle exceeds the 650 MiB budget (${(bytes / 1024 / 1024).toFixed(1)} MiB).`);
 }
 console.log(`Published ${files.length} browser-ready official-layer assets (${(bytes / 1024 / 1024).toFixed(1)} MiB).`);
