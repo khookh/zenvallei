@@ -743,12 +743,17 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   await expect(page.locator("[data-comparison-feedback]")).toContainText("no more than four");
   await page.locator('[data-comparison-series="family:water"]').click();
   await expect(page.locator('[data-comparison-series="family:water"]')).toHaveAttribute("aria-pressed", "false");
-  if (isMobile) await reopenCurrentScope(page);
+  // Opening the comparison legend may close the result panel to avoid a map
+  // collision at any viewport width. Recommit the active scope before testing
+  // the inline chart so geometry is never measured inside a hidden panel.
+  await reopenCurrentScope(page);
   // Series changes can complete a final asynchronous panel refresh. Wait for
   // the chart's data requests to settle before asserting roving keyboard focus.
   await page.waitForLoadState("networkidle");
   const visibleHistogram = page.locator("#detail-panel .comparison-chart:not(.is-expanded)");
   const firstHistogramBin = visibleHistogram.locator("[data-histogram-bin]").first();
+  await expect(visibleHistogram).toBeVisible();
+  await expect(visibleHistogram.locator("[data-histogram-output]")).toBeVisible();
   await expect(visibleHistogram.locator(".comparison-axis-y")).toHaveText("Surface share (%)");
   const chartSpacing = await visibleHistogram.evaluate((chart) => {
     const axis = chart.querySelector(".comparison-axis-label:not(.comparison-axis-y)").getBoundingClientRect();
