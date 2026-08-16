@@ -8,9 +8,11 @@ const COMPARISON_CHART_INVENTORY = {
   "landsat-urban-atlas": { selectors: ["[data-comparison-chart]:not(.is-expanded)"], expandActions: 1 },
   "landsat-jaarbak": { selectors: ["[data-comparison-chart]:not(.is-expanded)", ".sealed-urban-scatter:not(.is-expanded)"], expandActions: 2 },
   "landsat-groenkaart": { selectors: [".sealed-urban-scatter:not(.is-expanded)"], expandActions: 1 },
-  "groenkaart-income": { selectors: [".sealed-urban-scatter:not(.is-expanded)"], expandActions: 1 },
+  "groenkaart-income": { selectors: [".sealed-urban-scatter:not(.is-expanded)", ".income-temperature-box-chart:not(.is-expanded)"], expandActions: 2 },
   "landsat-income": { selectors: [".sealed-urban-scatter:not(.is-expanded)", ".income-temperature-box-chart:not(.is-expanded)"], expandActions: 2 },
-  "groenkaart-population": { selectors: ["[data-green-population-chart]:not(.is-expanded)"], expandActions: 1 },
+  "groenkaart-population": { selectors: ["[data-green-population-chart]:not(.is-expanded) .population-temperature-step", "[data-green-population-chart]:not(.is-expanded) .population-temperature-bars"], expandActions: 2 },
+  "jaarbak-income": { selectors: [".sealed-urban-scatter:not(.is-expanded)", ".income-temperature-box-chart:not(.is-expanded)"], expandActions: 2 },
+  "jaarbak-population": { selectors: ["[data-green-population-chart]:not(.is-expanded) .population-temperature-step", "[data-green-population-chart]:not(.is-expanded) .population-temperature-bars"], expandActions: 2 },
   "landsat-population": {
     selectors: [
       "[data-green-population-chart]:not(.is-expanded) .population-temperature-step",
@@ -351,6 +353,10 @@ test("opens every public comparison from either participant and restores the ini
     ["population", "groenkaart", "groenkaart-population"],
     ["landsat-temperature", "population", "landsat-population"],
     ["population", "landsat-temperature", "landsat-population"],
+    ["jaarbak", "population", "jaarbak-population"],
+    ["population", "jaarbak", "jaarbak-population"],
+    ["jaarbak", "income", "jaarbak-income"],
+    ["income", "jaarbak", "jaarbak-income"],
   ];
 
   for (const [fromLayer, targetLayer, comparisonId] of cases) {
@@ -363,7 +369,7 @@ test("opens every public comparison from either participant and restores the ini
       await expect(page.locator("[data-heat-income-chart]:not(.is-expanded)")).toBeVisible();
     } else if (comparisonId === "heat-population") {
       await expect(page.locator("[data-heat-population-box-chart]:not(.is-expanded)")).toBeVisible();
-    } else if (["landsat-groenkaart", "groenkaart-income", "landsat-income"].includes(comparisonId)) {
+    } else if (["landsat-groenkaart", "groenkaart-income", "landsat-income", "jaarbak-income"].includes(comparisonId)) {
       const chart = page.locator(".sealed-urban-scatter:not(.is-expanded)");
       await expect(chart).toBeVisible();
       if (comparisonId === "landsat-groenkaart") {
@@ -376,37 +382,40 @@ test("opens every public comparison from either participant and restores the ini
       } else {
         await expect(chart.locator("[data-scatter-sector]").first()).toBeVisible();
       }
-      if (comparisonId !== "landsat-income") {
+      if (comparisonId === "landsat-groenkaart" || comparisonId === "groenkaart-income") {
         await expect(page.locator("[data-density-class]")).toHaveCount(4);
       }
       await chart.locator("[data-expand-comparison-chart]").click();
       const expandedDialog = page.locator("[data-comparison-chart-dialog][open]");
       await expect(expandedDialog.locator(".sealed-urban-scatter.is-expanded")).toBeVisible();
-      if (comparisonId === "landsat-income") {
+      if (["landsat-income", "groenkaart-income", "jaarbak-income"].includes(comparisonId)) {
         await expect(expandedDialog.locator(".income-temperature-box-chart.is-expanded")).toHaveCount(0);
       }
       await expandedDialog.locator("[data-close-comparison-chart]").click();
-      if (comparisonId === "landsat-income") {
-        await page.locator('[data-dialog-target="landsat-income-sector-boxes"]').click();
-        const boxDialog = page.locator('[data-chart-dialog-id="landsat-income-sector-boxes"][open]');
+      if (["landsat-income", "groenkaart-income", "jaarbak-income"].includes(comparisonId)) {
+        await page.locator(`[data-dialog-target="${comparisonId}-income-boxes"]`).click();
+        const boxDialog = page.locator(`[data-chart-dialog-id="${comparisonId}-income-boxes"][open]`);
         await expect(boxDialog.locator(".income-temperature-box-chart.is-expanded")).toHaveCount(1);
         await expect(boxDialog.locator(".sealed-urban-scatter.is-expanded")).toHaveCount(0);
         await expect(boxDialog).not.toContainText("Clear-pixel temperatures by income category");
         await boxDialog.locator("[data-close-comparison-chart]").click();
       }
-    } else if (comparisonId === "groenkaart-population") {
+    } else if (["groenkaart-population", "jaarbak-population"].includes(comparisonId)) {
       await expect(page.locator("#secondary-control")).toBeHidden();
-      const chart = page.locator("[data-green-population-chart]:not(.is-expanded)");
-      await expect(chart).toBeVisible();
-      await expect(chart.locator("[data-green-population-group]").first()).toBeVisible();
+      const charts = page.locator("[data-green-population-chart]:not(.is-expanded)");
+      await expect(charts).toHaveCount(2);
+      await expect(charts.first().locator("[data-green-population-group]").first()).toBeVisible();
       await expect(page.locator("#legend-content .legend-continuous-scale").first())
-        .toHaveAttribute("aria-label", /vegetation cover within 100 m/i);
+        .toHaveAttribute("aria-label", comparisonId === "groenkaart-population"
+          ? /vegetation cover within 100 m/i : /soil-sealing density/i);
       await expect(page.locator("#legend-content .legend-comparison-section"))
         .toContainText(/Population density|Modelled inhabitants per hectare/);
-      await chart.locator("[data-expand-comparison-chart]").click();
-      await expect(page.locator("[data-comparison-chart-dialog] [data-green-population-chart].is-expanded"))
-        .toBeVisible();
-      await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
+      for (const target of [`${comparisonId}-cumulative`, `${comparisonId}-histogram`]) {
+        await page.locator(`[data-dialog-target="${target}"]`).click();
+        const dialog = page.locator(`[data-chart-dialog-id="${target}"][open]`);
+        await expect(dialog.locator("[data-green-population-chart].is-expanded")).toBeVisible();
+        await dialog.locator("[data-close-comparison-chart]").click();
+      }
     } else if (comparisonId === "landsat-population") {
       await expect(page.locator("#secondary-control")).toBeHidden();
       const charts = page.locator("[data-green-population-chart]:not(.is-expanded)");

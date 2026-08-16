@@ -1,4 +1,4 @@
-import { greenDensityColor } from "./sealed-urban-shared.js";
+import { greenDensityColor, soilDensityColor } from "./sealed-urban-shared.js";
 import { thermalColor } from "./thermal-palette.js";
 
 const PROTOCOL = "greenwave-compose";
@@ -113,7 +113,7 @@ async function composeTile(configuration, z, x, y, signal) {
       if (offset < 0) continue;
       if (configuration.scopeData && configuration.scopeIndex
         && configuration.scopeData.data[offset + 1] !== configuration.scopeIndex) continue;
-      if (configuration.mode === "density" || configuration.mode === "density-with-status") {
+      if (["density", "soil-density", "density-with-status"].includes(configuration.mode)) {
         if (configuration.mode === "density-with-status") {
           const status = configuration.temperatureData?.data[offset + 3];
           if (status === 254) {
@@ -125,7 +125,8 @@ async function composeTile(configuration, z, x, y, signal) {
         }
         const density = selectedDensity(configuration, offset);
         if (density == null) continue;
-        output.data.set([...greenDensityColor(density), 232], tileOffset);
+        const color = configuration.mode === "soil-density" ? soilDensityColor(density) : greenDensityColor(density);
+        output.data.set([...color, 232], tileOffset);
       } else if (configuration.mode === "temperature") {
         // Display status is deliberately independent from the narrower point
         // set used by comparison charts. This prevents graph eligibility rules

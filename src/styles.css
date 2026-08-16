@@ -1347,6 +1347,13 @@ select:hover, input[type="search"]:hover { border-color: #88bab6; }
 .population-temperature-bars rect { fill: #be5260; stroke: #7b1d2a; stroke-width: 1.2; cursor: crosshair; outline: none; }
 .population-temperature-bars rect:hover,
 .population-temperature-bars rect:focus { fill: #9f3040; stroke: #481018; stroke-width: 2.5; }
+.percentage-population-chart.is-green-profile .population-temperature-step { stroke: #176b43; }
+.percentage-population-chart.is-green-profile .population-temperature-bars rect { fill: #4cad64; stroke: #176b43; }
+.percentage-population-chart.is-green-profile .population-temperature-bars rect:hover,
+.percentage-population-chart.is-green-profile .population-temperature-bars rect:focus { fill: #238b45; stroke: #063e27; }
+.income-temperature-box-chart [data-income-box-group] { outline: none; cursor: pointer; }
+.income-temperature-box-chart [data-income-box-group]:focus rect,
+.income-temperature-box-chart [data-income-box-group]:hover rect { stroke: #082f38; stroke-width: 3; }
 
 .legend {
   left: var(--legend-dock-left, 20px);

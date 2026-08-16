@@ -900,6 +900,21 @@ async function start() {
     });
     application.comparisons.set(comparison.id, comparison);
   }
+  const jaarbakLayer = application.layers.get("jaarbak");
+  if (jaarbakLayer && populationLayer && data.comparisons?.["jaarbak-population"]) {
+    const { createJaarbakPopulationComparison } = await import("./comparisons/jaarbak-population.js");
+    const comparison = createJaarbakPopulationComparison({
+      descriptor: data.comparisons["jaarbak-population"], jaarbakLayer, populationLayer,
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
+  if (jaarbakLayer && incomeLayer && data.comparisons?.["jaarbak-income"]) {
+    const { createJaarbakIncomeComparison } = await import("./comparisons/jaarbak-income.js");
+    const comparison = createJaarbakIncomeComparison({
+      descriptor: data.comparisons["jaarbak-income"], jaarbakLayer, incomeLayer,
+    });
+    application.comparisons.set(comparison.id, comparison);
+  }
   const heatLayer = application.layers.get("heat");
   const { createHeatIncomeComparison } = await import("./comparisons/heat-income.js");
   const incomeComparison = createHeatIncomeComparison({

@@ -654,6 +654,84 @@ green_population_manifest = {
     json.dumps(green_population_manifest), encoding="utf-8"
 )
 
+# Soil-sealing socioeconomic fixtures share one lossless 100 m density image,
+# matching the production command's compact public derivatives.
+soil_socioeconomic_root = ROOT / "jaarbak-socioeconomic"
+soil_socioeconomic_root.mkdir(parents=True, exist_ok=True)
+soil_density = np.zeros((64, 64, 4), dtype=np.uint8)
+soil_density[..., 0] = np.tile(np.linspace(0, 255, 64, dtype=np.uint8), (64, 1))
+soil_density[..., 3] = 255
+Image.fromarray(soil_density).save(soil_socioeconomic_root / "density-grid.png")
+Image.fromarray(sealed_scope).save(soil_socioeconomic_root / "scope-index.png")
+soil_population_root = ROOT / "jaarbak-population"
+soil_population_root.mkdir(parents=True, exist_ok=True)
+soil_population_cells = []
+for sector_number, sector_id in enumerate(sector_ids):
+    for cell_number in range(10):
+        density = float((sector_number * 5 + cell_number * 9) % 101)
+        population_density = float((sector_number * 7 + cell_number * 11) % 220)
+        soil_population_cells.append({
+            "s": sector_id, "r": sector_number % 64, "c": cell_number,
+            "p": population_density, "a": .12,
+            "d": density,
+            "u": [[900, round(900 * density, 5)], [300, round(300 * density, 5)]],
+        })
+(soil_population_root / "cells.json").write_text(json.dumps({
+    "schemaVersion": 1, "cells": soil_population_cells,
+}), encoding="utf-8")
+soil_sector_stats = {}
+for _, row in sectors.iterrows():
+    sector_id = str(row.sectorId)
+    fiscal = income_2023.get(sector_id, {})
+    base_density = 30 + sector_indexes[sector_id] % 50
+    soil_sector_stats[sector_id] = {
+        "sectorId": sector_id, "sectorName": str(row.sectorName),
+        "municipality": str(row.municipality), "analysedAreaHa": .25,
+        "meanDensity": base_density,
+        "urbanSurfaceGroups": {
+            "residential": {"analysedAreaHa": .15,
+                            "densityAreaSum": round(1_500 * base_density, 5),
+                            "meanDensity": base_density},
+            "employmentInstitutional": {"analysedAreaHa": .10,
+                                        "densityAreaSum": round(1_000 * (base_density + 5), 5),
+                                        "meanDensity": base_density + 5},
+        },
+        "income": fiscal.get("medianNetTaxableIncome") if fiscal.get("sourceStatus") == "available" else None,
+    }
+soil_income_root = ROOT / "jaarbak-income"
+soil_income_root.mkdir(parents=True, exist_ok=True)
+soil_income_statistics = json.dumps({
+    "schemaVersion": 1, "sectorStats": soil_sector_stats,
+    "regressionsBySurface": {
+        surface_key: {scope_id: fixture_regression(scope_id) for scope_id in scope_ids}
+        for surface_key in ("residential", "employmentInstitutional", "residential+employmentInstitutional")
+    },
+}, separators=(",", ":")).encode("utf-8")
+(soil_income_root / "statistics.json.gz").write_bytes(
+    gzip.compress(soil_income_statistics, compresslevel=9, mtime=0),
+)
+soil_common_manifest = {
+    "schemaVersion": 1, "soilSealingYear": 2024, "urbanAtlasYear": 2021,
+    "densityRadiusMeters": 100, "densityCircleAreaHa": 3.14159265,
+    "densityAnalysisResolutionMeters": 10, "minimumDensityCoverage": 95,
+    "minimumAnalysedAreaHa": .10, "maskResolutionMeters": 1,
+    "aggregation": "exact-masked-area", "coordinates": comparison_coordinates,
+    "imageSize": [64, 64], "densityGridUrl": "jaarbak-socioeconomic/density-grid.png",
+    "scopeIndexUrl": "jaarbak-socioeconomic/scope-index.png",
+    "sectorMunicipalities": sector_municipalities, **surface_contract,
+}
+(soil_population_root / "manifest.json").write_text(json.dumps({
+    **soil_common_manifest, "comparisonId": "jaarbak-population",
+    "primaryLayerId": "jaarbak", "secondaryLayerId": "population",
+    "populationYear": 2019, "populationDatasetId": "flanders-2019",
+    "populationResolutionMeters": 100, "statisticsUrl": "jaarbak-population/cells.json",
+}), encoding="utf-8")
+(soil_income_root / "manifest.json").write_text(json.dumps({
+    **soil_common_manifest, "comparisonId": "jaarbak-income",
+    "primaryLayerId": "jaarbak", "secondaryLayerId": "income",
+    "incomeYear": 2023, "statisticsUrl": "jaarbak-income/statistics.json.gz",
+}), encoding="utf-8")
+
 landsat_green_root = ROOT / "landsat-groenkaart"
 (landsat_green_root / "points").mkdir(parents=True, exist_ok=True)
 (landsat_green_root / "statistics").mkdir(parents=True, exist_ok=True)
@@ -870,6 +948,14 @@ descriptors["land-cover-scenario"] = {
         "landsat-population": {
             "comparisonId": "landsat-population", "primaryLayerId": "landsat-temperature",
             "secondaryLayerId": "population", "manifestUrl": "landsat-population/manifest.json",
+        },
+        "jaarbak-population": {
+            "comparisonId": "jaarbak-population", "primaryLayerId": "jaarbak",
+            "secondaryLayerId": "population", "manifestUrl": "jaarbak-population/manifest.json",
+        },
+        "jaarbak-income": {
+            "comparisonId": "jaarbak-income", "primaryLayerId": "jaarbak",
+            "secondaryLayerId": "income", "manifestUrl": "jaarbak-income/manifest.json",
         },
     },
 }), encoding="utf-8")

@@ -160,3 +160,87 @@ export function summarizePopulationTemperature(records, { binWidth = 0.5 } = {})
     temperatureMaximum: points.length ? points[0].temperature : null,
   };
 }
+
+/**
+ * Build a resident-weighted cumulative curve and fixed distribution for a
+ * bounded percentage measured once per uniform 1 ha population-model cell.
+ * Population is a weight, not a second observation, and equal values stay on
+ * one cumulative step so threshold readouts remain deterministic.
+ */
+export function summarizePopulationPercentage(records, {
+  valueKey,
+  populationKey = "populationDensityPerHa",
+  binWidth = 5,
+  direction = "ascending",
+} = {}) {
+  if (!valueKey || !Number.isFinite(binWidth) || binWidth <= 0 || 100 % binWidth !== 0) {
+    throw new TypeError("A percentage value key and an exact divisor of 100 are required.");
+  }
+  if (!new Set(["ascending", "descending"]).has(direction)) {
+    throw new TypeError("Population percentage direction must be ascending or descending.");
+  }
+  const valid = records.filter((record) => Number.isFinite(record?.[populationKey])
+    && record[populationKey] >= 0 && Number.isFinite(record?.[valueKey]))
+    .map((record) => ({ ...record, [valueKey]: Math.max(0, Math.min(100, record[valueKey])) }));
+  const zeroPopulationCount = valid.filter((record) => record[populationKey] === 0).length;
+  const sign = direction === "ascending" ? 1 : -1;
+  const points = valid.filter((record) => record[populationKey] > 0)
+    .sort((left, right) => sign * (left[valueKey] - right[valueKey])
+      || String(left.cellId ?? "").localeCompare(String(right.cellId ?? "")));
+  const totalResidents = points.reduce((sum, point) => sum + point[populationKey], 0);
+  const weightedMean = totalResidents > 0
+    ? points.reduce((sum, point) => sum + point[valueKey] * point[populationKey], 0) / totalResidents
+    : null;
+  const binCount = 100 / binWidth;
+  const bins = Array.from({ length: binCount }, (_, index) => ({
+    lower: index * binWidth,
+    upper: (index + 1) * binWidth,
+    residents: 0,
+    cellCount: 0,
+    analysedAreaHa: 0,
+  }));
+  points.forEach((point) => {
+    const index = Math.min(binCount - 1, Math.floor(point[valueKey] / binWidth));
+    bins[index].residents += point[populationKey];
+    bins[index].cellCount += 1;
+    bins[index].analysedAreaHa += Number(point.analysedAreaHa ?? 0);
+  });
+  bins.forEach((bin) => { bin.share = totalResidents ? bin.residents / totalResidents * 100 : 0; });
+
+  let cumulativeResidents = 0;
+  const curve = [];
+  for (let start = 0; start < points.length;) {
+    let end = start + 1;
+    while (end < points.length && points[end][valueKey] === points[start][valueKey]) end += 1;
+    const tied = points.slice(start, end);
+    const tiedResidents = tied.reduce((sum, point) => sum + point[populationKey], 0);
+    const selectedResidents = cumulativeResidents + tiedResidents;
+    const value = points[start][valueKey];
+    const binIndex = Math.min(binCount - 1, Math.floor(value / binWidth));
+    tied.forEach((point) => {
+      cumulativeResidents += point[populationKey];
+      curve.push({
+        ...point,
+        value,
+        cumulativeResidents,
+        selectedResidents,
+        selectedShare: totalResidents ? selectedResidents / totalResidents * 100 : 0,
+        remainingResidents: totalResidents - selectedResidents,
+        remainingShare: totalResidents ? (totalResidents - selectedResidents) / totalResidents * 100 : 0,
+        selectedCellCount: end,
+        remainingCellCount: points.length - end,
+        intervalLower: bins[binIndex].lower,
+        intervalUpper: bins[binIndex].upper,
+        intervalResidents: bins[binIndex].residents,
+        intervalCellCount: bins[binIndex].cellCount,
+        intervalAnalysedAreaHa: bins[binIndex].analysedAreaHa,
+      });
+    });
+    start = end;
+  }
+  return {
+    points, curve, bins, direction, totalResidents, zeroPopulationCount, weightedMean,
+    valueMinimum: points.length ? Math.min(...points.map((point) => point[valueKey])) : null,
+    valueMaximum: points.length ? Math.max(...points.map((point) => point[valueKey])) : null,
+  };
+}

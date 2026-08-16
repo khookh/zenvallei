@@ -1451,8 +1451,8 @@ function sealedUrbanScatterChart(model, { expanded = false, showExpand = true, d
   </div>`;
 }
 
-function incomeTemperatureBoxChart(model, { expanded = false, showExpand = true } = {}) {
-  if (model.comparisonId !== "landsat-income") return "";
+function incomeOutcomeBoxChart(model, { expanded = false, showExpand = true } = {}) {
+  if (!model.incomeBoxKind) return "";
   const summaries = model.incomeCategories?.sectors;
   const categories = [
     { id: "low", symbol: "€", color: "#4c7a89" },
@@ -1460,7 +1460,9 @@ function incomeTemperatureBoxChart(model, { expanded = false, showExpand = true 
     { id: "high", symbol: "€€€", color: "#9b3c62" },
   ].map((category) => ({ ...category, summary: summaries?.[category.id] }))
     .filter(({ summary }) => summary && summary.count >= 5);
-  if (!categories.length) return `<p class="panel-empty-state">${escapeHtml(t("landsatIncome.categoryUnavailable"))}</p>`;
+  const key = model.incomeBoxKind === "temperature" ? "landsatIncome"
+    : model.incomeBoxKind === "green" ? "greenIncome" : "soilIncome";
+  if (!categories.length) return `<p class="panel-empty-state">${escapeHtml(t(`${key}.categoryUnavailable`))}</p>`;
   const width = expanded ? 980 : 440;
   const height = expanded ? 560 : 350;
   const plot = expanded ? { left: 104, top: 30, width: 820, height: 390 } : { left: 72, top: 24, width: 338, height: 220 };
@@ -1471,11 +1473,13 @@ function incomeTemperatureBoxChart(model, { expanded = false, showExpand = true 
   const y = (value) => plot.top + plot.height - (value - low) / Math.max(1, high - low) * plot.height;
   const boxWidth = Math.min(expanded ? 100 : 56, plot.width / categories.length * .42);
   const yTicks = Array.from({ length: 5 }, (_, index) => low + (high - low) * index / 4);
-  const title = t("landsatIncome.sectorBoxesTitle");
-  return `<div class="income-temperature-box-chart ${expanded ? "is-expanded" : ""}">
-    ${expanded || !showExpand ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart data-dialog-target="landsat-income-sector-boxes" aria-label="${escapeHtml(t("chart.expandNamed", { chart: title }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
+  const title = t(`${key}.sectorBoxesTitle`);
+  const unit = model.incomeBoxKind === "temperature" ? "°C" : "%";
+  const valueKey = model.yKey;
+  return `<div class="income-temperature-box-chart ${expanded ? "is-expanded" : ""}" data-income-box-chart>
+    ${expanded || !showExpand ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart data-dialog-target="${escapeHtml(model.comparisonId)}-income-boxes" aria-label="${escapeHtml(t("chart.expandNamed", { chart: title }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
     <h4>${escapeHtml(title)}</h4>
-    <p>${escapeHtml(t("landsatIncome.sectorBoxesIntro"))}</p>
+    <p>${escapeHtml(t(`${key}.sectorBoxesIntro`))}</p>
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(title)}">
       <g class="green-population-grid">${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(value)}" y2="${y(value)}"></line>`).join("")}</g>
       ${categories.map(({ summary, symbol, color }, index) => {
@@ -1485,21 +1489,29 @@ function incomeTemperatureBoxChart(model, { expanded = false, showExpand = true 
           const id = point.income < 30_000 ? "low" : point.income < 40_000 ? "middle" : "high";
           return id === categoryId;
         });
-        return `<g aria-label="${escapeHtml(t("landsatIncome.categoryReadout", { category: symbol, count: summary.count, mean: formatNumber(summary.mean, 1), median: formatNumber(summary.median, 1), q1: formatNumber(summary.q1, 1), q3: formatNumber(summary.q3, 1) }))}">
+        const label = t(`${key}.categoryReadout`, { category: symbol, count: summary.count,
+          mean: formatNumber(summary.mean, 1), median: formatNumber(summary.median, 1),
+          q1: formatNumber(summary.q1, 1), q3: formatNumber(summary.q3, 1) });
+        return `<g role="button" tabindex="${index === 0 ? 0 : -1}" data-income-box-group data-box-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
           <line class="heat-population-whisker" x1="${centre}" x2="${centre}" y1="${y(summary.whiskerLow)}" y2="${y(summary.whiskerHigh)}"></line>
           <rect x="${centre - boxWidth / 2}" y="${y(summary.q3)}" width="${boxWidth}" height="${Math.max(2, y(summary.q1) - y(summary.q3))}" fill="${color}" opacity=".78"></rect>
           <line class="heat-population-median" x1="${centre - boxWidth / 2}" x2="${centre + boxWidth / 2}" y1="${y(summary.median)}" y2="${y(summary.median)}"></line>
           <circle cx="${centre}" cy="${y(summary.mean)}" r="5" fill="#fff" stroke="${color}" stroke-width="3"></circle>
-          ${sectorDots.map((point, dotIndex) => `<circle cx="${centre + ((dotIndex % 7) - 3) * 2.8}" cy="${y(point.temperature)}" r="2.3" fill="#173f49" opacity=".58"><title>${escapeHtml(`${point.sectorName}: ${formatNumber(point.temperature, 1)}°C`)}</title></circle>`).join("")}
+          ${sectorDots.map((point, dotIndex) => `<circle cx="${centre + ((dotIndex % 7) - 3) * 2.8}" cy="${y(point[valueKey])}" r="2.3" fill="#173f49" opacity=".58"><title>${escapeHtml(`${point.sectorName}: ${formatNumber(point[valueKey], 1)}${unit}`)}</title></circle>`).join("")}
         </g>`;
       }).join("")}
       <g class="green-population-axis-values" aria-hidden="true">
-        ${yTicks.map((value) => `<text x="${plot.left - 12}" y="${y(value) + 5}" text-anchor="end">${escapeHtml(formatNumber(value, 1))}°C</text>`).join("")}
+        ${yTicks.map((value) => `<text x="${plot.left - 12}" y="${y(value) + 5}" text-anchor="end">${escapeHtml(formatNumber(value, 1))}${unit}</text>`).join("")}
         ${categories.map(({ summary, symbol }, index) => `<text x="${x(index)}" y="${plot.top + plot.height + 27}" text-anchor="middle"><tspan x="${x(index)}">${symbol}</tspan><tspan x="${x(index)}" dy="17">n=${summary.count}</tspan></text>`).join("")}
       </g>
       <text class="green-population-axis-label" x="${plot.left + plot.width / 2}" y="${height - 18}" text-anchor="middle">${escapeHtml(t("landsatIncome.axisCategory"))}</text>
-      <text class="green-population-axis-label" transform="translate(29 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("sealedUrban.axisTemperature"))}</text>
+      <text class="green-population-axis-label" transform="translate(29 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(model.yLabel)}</text>
     </svg>
+    <p class="sealed-scatter-output" data-income-box-output aria-live="polite">${escapeHtml(t(`${key}.categoryReadout`, {
+      category: categories[0].symbol, count: categories[0].summary.count,
+      mean: formatNumber(categories[0].summary.mean, 1), median: formatNumber(categories[0].summary.median, 1),
+      q1: formatNumber(categories[0].summary.q1, 1), q3: formatNumber(categories[0].summary.q3, 1),
+    }))}</p>
   </div>`;
 }
 
@@ -1543,12 +1555,14 @@ function sealedUrbanScatterDialog(model) {
   </dialog>`;
 }
 
-function incomeTemperatureBoxDialog(model) {
-  if (model.comparisonId !== "landsat-income") return "";
-  return `<dialog class="comparison-chart-dialog sealed-scatter-dialog" data-comparison-chart-dialog data-chart-dialog-id="landsat-income-sector-boxes" aria-label="${escapeHtml(t("landsatIncome.sectorBoxesTitle"))}">
+function incomeOutcomeBoxDialog(model) {
+  if (!model.incomeBoxKind) return "";
+  const key = model.incomeBoxKind === "temperature" ? "landsatIncome"
+    : model.incomeBoxKind === "green" ? "greenIncome" : "soilIncome";
+  return `<dialog class="comparison-chart-dialog sealed-scatter-dialog" data-comparison-chart-dialog data-chart-dialog-id="${escapeHtml(model.comparisonId)}-income-boxes" aria-label="${escapeHtml(t(`${key}.sectorBoxesTitle`))}">
     <div class="comparison-chart-dialog-content">
-      <header><h3>${escapeHtml(t("landsatIncome.sectorBoxesTitle"))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("sealedUrban.closeChart"))}">&times;</button></header>
-      ${incomeTemperatureBoxChart(model, { expanded: true })}
+      <header><h3>${escapeHtml(t(`${key}.sectorBoxesTitle`))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("sealedUrban.closeChart"))}">&times;</button></header>
+      ${incomeOutcomeBoxChart(model, { expanded: true })}
     </div>
   </dialog>`;
 }
@@ -1565,10 +1579,10 @@ function renderSealedUrbanScatter(model) {
   <div class="panel-body comparison-body sealed-urban-body">
     <section aria-labelledby="sealed-scatter-title">
       <div class="section-heading"><p class="section-kicker">${escapeHtml(t("sealedUrban.analysis"))}</p><h3 id="sealed-scatter-title">${escapeHtml(model.title)}</h3></div>
-      ${sealedUrbanScatterChart(model, { dialogTarget: model.comparisonId === "landsat-income" ? "landsat-income-scatter" : null })}
-      ${incomeTemperatureBoxChart(model)}
+      ${sealedUrbanScatterChart(model, { dialogTarget: model.incomeBoxKind ? `${model.comparisonId}-scatter` : null })}
+      ${incomeOutcomeBoxChart(model)}
       ${sealedUrbanScatterDialog(model)}
-      ${incomeTemperatureBoxDialog(model)}
+      ${incomeOutcomeBoxDialog(model)}
       <div class="summary-grid sealed-regression-grid">
         ${metricCard("sealedUrban.slope", regression ? `${formatNumber(regression.slope * model.slopeScale, 3)} ${model.slopeUnit}` : t("value.notAvailable"), "#8f1d2c")}
       </div>
@@ -1584,114 +1598,139 @@ function renderSealedUrbanScatter(model) {
   </div>`;
 }
 
-function populationProfileBandLabel(band, model) {
-  const common = {
-    start: formatNumber(band.startShare, 0), end: formatNumber(band.endShare, 0),
-    minimum: formatNumber(band.minimum, 1), maximum: formatNumber(band.maximum, 1),
-    residents: formatNumber(band.residents, 0), count: band.count,
-    value: formatNumber(band.weightedMean, 1), unit: model.valueUnit,
-  };
-  if (model.valueKind === "temperature") {
-    return t("populationProfile.temperatureBandReadout", {
-      ...common, contributing: formatNumber(band.contributingCount, 0),
-    });
-  }
-  return t("populationProfile.vegetationBandReadout", {
-    ...common, area: formatNumber(band.weightedMean / 100 * Math.PI, 2),
+function percentagePopulationCurveLabel(point, model) {
+  return t(`${model.copyPrefix}.cumulativeReadout`, {
+    value: formatNumber(point.value, 1),
+    selected: formatNumber(point.selectedResidents, 0),
+    selectedShare: formatNumber(point.selectedShare, 1),
+    remaining: formatNumber(point.remainingResidents, 0),
+    remainingShare: formatNumber(point.remainingShare, 1),
+    interval: `${formatNumber(point.intervalLower, 0)}–${formatNumber(point.intervalUpper, 0)}%`,
+    intervalResidents: formatNumber(point.intervalResidents, 0),
+    cells: formatNumber(point.intervalCellCount, 0),
   });
 }
 
-function populationProfileChart(model, { expanded = false, showExpand = true } = {}) {
-  if (!model.sufficient) {
-    return `<div class="green-population-small-sample">
-      <strong>${escapeHtml(model.weightedMean == null ? t("value.notAvailable") : `${formatNumber(model.weightedMean, 1)}${model.valueUnit}`)}</strong>
-      <p>${escapeHtml(t("populationProfile.smallSample", { count: model.points.length }))}</p>
-    </div>`;
-  }
+function percentagePopulationCumulativeChart(model, { expanded = false } = {}) {
+  if (!model.curve?.length || !model.totalResidents) return `<p class="panel-empty-state">${escapeHtml(t("sealedUrban.noComparableValue"))}</p>`;
   const width = expanded ? 1100 : 440;
-  const height = expanded ? 650 : 410;
-  const plot = expanded
-    ? { left: 118, top: 42, width: 920, height: 430 }
-    : { left: 78, top: 32, width: 332, height: 250 };
-  const values = model.bands.map(({ weightedMean }) => weightedMean);
-  const groups = model.bands.map((band) => ({ ...band, minimum: band.startShare, maximum: band.endShare }));
-  const floor = model.valueKind === "temperature" ? Math.floor(Math.min(...values) - 1) : 0;
-  const ceiling = model.valueKind === "temperature" ? Math.ceil(Math.max(...values) + 1) : 100;
-  const x = (index) => plot.left + plot.width * (index + .5) / model.bands.length;
-  const y = (value) => plot.top + plot.height - (value - floor) / Math.max(1, ceiling - floor) * plot.height;
-  const barWidth = Math.max(18, Math.min(70, plot.width / model.bands.length * .68));
-  const yTicks = Array.from({ length: 5 }, (_, index) => floor + (ceiling - floor) * index / 4);
-  const initialLabel = populationProfileBandLabel(model.bands[0], model);
-  const prefix = `population-profile-${model.valueKind}-${expanded ? "expanded" : "inline"}`;
-  return `<div class="green-population-chart ${expanded ? "is-expanded" : ""}" data-green-population-chart>
-    ${expanded || !showExpand ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart aria-label="${escapeHtml(t("chart.expandNamed", { chart: t("greenPopulation.chartTitle") }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
-    <p class="green-population-chart-intro">${escapeHtml(t(model.chartIntroKey, { count: model.points.length, residents: formatNumber(model.totalResidents, 0) }))}</p>
-    <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
-      <title id="${prefix}-title">${escapeHtml(t(model.chartTitleKey))}</title>
-      <desc id="${prefix}-description">${escapeHtml(t(model.chartDescriptionKey, { area: panelAreaName(model.record), count: model.points.length }))}</desc>
+  const height = expanded ? 650 : 430;
+  const plot = expanded ? { left: 112, top: 38, width: 920, height: 455 }
+    : { left: 78, top: 28, width: 330, height: 270 };
+  const x = (value) => plot.left + value / model.totalResidents * plot.width;
+  const y = (value) => plot.top + plot.height - value / 100 * plot.height;
+  const yTicks = [0, 25, 50, 75, 100];
+  const xTicks = Array.from({ length: 5 }, (_, index) => model.totalResidents * index / 4);
+  let path = `M ${plot.left} ${y(model.curve[0].value)}`;
+  model.curve.forEach((point, index) => {
+    path += ` H ${x(point.cumulativeResidents)}`;
+    if (model.curve[index + 1]) path += ` V ${y(model.curve[index + 1].value)}`;
+  });
+  const dialogId = `${model.comparisonId}-cumulative`;
+  const prefix = `${dialogId}-${expanded ? "expanded" : "inline"}`;
+  return `<div class="green-population-chart percentage-population-chart ${model.copyPrefix === "greenPopulation" ? "is-green-profile" : "is-soil-profile"} ${expanded ? "is-expanded" : ""}" data-green-population-chart>
+    ${expanded ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart data-dialog-target="${dialogId}" aria-label="${escapeHtml(t("chart.expandNamed", { chart: t(`${model.copyPrefix}.cumulativeTitle`) }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
+    <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description" data-cumulative-population-plot data-plot-left="${plot.left}" data-plot-right="${plot.left + plot.width}">
+      <title id="${prefix}-title">${escapeHtml(t(`${model.copyPrefix}.cumulativeTitle`))}</title>
+      <desc id="${prefix}-description">${escapeHtml(t(`${model.copyPrefix}.cumulativeDescription`, { area: panelAreaName(model.record), residents: formatNumber(model.totalResidents, 0) }))}</desc>
       <g class="green-population-grid" aria-hidden="true">${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(value)}" y2="${y(value)}"></line>`).join("")}</g>
-      <g class="green-population-boxes">${model.bands.map((band, index) => {
-        const label = populationProfileBandLabel(band, model);
-        const centre = x(index);
-        return `<rect role="button" tabindex="${index === 0 ? 0 : -1}" data-green-population-group data-box-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" x="${centre - barWidth / 2}" y="${y(band.weightedMean)}" width="${barWidth}" height="${Math.max(2, y(floor) - y(band.weightedMean))}"></rect>`;
+      <path class="population-temperature-step" d="${path}"></path>
+      <line class="population-temperature-guide" data-population-temperature-guide x1="${plot.left}" x2="${plot.left}" y1="${plot.top}" y2="${plot.top + plot.height}" hidden></line>
+      <g class="population-temperature-hit-points">${model.curve.map((point, index) => {
+        const start = index ? model.curve[index - 1].cumulativeResidents : 0;
+        const label = percentagePopulationCurveLabel(point, model);
+        return `<rect role="button" tabindex="${index === 0 ? 0 : -1}" data-green-population-group data-guide-x="${x(point.cumulativeResidents)}" data-box-label="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" x="${x(start)}" y="${plot.top}" width="${Math.max(.01, x(point.cumulativeResidents) - x(start))}" height="${plot.height}"></rect>`;
       }).join("")}</g>
       <g class="green-population-axis-values" aria-hidden="true">
-        ${yTicks.map((value) => `<text x="${plot.left - 15}" y="${y(value) + 5}" text-anchor="end">${escapeHtml(formatNumber(value, model.valueKind === "temperature" ? 1 : 0))}${model.valueUnit}</text>`).join("")}
-        ${groups.map((group, index) => `<text class="green-population-range" x="${x(index)}" y="${plot.top + plot.height + 27}" text-anchor="middle"><tspan x="${x(index)}">${expanded ? `${escapeHtml(formatNumber(group.minimum, 0))}–${escapeHtml(formatNumber(group.maximum, 0))}` : `G${index + 1}`}</tspan><tspan x="${x(index)}" dy="17">n=${group.count}</tspan></text>`).join("")}
+        ${yTicks.map((value) => `<text x="${plot.left - 13}" y="${y(value) + 5}" text-anchor="end">${value}%</text>`).join("")}
+        ${xTicks.map((value) => `<text x="${x(value)}" y="${plot.top + plot.height + 27}" text-anchor="middle">${escapeHtml(formatNumber(value, 0))}</text>`).join("")}
       </g>
-      <g class="population-profile-axis-values" aria-hidden="true">
-        ${model.bands.map((band, index) => `<text x="${x(index)}" y="${plot.top + plot.height + 27}" text-anchor="middle"><tspan x="${x(index)}">${escapeHtml(formatNumber(band.startShare, 0))}–${escapeHtml(formatNumber(band.endShare, 0))}%</tspan><tspan x="${x(index)}" dy="17">n=${band.count}</tspan></text>`).join("")}
-      </g>
-      <text class="green-population-axis-label" x="${plot.left + plot.width / 2}" y="${height - 22}" text-anchor="middle">${escapeHtml(t("populationProfile.axisPopulation"))}</text>
-      <text class="green-population-axis-label" transform="translate(31 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t(model.axisYKey))}</text>
+      <text class="green-population-axis-label" x="${plot.left + plot.width / 2}" y="${height - 20}" text-anchor="middle">${escapeHtml(t("landsatPopulation.axisCumulativeResidents"))}</text>
+      <text class="green-population-axis-label" transform="translate(27 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t(`${model.copyPrefix}.axisValue`))}</text>
     </svg>
-    <p class="green-population-output" data-green-population-output aria-live="polite">${escapeHtml(initialLabel)}</p>
+    <p class="green-population-output" data-green-population-output aria-live="polite">${escapeHtml(percentagePopulationCurveLabel(model.curve[0], model))}</p>
   </div>`;
 }
 
-function greenPopulationChartDialog(model) {
-  return `<dialog class="comparison-chart-dialog green-population-dialog" data-comparison-chart-dialog aria-label="${escapeHtml(t(model.chartTitleKey))}">
+function percentagePopulationHistogramLabel(bin, model) {
+  return t(`${model.copyPrefix}.histogramReadout`, {
+    interval: `${formatNumber(bin.lower, 0)}–${formatNumber(bin.upper, 0)}%`,
+    residents: formatNumber(bin.residents, 0), share: formatNumber(bin.share, 1),
+    represented: formatNumber(model.totalResidents, 0), cells: formatNumber(bin.cellCount, 0),
+  });
+}
+
+function percentagePopulationHistogram(model, { expanded = false } = {}) {
+  if (!model.bins?.length || !model.totalResidents) return `<p class="panel-empty-state">${escapeHtml(t("sealedUrban.noComparableValue"))}</p>`;
+  const width = expanded ? 1100 : 440;
+  const height = expanded ? 650 : 430;
+  const plot = expanded ? { left: 112, top: 38, width: 920, height: 455 }
+    : { left: 82, top: 28, width: 326, height: 270 };
+  const maximum = Math.max(1, ...model.bins.map(({ residents }) => residents));
+  const x = (index) => plot.left + plot.width * index / model.bins.length;
+  const y = (value) => plot.top + plot.height - value / maximum * plot.height;
+  const barWidth = Math.max(2, plot.width / model.bins.length - 2);
+  const yTicks = Array.from({ length: 5 }, (_, index) => maximum * index / 4);
+  const tickStep = expanded ? 2 : 4;
+  const dialogId = `${model.comparisonId}-histogram`;
+  const prefix = `${dialogId}-${expanded ? "expanded" : "inline"}`;
+  return `<div class="green-population-chart percentage-population-chart ${model.copyPrefix === "greenPopulation" ? "is-green-profile" : "is-soil-profile"} ${expanded ? "is-expanded" : ""}" data-green-population-chart>
+    ${expanded ? "" : `<div class="sealed-scatter-actions"><button class="comparison-chart-expand" type="button" data-expand-comparison-chart data-dialog-target="${dialogId}" aria-label="${escapeHtml(t("chart.expandNamed", { chart: t(`${model.copyPrefix}.histogramTitle`) }))}">${escapeHtml(t("chart.expand"))}</button></div>`}
+    <svg viewBox="0 0 ${width} ${height}" role="group" aria-labelledby="${prefix}-title ${prefix}-description">
+      <title id="${prefix}-title">${escapeHtml(t(`${model.copyPrefix}.histogramTitle`))}</title>
+      <desc id="${prefix}-description">${escapeHtml(t(`${model.copyPrefix}.histogramDescription`, { area: panelAreaName(model.record), residents: formatNumber(model.totalResidents, 0) }))}</desc>
+      <g class="green-population-grid" aria-hidden="true">${yTicks.map((value) => `<line x1="${plot.left}" x2="${plot.left + plot.width}" y1="${y(value)}" y2="${y(value)}"></line>`).join("")}</g>
+      <g class="population-temperature-bars">${model.bins.map((bin, index) => `<rect role="button" tabindex="${index === 0 ? 0 : -1}" data-green-population-group data-box-label="${escapeHtml(percentagePopulationHistogramLabel(bin, model))}" aria-label="${escapeHtml(percentagePopulationHistogramLabel(bin, model))}" x="${x(index) + 1}" y="${y(bin.residents)}" width="${barWidth}" height="${Math.max(2, y(0) - y(bin.residents))}"></rect>`).join("")}</g>
+      <g class="green-population-axis-values" aria-hidden="true">
+        ${yTicks.map((value) => `<text x="${plot.left - 13}" y="${y(value) + 5}" text-anchor="end">${escapeHtml(formatNumber(value, 0))}</text>`).join("")}
+        ${model.bins.map((bin, index) => index % tickStep === 0 ? `<text x="${x(index) + barWidth / 2}" y="${plot.top + plot.height + 27}" text-anchor="middle">${escapeHtml(formatNumber(bin.lower, 0))}%</text>` : "").join("")}
+      </g>
+      <text class="green-population-axis-label" x="${plot.left + plot.width / 2}" y="${height - 20}" text-anchor="middle">${escapeHtml(t(`${model.copyPrefix}.axisIntervals`))}</text>
+      <text class="green-population-axis-label" transform="translate(27 ${plot.top + plot.height / 2}) rotate(-90)" text-anchor="middle">${escapeHtml(t("landsatPopulation.axisResidents"))}</text>
+    </svg>
+    <p class="green-population-output" data-green-population-output aria-live="polite">${escapeHtml(percentagePopulationHistogramLabel(model.bins.find(({ residents }) => residents > 0) ?? model.bins[0], model))}</p>
+  </div>`;
+}
+
+function percentagePopulationDialog(model, kind) {
+  const cumulative = kind === "cumulative";
+  return `<dialog class="comparison-chart-dialog green-population-dialog" data-comparison-chart-dialog data-chart-dialog-id="${escapeHtml(model.comparisonId)}-${kind}" aria-label="${escapeHtml(t(`${model.copyPrefix}.${cumulative ? "cumulativeExpandedTitle" : "histogramExpandedTitle"}`, { area: panelAreaName(model.record) }))}">
     <div class="comparison-chart-dialog-content">
-      <header><h3>${escapeHtml(t(model.expandedTitleKey, { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("greenPopulation.closeChart"))}">&times;</button></header>
-      <p class="comparison-dialog-description">${escapeHtml(t(model.expandedDescriptionKey, { count: model.points.length, area: panelAreaName(model.record) }))}</p>
-      ${populationProfileChart(model, { expanded: true })}
-      <p class="comparison-academic-note">${escapeHtml(t(model.academicNoteKey))}</p>
+      <header><h3>${escapeHtml(t(`${model.copyPrefix}.${cumulative ? "cumulativeExpandedTitle" : "histogramExpandedTitle"}`, { area: panelAreaName(model.record) }))}</h3><button type="button" data-close-comparison-chart aria-label="${escapeHtml(t("greenPopulation.closeChart"))}">&times;</button></header>
+      <p class="comparison-dialog-description">${escapeHtml(t(`${model.copyPrefix}.expandedContext`, { residents: formatNumber(model.totalResidents, 0), area: panelAreaName(model.record) }))}</p>
+      ${cumulative ? percentagePopulationCumulativeChart(model, { expanded: true }) : percentagePopulationHistogram(model, { expanded: true })}
+      <p class="comparison-academic-note">${escapeHtml(t(`${model.copyPrefix}.academicNote`))}</p>
     </div>
   </dialog>`;
 }
 
-function renderGroenkaartPopulationComparison(model) {
-  const chartModel = {
-    ...model, valueKind: "vegetation", valueUnit: "%",
-    chartTitleKey: "greenPopulation.chartTitle", chartDescriptionKey: "greenPopulation.chartDescription",
-    chartIntroKey: "greenPopulation.chartIntro", axisYKey: "greenPopulation.axisGreen",
-    expandedTitleKey: "greenPopulation.expandedTitle", expandedDescriptionKey: "greenPopulation.expandedDescription",
-    academicNoteKey: "greenPopulation.academicNote",
-  };
+function renderPercentagePopulationComparison(model) {
   return `<div class="panel-hero comparison-hero green-population-hero">
-    <p class="panel-eyebrow">${escapeHtml(t("greenPopulation.heroKicker"))}</p>
+    <p class="panel-eyebrow">${escapeHtml(t(`${model.copyPrefix}.heroKicker`))}</p>
     <h2 id="panel-title">${escapeHtml(panelAreaName(model.record))}</h2>
-    <p class="panel-subtitle">${escapeHtml(t("greenPopulation.title"))}</p>
-    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t("greenPopulation.sampleCount", { count: model.points.length }))}</p>
+    <p class="panel-subtitle">${escapeHtml(t(`${model.copyPrefix}.title`))}</p>
+    <p class="relative-note"><span aria-hidden="true">◇</span> ${escapeHtml(t(`${model.copyPrefix}.sampleCount`, { count: model.points.length }))}</p>
   </div>
   <div class="panel-body comparison-body green-population-body">
     <section aria-labelledby="green-population-chart-title">
-      <div class="section-heading"><p class="section-kicker">${escapeHtml(t("greenPopulation.analysis"))}</p><h3 id="green-population-chart-title">${escapeHtml(t("greenPopulation.chartTitle"))}</h3></div>
-      ${populationProfileChart(chartModel)}
-      ${greenPopulationChartDialog(chartModel)}
+      <div class="section-heading"><p class="section-kicker">${escapeHtml(t(`${model.copyPrefix}.analysis`))}</p><h3 id="green-population-chart-title">${escapeHtml(t(`${model.copyPrefix}.cumulativeTitle`))}</h3></div>
+      <p>${escapeHtml(t(`${model.copyPrefix}.inlineIntro`, { residents: formatNumber(model.totalResidents, 0), cells: formatNumber(model.points.length, 0) }))}</p>
+      ${percentagePopulationCumulativeChart(model)}
+      ${percentagePopulationDialog(model, "cumulative")}
+      <div class="section-heading comparison-secondary-heading"><h3>${escapeHtml(t(`${model.copyPrefix}.histogramTitle`))}</h3></div>
+      ${percentagePopulationHistogram(model)}
+      ${percentagePopulationDialog(model, "histogram")}
       <div class="summary-grid sealed-regression-grid">
-        ${metricCard("greenPopulation.mean", model.weightedMean == null ? t("value.notAvailable") : `${formatNumber(model.weightedMean, 1)}%`, "#176b43")}
-        ${metricCard("greenPopulation.cells", formatNumber(model.points.length, 0), "#315e66")}
-        ${metricCard("greenPopulation.residents", formatNumber(model.totalResidents, 0), "#53666b")}
+        ${metricCard(`${model.copyPrefix}.mean`, model.weightedMean == null ? t("value.notAvailable") : `${formatNumber(model.weightedMean, 1)}%`, model.copyPrefix === "greenPopulation" ? "#176b43" : "#a50f15")}
       </div>
     </section>
     <details class="detail-accordion" data-section="green-population-details">
-      <summary data-focus-key="green-population-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t("greenPopulation.detailsTitle"))}</span></summary>
-      <div class="accordion-content methodology-copy"><p>${escapeHtml(t("greenPopulation.definition"))}</p><p>${escapeHtml(t("greenPopulation.selectedClasses", { classes: model.selectedClassLabels.join(", ") }))}</p><p>${escapeHtml(t("greenPopulation.bandDefinition"))}</p><p>${escapeHtml(t("greenPopulation.residentWeighting"))}</p><p>${escapeHtml(t("greenPopulation.zeroPopulation", { count: model.zeroPopulationCount }))}</p>${model.bands.length ? `<ol class="green-population-group-list">${model.bands.map((band) => `<li>${escapeHtml(populationProfileBandLabel(band, chartModel))}</li>`).join("")}</ol>` : ""}</div>
+      <summary data-focus-key="green-population-details-summary"><span><small>${escapeHtml(t("panel.detailsKicker"))}</small>${escapeHtml(t(`${model.copyPrefix}.detailsTitle`))}</span></summary>
+      <div class="accordion-content methodology-copy"><p>${escapeHtml(t(`${model.copyPrefix}.definition`))}</p>${model.selectedClassLabels?.length ? `<p>${escapeHtml(t("greenPopulation.selectedClasses", { classes: model.selectedClassLabels.join(", ") }))}</p>` : ""}<p>${escapeHtml(t(`${model.copyPrefix}.residentWeighting`))}</p><p>${escapeHtml(t(`${model.copyPrefix}.zeroPopulation`, { count: model.zeroPopulationCount }))}</p></div>
     </details>
     <details class="detail-accordion methodology-accordion" data-section="green-population-methodology">
-      <summary data-focus-key="green-population-methodology-summary"><span>${escapeHtml(t("greenPopulation.methodologyTitle"))}</span></summary>
-      <div class="accordion-content methodology-copy"><p>${escapeHtml(t("greenPopulation.methodology"))}</p><p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("greenPopulation.academicNote"))}</p></div>
+      <summary data-focus-key="green-population-methodology-summary"><span>${escapeHtml(t(`${model.copyPrefix}.methodologyTitle`))}</span></summary>
+      <div class="accordion-content methodology-copy"><p>${escapeHtml(t(`${model.copyPrefix}.methodology`))}</p><p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t(`${model.copyPrefix}.academicNote`))}</p></div>
     </details>
   </div>`;
 }
@@ -1974,7 +2013,9 @@ export function renderSectorPanelModel(model) {
   if (model.template === "heat-income-comparison") return renderHeatIncomeComparison(model);
   if (model.template === "heat-population-comparison") return renderHeatPopulationComparison(model);
   if (model.template === "sealed-urban-scatter") return renderSealedUrbanScatter(model);
-  if (model.template === "groenkaart-population-comparison") return renderGroenkaartPopulationComparison(model);
+  if (["groenkaart-population-comparison", "jaarbak-population-comparison"].includes(model.template)) {
+    return renderPercentagePopulationComparison(model);
+  }
   if (model.template === "landsat-population-comparison") return renderLandsatPopulationComparison(model);
   if (model.template === "land-cover-scenario") return renderLandCoverScenario(model);
   if (model.template === "income") return renderIncome(model);

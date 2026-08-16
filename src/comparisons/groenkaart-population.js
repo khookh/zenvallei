@@ -7,14 +7,16 @@ import {
   greenClassSelector, hasUrbanSurfaceContract, loadImageData, safeAsset, SEALED_URBAN_SOURCE_URLS,
   selectedDensity, selectedUrbanClassIndexes, surroundingAreaHa, urbanSurfaceSelector,
 } from "./sealed-urban-shared.js";
-import { summarizeResidentProfile } from "./population-profile.js";
+import { summarizePopulationPercentage } from "./population-profile.js";
 
 const BEFORE_LAYER = "heat-sectors-hit-area";
 const RASTER_LAYER_ID = "groenkaart-population-density";
 const POPULATION_DATASET = "flanders-2019";
 export function summarizeGreenByPopulation(cells, selectedClasses) {
   const records = cells.map((cell) => ({ ...cell, density: selectedDensity(cell, selectedClasses) }));
-  return summarizeResidentProfile(records, { valueKey: "density" });
+  return summarizePopulationPercentage(records, {
+    valueKey: "density", binWidth: 5, direction: "ascending",
+  });
 }
 
 export function validateGroenkaartPopulationManifest(manifest) {
@@ -260,9 +262,11 @@ export function createGroenkaartPopulationComparison({
       const summary = summarizeGreenByPopulation(cellsForRecord(record), selectedGreen);
       return {
         template: "groenkaart-population-comparison",
+        comparisonId: "groenkaart-population", copyPrefix: "greenPopulation",
         record: record?.scope || record?.sectorId ? record : null,
         populationYear: 2019, greenMapYear: 2021,
-        points: summary.points, bands: summary.bands, groups: summary.bands, sufficient: summary.sufficient,
+        points: summary.points, curve: summary.curve, bins: summary.bins,
+        direction: summary.direction,
         totalResidents: summary.totalResidents, zeroPopulationCount: summary.zeroPopulationCount,
         weightedMean: summary.weightedMean,
         selectedClasses: [...selectedGreen],

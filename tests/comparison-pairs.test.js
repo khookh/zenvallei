@@ -4,8 +4,8 @@ import {
 } from "../src/comparison-pairs.js";
 
 describe("comparison pair contract", () => {
-  it("discovers all nine comparisons from both participating layers", () => {
-    expect(COMPARISON_PAIRS).toHaveLength(9);
+  it("discovers all eleven comparisons from both participating layers", () => {
+    expect(COMPARISON_PAIRS).toHaveLength(11);
     for (const pair of COMPARISON_PAIRS) {
       const [first, second] = pair.layers;
       expect(comparisonForLayers(first, second)?.id).toBe(pair.id);
@@ -22,14 +22,16 @@ describe("comparison pair contract", () => {
     expect(comparisonForLayers("groenkaart", "landsat-temperature")?.canonicalLayerId).toBe("landsat-temperature");
     expect(comparisonForLayers("population", "groenkaart")?.canonicalLayerId).toBe("groenkaart");
     expect(comparisonForLayers("population", "landsat-temperature")?.canonicalLayerId).toBe("landsat-temperature");
+    expect(comparisonForLayers("population", "jaarbak")?.canonicalLayerId).toBe("jaarbak");
+    expect(comparisonForLayers("income", "jaarbak")?.canonicalLayerId).toBe("jaarbak");
   });
 
   it("offers only registered functional targets", () => {
     expect(comparisonTargets("urban-atlas")).toEqual(["landsat-temperature"]);
-    expect(comparisonTargets("jaarbak")).toEqual(["landsat-temperature"]);
+    expect(comparisonTargets("jaarbak").sort()).toEqual(["income", "landsat-temperature", "population"]);
     expect(comparisonTargets("groenkaart").sort()).toEqual(["income", "landsat-temperature", "population"]);
-    expect(comparisonTargets("population").sort()).toEqual(["groenkaart", "heat", "landsat-temperature"]);
-    expect(comparisonTargets("income").sort()).toEqual(["groenkaart", "heat", "landsat-temperature"]);
+    expect(comparisonTargets("population").sort()).toEqual(["groenkaart", "heat", "jaarbak", "landsat-temperature"]);
+    expect(comparisonTargets("income").sort()).toEqual(["groenkaart", "heat", "jaarbak", "landsat-temperature"]);
     expect(comparisonTargets("landgebruik")).toEqual([]);
   });
 });

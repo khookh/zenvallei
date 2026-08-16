@@ -271,6 +271,18 @@ export function createDetailPanel({
       groups[nextIndex]?.focus();
       return;
     }
+    const incomeBox = event.target.closest("[data-income-box-group]");
+    if (incomeBox && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const groups = [...incomeBox.closest("[data-income-box-chart]").querySelectorAll("[data-income-box-group]")];
+      const currentIndex = groups.indexOf(incomeBox);
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? groups.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + groups.length) % groups.length;
+      groups.forEach((group, index) => group.setAttribute("tabindex", index === nextIndex ? "0" : "-1"));
+      groups[nextIndex]?.focus();
+      return;
+    }
     const histogramBin = event.target.closest("[data-histogram-bin]");
     if (histogramBin && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       event.preventDefault();
@@ -342,6 +354,14 @@ export function createDetailPanel({
   };
   content.addEventListener("focusin", updateGreenPopulationGroup);
   content.addEventListener("pointerover", updateGreenPopulationGroup);
+  const updateIncomeBox = (event) => {
+    const group = event.target.closest?.("[data-income-box-group]");
+    if (!group) return;
+    const output = group.closest("[data-income-box-chart]")?.querySelector("[data-income-box-output]");
+    if (output) output.textContent = group.dataset.boxLabel;
+  };
+  content.addEventListener("focusin", updateIncomeBox);
+  content.addEventListener("pointerover", updateIncomeBox);
   content.addEventListener("pointermove", (event) => {
     const chart = event.target.closest?.("[data-green-population-chart]");
     const svg = chart?.querySelector("[data-cumulative-population-plot]");

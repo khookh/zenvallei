@@ -27,12 +27,14 @@ derivatives are published.
 | `landsat-urban-atlas` | Exact Urban Atlas polygon area under each retained clear 30 m Landsat cell; one temperature may contribute proportionally to multiple classes | Temperature distributions by selected land-use class |
 | `landsat-jaarbak` | Exact sealed/unsealed 1 m surface for distributions; surrounding sealed fraction within 100 m for regression points | Surface distributions and temperature-versus-sealing scatter |
 | `landsat-groenkaart` | High/low Green Map selection within 100 m for eligible clear 30 m thermal centres, restricted by the documented shared urban mask | Temperature-versus-green-cover scatter and OLS line |
-| `groenkaart-income` | Exact sealed urban area weights the selected 100 m green-density surface within each sector before comparison with Statbel income | Sector scatter and OLS line |
-| `landsat-income` | Clear Landsat temperature-area sums over exact sealed Urban Atlas surface, divided by analysed area per sector | Sector temperature-versus-income scatter and OLS line |
-| `groenkaart-population` | Exact-sealed-area-weighted vegetation cover per eligible 100 m population-model cell | Resident-weighted cumulative population profile |
+| `groenkaart-income` | Exact sealed urban area weights the selected 100 m green-density surface within each sector before comparison with Statbel income | Sector scatter with OLS line and fixed-income-category box plots |
+| `landsat-income` | Clear Landsat temperature-area sums over exact sealed Urban Atlas surface, divided by analysed area per sector | Sector temperature-versus-income scatter, OLS line and fixed-income-category box plots |
+| `groenkaart-population` | Exact-sealed-area-weighted vegetation cover per eligible 100 m population-model cell | Least-to-most vegetation cumulative residents and fixed 5-percentage-point resident distribution |
 | `landsat-population` | Clear exact-area mean temperature per eligible 100 m population-model cell; at least 0.10 ha support | Hottest-first cumulative residents and fixed 0.5°C distribution |
+| `jaarbak-population` | Exact sealed Urban Atlas positions weight the 2024 circular 100 m Soil-sealing density once per eligible 2019 population-model cell | Most-to-least sealing cumulative residents and fixed 5-percentage-point resident distribution |
+| `jaarbak-income` | Exact sealed Urban Atlas positions weight the 2024 circular 100 m Soil-sealing density within each sector before comparison with Statbel 2023 income | Sector scatter with OLS line and fixed-income-category box plots |
 
-The four one-predictor regression comparisons show a descriptive unweighted
+The five one-predictor regression comparisons show a descriptive unweighted
 OLS line. Their two-sided test estimates spatial autocorrelation in both
 variables over 13 distance classes, reduces the effective sample size, and
 then tests `Pearson r = 0`. P-values are exploratory and unadjusted for the

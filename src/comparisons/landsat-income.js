@@ -6,7 +6,7 @@ import { boundsFromCoordinates, createExactSealedRaster } from "./exact-sealed-r
 import {
   comparisonAreaRecord, comparisonPixelOffset, hideIncomeSymbols, incomeLegend, loadImageData, mountIncomeSymbols,
   combineUrbanGroupStats, hasUrbanSurfaceContract, ordinaryLeastSquares, safeAsset, SEALED_URBAN_SOURCE_URLS,
-  sectorPointLabel, selectedUrbanClassIndexes, urbanSurfaceSelector,
+  sectorPointLabel, selectedUrbanClassIndexes, summarizeIncomeCategories, urbanSurfaceSelector,
   validateSpatialInference,
 } from "./sealed-urban-shared.js";
 
@@ -220,7 +220,9 @@ export function createLandsatIncomeComparison({ descriptor, landsatLayer, income
         xKey: "income", yKey: "temperature", points: current,
         regression,
         incomeCategories: statistics.incomeCategoriesBySurface?.[surfaceKey]?.[scopeId(areaRecord)]
-          ?? statistics.incomeCategories?.[scopeId(areaRecord)] ?? { sectors: {}, pixels: {} },
+          ?? statistics.incomeCategories?.[scopeId(areaRecord)]
+          ?? { sectors: summarizeIncomeCategories(current, "temperature") },
+        incomeBoxKind: "temperature",
         slopeScale: 10_000, slopeUnit: t("landsatIncome.slopeUnit"),
         highlightedSectorId, observation: observation(),
         selectedSurfaceLabels: manifest.urbanSurfaceGroups.filter(({ id }) => selectedUrban.has(id))

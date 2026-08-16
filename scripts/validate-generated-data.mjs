@@ -112,8 +112,8 @@ const officialIndex = JSON.parse(await fs.readFile(path.join(officialRoot, "inde
 const officialIds = Object.keys(officialIndex.datasets ?? {});
 const expectedOfficialIds = ["groenkaart", "jaarbak", "land-cover-scenario", "landgebruik", "landsat-temperature"];
 const expectedComparisonIds = [
-  "groenkaart-income", "groenkaart-population", "landsat-groenkaart", "landsat-income",
-  "landsat-jaarbak", "landsat-population", "landsat-urban-atlas",
+  "groenkaart-income", "groenkaart-population", "jaarbak-income", "jaarbak-population",
+  "landsat-groenkaart", "landsat-income", "landsat-jaarbak", "landsat-population", "landsat-urban-atlas",
 ];
 const comparisonIds = Object.keys(officialIndex.comparisons ?? {}).sort();
 if (officialIndex.schemaVersion !== 3
@@ -225,6 +225,23 @@ for (const comparisonId of comparisonIds) {
       || manifest.aggregation !== "exact-masked-area" || manifest.displayResolutionMeters !== 1) {
       throw new Error(`${comparisonId}: published analytical contract is incompatible.`);
     }
+  } else if (["jaarbak-population", "jaarbak-income"].includes(comparisonId)) {
+    referencedAssets.push(manifest.densityGridUrl, manifest.statisticsUrl, manifest.urbanAtlasClassMaskUrl);
+    if (manifest.schemaVersion !== 1 || manifest.soilSealingYear !== 2024
+      || manifest.urbanAtlasYear !== 2021 || manifest.densityRadiusMeters !== 100
+      || manifest.densityAnalysisResolutionMeters !== 10 || manifest.minimumDensityCoverage !== 95
+      || manifest.minimumAnalysedAreaHa !== .1 || manifest.maskResolutionMeters !== 1
+      || manifest.aggregation !== "exact-masked-area") {
+      throw new Error(`${comparisonId}: published socioeconomic Soil-sealing contract is incompatible.`);
+    }
+    if (comparisonId === "jaarbak-population"
+      && (manifest.populationDatasetId !== "flanders-2019" || manifest.populationYear !== 2019
+        || manifest.populationResolutionMeters !== 100)) {
+      throw new Error(`${comparisonId}: published population contract is incompatible.`);
+    }
+    if (comparisonId === "jaarbak-income" && manifest.incomeYear !== 2023) {
+      throw new Error(`${comparisonId}: published income contract is incompatible.`);
+    }
   } else if (comparisonId === "landsat-jaarbak") {
     referencedAssets.push(manifest.analysisScopeIndexUrl);
     if (manifest.schemaVersion !== 4 || manifest.maskResolutionMeters !== 1
@@ -247,7 +264,8 @@ for (const comparisonId of comparisonIds) {
       throw new Error(`${comparisonId}: published exact-mask contract is incompatible.`);
     }
   }
-  if (["groenkaart-income", "groenkaart-population", "landsat-groenkaart", "landsat-income", "landsat-population"]
+  if (["groenkaart-income", "groenkaart-population", "jaarbak-income", "jaarbak-population",
+    "landsat-groenkaart", "landsat-income", "landsat-population"]
     .includes(comparisonId) && !hasExpectedUrbanSurfaceGroups(manifest)) {
     throw new Error(`${comparisonId}: Urban Atlas surface groups or defaults are incompatible.`);
   }

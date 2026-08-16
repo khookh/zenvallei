@@ -11,6 +11,7 @@ const comparisonIds = [
   "groenkaart-income", "landsat-income",
   "groenkaart-population",
   "landsat-population",
+  "jaarbak-population", "jaarbak-income",
 ];
 const forbiddenText = /(?:Bearer\s+eyJ|client_secret|[A-Z]:\\Users\\|se=\d{4}-\d{2}-\d{2}T)/i;
 
@@ -113,6 +114,11 @@ async function publishComparison(comparisonId, descriptor) {
   } else if (comparisonId === "groenkaart-population") {
     await copyAsset(manifest.statisticsUrl, ".json");
     await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
+  } else if (["jaarbak-population", "jaarbak-income"].includes(comparisonId)) {
+    await copyAsset(manifest.densityGridUrl, ".png");
+    await copyAsset(manifest.scopeIndexUrl, ".png");
+    await copyAsset(manifest.statisticsUrl, comparisonId === "jaarbak-income" ? ".json.gz" : ".json");
+    await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");
   } else if (comparisonId === "landsat-groenkaart") {
     await copyAsset(manifest.densityGridUrl, ".png");
     await copyAsset(manifest.densityNonGreenUrl, ".png");
@@ -191,7 +197,7 @@ const comparisonBytes = (await Promise.all(comparisonIds.map(async (comparisonId
   return (await Promise.all(entries.map(async (file) => (await fs.stat(file)).size)))
     .reduce((sum, size) => sum + size, 0);
 }))).reduce((sum, size) => sum + size, 0);
-// Nine public comparisons, including the lossless population-cell indexes,
+// Eleven public comparisons, including the lossless population-cell indexes,
 // currently require 34.2 MiB. Keep a narrow independent ceiling as well as
 // the stricter 550 MiB complete-bundle ceiling below.
 if (comparisonBytes > 36 * 1024 * 1024) {

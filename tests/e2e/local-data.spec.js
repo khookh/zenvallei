@@ -201,7 +201,9 @@ test("reveals the aligned sealed mask and Landsat comparison atomically", async 
     status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
   }));
   await page.goto("/");
-  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
+  // The first local-data page in a fresh fixture can spend most of a minute
+  // warming the analytical catalogue before comparison assets are requested.
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 120_000 });
   await page.locator("#project-intro-primary").click();
   await page.locator('[data-layer="landsat-temperature"]').click();
   await expect(page.locator("#temporal-output")).toContainText("22 Jun 2026");
@@ -346,14 +348,17 @@ test("compares Green Map vegetation cover with the uniform 2019 population model
     status: 200, contentType: "image/png", body: TRANSPARENT_PNG,
   }));
   await page.goto("/");
-  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
+  // A cold local fixture validates its analytical catalogue before it exposes
+  // the comparison controls; slower developer disks can exceed 80 seconds.
+  await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 120_000 });
   await page.locator("#project-intro-primary").click();
 
-  await activateComparison(page, "population", "groenkaart", "#detail-panel [data-green-population-chart]:not(.is-expanded)");
+  await activateComparison(page, "population", "groenkaart", "#detail-panel [data-green-population-chart]:not(.is-expanded) .population-temperature-step");
   await expect(page.locator('[data-layer="groenkaart"]')).toHaveClass(/is-linked-comparison/);
   await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-linked-comparison/);
   await expect(page.locator("#secondary-control")).toBeHidden();
-  await expect(page.locator("#detail-panel")).toContainText("Vegetation cover across the modelled population");
+  await expect(page.locator("#detail-panel")).toContainText("Cumulative residents by vegetation cover");
+  await expect(page.locator("[data-green-population-chart]:not(.is-expanded)")).toHaveCount(2);
   await expect(page.locator("[data-green-population-chart]:not(.is-expanded) [data-green-population-group]").first())
     .toBeVisible();
   await expect(page.locator("#legend-content .legend-continuous-scale"))
@@ -367,10 +372,12 @@ test("compares Green Map vegetation cover with the uniform 2019 population model
   await expect(page.locator("[data-green-population-chart]:not(.is-expanded) [data-green-population-group]").first())
     .toBeVisible();
 
-  await page.locator("[data-green-population-chart]:not(.is-expanded) [data-expand-comparison-chart]").click();
-  await expect(page.locator("[data-comparison-chart-dialog] [data-green-population-chart].is-expanded"))
-    .toBeVisible();
-  await page.locator("[data-comparison-chart-dialog] [data-close-comparison-chart]").click();
+  for (const target of ["groenkaart-population-cumulative", "groenkaart-population-histogram"]) {
+    await page.locator(`[data-dialog-target="${target}"]`).click();
+    await expect(page.locator(`[data-chart-dialog-id="${target}"] [data-green-population-chart].is-expanded`))
+      .toBeVisible();
+    await page.locator(`[data-chart-dialog-id="${target}"] [data-close-comparison-chart]`).click();
+  }
 
   await expandControls(page);
   await page.locator("#analysis-pair-remove").click();

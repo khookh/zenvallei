@@ -12,9 +12,10 @@ from greenwave_local_layers.dataset_registry import (
 
 
 def test_registry_has_unique_ordered_dataset_contracts():
-    assert len(dataset_ids()) == len(set(dataset_ids())) == 10
+    assert len(dataset_ids()) == len(set(dataset_ids())) == 11
     assert tuple(spec.dataset_id for spec in DATASET_SPECS) == dataset_ids()
     assert dataset_spec("land-cover-scenario").published is False
+    assert dataset_spec("jaarbak-socioeconomic").published is True
     assert all(spec.cache_output.startswith(".cache/local-layers/") for spec in DATASET_SPECS)
 
 

@@ -135,6 +135,7 @@ describe("English–Dutch translations", () => {
       "heatIncome.contextText", "heatPopulation.contextText", "comparison.contextText",
       "soilComparison.contextTextExact", "landsatGreen.contextText", "greenIncome.contextText",
       "landsatIncome.contextText", "greenPopulation.contextText", "landsatPopulation.contextText",
+      "soilPopulation.contextText", "soilIncome.contextText",
     ];
     for (const language of ["en", "nl"]) {
       for (const key of contextKeys) {
@@ -146,7 +147,7 @@ describe("English–Dutch translations", () => {
       }
     }
     expect(t("greenPopulation.contextText", {}, "en"))
-      .toBe("How much vegetation is close to residents? The chart shows vegetation cover within 100 m across the represented population.");
+      .toBe("How much vegetation is close to residents? The charts show vegetation cover within 100 m across the represented population.");
     expect(t("landsatPopulation.contextText", {}, "en"))
       .toBe("How many residents were in areas with higher daytime ground temperatures? The charts distribute the represented population across the observed temperature range.");
   });

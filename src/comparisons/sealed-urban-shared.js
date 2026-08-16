@@ -15,6 +15,15 @@ export const GREEN_DENSITY_STOPS = Object.freeze([
 export const GREEN_DENSITY_COLORS = Object.freeze(GREEN_DENSITY_STOPS.map(({ color }) => color));
 export const GREEN_DENSITY_GRADIENT = `linear-gradient(90deg, ${GREEN_DENSITY_STOPS
   .map(({ value, color }) => `${color} ${value}%`).join(", ")})`;
+export const SOIL_DENSITY_STOPS = Object.freeze([
+  Object.freeze({ value: 0, color: "#fff5f0" }),
+  Object.freeze({ value: 25, color: "#fcbba1" }),
+  Object.freeze({ value: 50, color: "#fb6a4a" }),
+  Object.freeze({ value: 75, color: "#cb181d" }),
+  Object.freeze({ value: 100, color: "#67000d" }),
+]);
+export const SOIL_DENSITY_GRADIENT = `linear-gradient(90deg, ${SOIL_DENSITY_STOPS
+  .map(({ value, color }) => `${color} ${value}%`).join(", ")})`;
 export const SURROUNDING_RADIUS_METRES = 100;
 export const SURROUNDING_AREA_HA = Math.PI;
 const EXPECTED_URBAN_SURFACE_GROUPS = Object.freeze({
@@ -22,7 +31,7 @@ const EXPECTED_URBAN_SURFACE_GROUPS = Object.freeze({
   employmentInstitutional: Object.freeze(["12100"]),
 });
 
-/** Keep the five comparison manifests on the same explicit two-group contract. */
+/** Keep the seven sealed-urban comparison manifests on one explicit two-group contract. */
 export function hasUrbanSurfaceContract(manifest) {
   if (!Array.isArray(manifest?.urbanSurfaceGroups)
     || JSON.stringify(manifest.defaultUrbanSurfaceGroups) !== JSON.stringify(Object.keys(EXPECTED_URBAN_SURFACE_GROUPS))) {
@@ -192,6 +201,49 @@ export function incomeLevel(value) {
   if (value < 30_000) return { id: "low", symbol: "€" };
   if (value < 40_000) return { id: "middle", symbol: "€€" };
   return { id: "high", symbol: "€€€" };
+}
+
+export function soilDensityColor(value) {
+  const bounded = Math.max(0, Math.min(100, Number(value) || 0));
+  const endIndex = Math.max(1, SOIL_DENSITY_STOPS.findIndex((stop) => stop.value >= bounded));
+  const start = SOIL_DENSITY_STOPS[endIndex - 1];
+  const end = SOIL_DENSITY_STOPS[endIndex];
+  const mix = (bounded - start.value) / Math.max(1, end.value - start.value);
+  const startRgb = hexRgb(start.color);
+  const endRgb = hexRgb(end.color);
+  return startRgb.map((component, index) => Math.round(component + (endRgb[index] - component) * mix));
+}
+
+function quantile(sortedValues, probability) {
+  const position = (sortedValues.length - 1) * probability;
+  const lower = Math.floor(position);
+  const fraction = position - lower;
+  return sortedValues[lower] + ((sortedValues[lower + 1] ?? sortedValues[lower]) - sortedValues[lower]) * fraction;
+}
+
+/** Sector-level boxes used consistently by continuous income comparisons. */
+export function summarizeIncomeCategories(points, valueKey) {
+  const categories = { low: [], middle: [], high: [] };
+  points.forEach((point) => {
+    const level = incomeLevel(point.income);
+    if (level && Number.isFinite(point[valueKey])) categories[level.id].push(point[valueKey]);
+  });
+  return Object.fromEntries(Object.entries(categories).map(([id, values]) => {
+    const sorted = values.sort((left, right) => left - right);
+    if (!sorted.length) return [id, null];
+    const q1 = quantile(sorted, .25);
+    const median = quantile(sorted, .5);
+    const q3 = quantile(sorted, .75);
+    const spread = q3 - q1;
+    const inside = sorted.filter((value) => value >= q1 - 1.5 * spread && value <= q3 + 1.5 * spread);
+    return [id, {
+      count: sorted.length,
+      mean: sorted.reduce((sum, value) => sum + value, 0) / sorted.length,
+      q1, median, q3,
+      whiskerLow: inside[0],
+      whiskerHigh: inside.at(-1),
+    }];
+  }));
 }
 
 export function incomeLegend() {

@@ -1,5 +1,5 @@
 /**
- * The application has nine deliberate analyses, not an open-ended plugin
+ * The application has eleven deliberate analyses, not an open-ended plugin
  * system. This table is the single authority for discovery from either layer
  * and for the canonical map presentation used by each analysis.
  */
@@ -13,6 +13,8 @@ export const COMPARISON_PAIRS = Object.freeze([
   Object.freeze({ id: "groenkaart-population", layers: ["groenkaart", "population"], canonicalLayerId: "groenkaart" }),
   Object.freeze({ id: "landsat-income", layers: ["landsat-temperature", "income"], canonicalLayerId: "landsat-temperature" }),
   Object.freeze({ id: "landsat-population", layers: ["landsat-temperature", "population"], canonicalLayerId: "landsat-temperature" }),
+  Object.freeze({ id: "jaarbak-population", layers: ["jaarbak", "population"], canonicalLayerId: "jaarbak" }),
+  Object.freeze({ id: "jaarbak-income", layers: ["jaarbak", "income"], canonicalLayerId: "jaarbak" }),
 ]);
 
 export function comparisonPair(id) {

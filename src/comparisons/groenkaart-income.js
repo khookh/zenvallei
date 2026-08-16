@@ -8,7 +8,7 @@ import {
   GREEN_DENSITY_STOPS, greenClassSelector, hasUrbanSurfaceContract, hideIncomeSymbols, incomeLegend,
   loadImageData, mountIncomeSymbols, ordinaryLeastSquares, safeAsset,
   SEALED_URBAN_SOURCE_URLS, sectorPointLabel, selectedUrbanClassIndexes, surroundingAreaHa,
-  urbanSurfaceSelector, validateSpatialInference,
+  summarizeIncomeCategories, urbanSurfaceSelector, validateSpatialInference,
 } from "./sealed-urban-shared.js";
 
 const RASTER_LAYER_ID = "groenkaart-income-density";
@@ -240,6 +240,8 @@ export function createGroenkaartIncomeComparison({ descriptor, groenkaartLayer, 
         xLabel: t("sealedUrban.axisIncome"), yLabel: t("sealedUrban.axisGreenDensity"),
         xKey: "income", yKey: "density", points: current,
         regression,
+        incomeCategories: { sectors: summarizeIncomeCategories(current, "density") },
+        incomeBoxKind: "green",
         slopeScale: 10_000, slopeUnit: t("greenIncome.slopeUnit"),
         highlightedSectorId, selectedClasses: [...selectedGreen],
         selectedClassLabels: greenClassSelector(manifest, selectedGreen).items.filter((item) => item.selected).map((item) => item.label),

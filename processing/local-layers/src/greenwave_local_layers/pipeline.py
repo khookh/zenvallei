@@ -505,7 +505,7 @@ def update_index():
     for comparison_id in (
         "landsat-urban-atlas", "landsat-jaarbak", "landsat-groenkaart",
         "groenkaart-income", "landsat-income", "groenkaart-population",
-        "landsat-population",
+        "landsat-population", "jaarbak-population", "jaarbak-income",
     ):
         comparison_path = CACHE_ROOT / comparison_id / "manifest.json"
         if not comparison_path.exists():

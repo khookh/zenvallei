@@ -376,6 +376,7 @@ describe("progressive detail panel", () => {
         inference: { method: "crh-dutilleul-modified-t", status: "available", pValue: .0004,
           effectiveSampleSize: 11.25, distanceClassCount: 13 } },
       slopeScale: 10_000, slopeUnit: "°C per €10,000",
+      incomeBoxKind: "temperature",
       incomeCategories: {
         sectors: { low: category(31.2), middle: category(33.2), high: category(35.2) },
         pixels: { low: category(30), middle: category(32), high: category(34) },
@@ -392,13 +393,50 @@ describe("progressive detail panel", () => {
     document.querySelector("#content").innerHTML = html;
     expect(document.querySelectorAll("[data-expand-comparison-chart]")).toHaveLength(2);
     expect(document.querySelector('[data-dialog-target="landsat-income-scatter"]')).not.toBeNull();
-    expect(document.querySelector('[data-dialog-target="landsat-income-sector-boxes"]')).not.toBeNull();
+    expect(document.querySelector('[data-dialog-target="landsat-income-income-boxes"]')).not.toBeNull();
     expect(document.querySelector('[data-chart-dialog-id="landsat-income-scatter"] .income-temperature-box-chart')).toBeNull();
-    expect(document.querySelectorAll('[data-chart-dialog-id="landsat-income-sector-boxes"] .income-temperature-box-chart')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-chart-dialog-id="landsat-income-income-boxes"] .income-temperature-box-chart')).toHaveLength(1);
+  });
+
+  it("keeps two independent resident-profile charts for Green Map and Soil sealing", () => {
+    setLanguage("en");
+    for (const [comparisonId, template, copyPrefix] of [
+      ["groenkaart-population", "groenkaart-population-comparison", "greenPopulation"],
+      ["jaarbak-population", "jaarbak-population-comparison", "soilPopulation"],
+    ]) {
+      const points = [
+        { density: 10, populationDensityPerHa: 40 },
+        { density: 60, populationDensityPerHa: 60 },
+      ];
+      const curve = [
+        { value: 10, cumulativeResidents: 40, selectedResidents: 40, selectedShare: 40,
+          remainingResidents: 60, remainingShare: 60, intervalLower: 10, intervalUpper: 15,
+          intervalResidents: 40, intervalCellCount: 1 },
+        { value: 60, cumulativeResidents: 100, selectedResidents: 100, selectedShare: 100,
+          remainingResidents: 0, remainingShare: 0, intervalLower: 60, intervalUpper: 65,
+          intervalResidents: 60, intervalCellCount: 1 },
+      ];
+      const bins = Array.from({ length: 20 }, (_, index) => ({
+        lower: index * 5, upper: (index + 1) * 5,
+        residents: index === 2 ? 40 : index === 12 ? 60 : 0,
+        share: index === 2 ? 40 : index === 12 ? 60 : 0,
+        cellCount: index === 2 || index === 12 ? 1 : 0,
+      }));
+      const html = renderSectorPanelModel({
+        template, comparisonId, copyPrefix,
+        record: { scope: "region", sectorName: "Entire Zennevallei" },
+        points, curve, bins, totalResidents: 100, weightedMean: 40, zeroPopulationCount: 0,
+      });
+      document.querySelector("#content").innerHTML = html;
+      expect(document.querySelectorAll("[data-expand-comparison-chart]")).toHaveLength(2);
+      expect(document.querySelectorAll("[data-green-population-chart]:not(.is-expanded)")).toHaveLength(2);
+      expect(document.querySelector(`[data-dialog-target="${comparisonId}-cumulative"]`)).not.toBeNull();
+      expect(document.querySelector(`[data-dialog-target="${comparisonId}-histogram"]`)).not.toBeNull();
+    }
   });
 
   it("explains the 13-class spatial adjustment for every expanded regression", () => {
-    const comparisons = ["landsat-groenkaart", "landsat-jaarbak", "groenkaart-income", "landsat-income"];
+    const comparisons = ["landsat-groenkaart", "landsat-jaarbak", "groenkaart-income", "landsat-income", "jaarbak-income"];
     for (const language of ["en", "nl"]) {
       setLanguage(language);
       for (const [index, comparisonId] of comparisons.entries()) {

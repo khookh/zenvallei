@@ -40,23 +40,26 @@ describe("Green Map-population comparison", () => {
       .toThrow(/unsupported/i);
   });
 
-  it("creates resident-weighted bands without splitting tied population values", () => {
+  it("creates a least-to-most vegetation curve without splitting tied values", () => {
     const cells = Array.from({ length: 100 }, (_, index) => cell(index, Math.floor(index / 10) * 5 + 5, index));
     const summary = summarizeGreenByPopulation(cells, new Set([1, 2]));
-    expect(summary.sufficient).toBe(true);
-    expect(summary.bands.reduce((sum, group) => sum + group.count, 0)).toBe(100);
-    expect(summary.bands.every((band) => band.count >= 5)).toBe(true);
-    expect(summary.bands.at(-1).endShare).toBeCloseTo(100);
-    expect(summary.bands.every((band, index) => !index || band.minimum > summary.bands[index - 1].maximum)).toBe(true);
+    expect(summary.direction).toBe("ascending");
+    expect(summary.curve).toHaveLength(100);
+    expect(summary.curve.at(-1).cumulativeResidents).toBe(summary.totalResidents);
+    expect(summary.bins).toHaveLength(20);
+    expect(summary.bins.reduce((sum, bin) => sum + bin.residents, 0)).toBe(summary.totalResidents);
+    const tied = summary.curve.filter(({ value }) => value === 10);
+    expect(new Set(tied.map(({ selectedResidents }) => selectedResidents))).toHaveLength(1);
   });
 
-  it("shows a weighted mean instead of bands below ten positive cells", () => {
+  it("retains exact small cohorts instead of creating resident-decile bands", () => {
     const summary = summarizeGreenByPopulation(
       Array.from({ length: 9 }, (_, index) => cell(index, index + 1, 30)),
       new Set([1, 2]),
     );
-    expect(summary).toMatchObject({ sufficient: false, bands: [] });
     expect(summary.points).toHaveLength(9);
+    expect(summary.curve).toHaveLength(9);
+    expect(summary.bins).toHaveLength(20);
     expect(summary.weightedMean).toBe(30);
   });
 
@@ -64,9 +67,9 @@ describe("Green Map-population comparison", () => {
     const source = [cell(1, 12, 50), cell(2, 14, 20), ...Array.from({ length: 28 }, (_, index) => cell(index + 3, 20 + index, 10))];
     const green = summarizeGreenByPopulation(source, new Set([1, 2]));
     const nonGreen = summarizeGreenByPopulation(source, new Set([4]));
-    expect(green.points[0].density).toBe(50);
-    expect(nonGreen.points[0].density).toBe(50);
-    expect(green.points[1].density).toBe(20);
-    expect(nonGreen.points[1].density).toBe(80);
+    expect(green.points.find(({ cellId }) => cellId === "1").density).toBe(50);
+    expect(nonGreen.points.find(({ cellId }) => cellId === "1").density).toBe(50);
+    expect(green.points.find(({ cellId }) => cellId === "2").density).toBe(20);
+    expect(nonGreen.points.find(({ cellId }) => cellId === "2").density).toBe(80);
   });
 });

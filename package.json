@@ -27,6 +27,7 @@
     "sealed-urban:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset sealed-urban-comparisons",
     "green-population:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset groenkaart-population",
     "landsat-population:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset landsat-population",
+    "soil-socioeconomic:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset jaarbak-socioeconomic",
     "lst-scenario:prepare": "node scripts/run-local-layer-python.mjs -m greenwave_local_layers --dataset land-cover-scenario",
     "lst-scenario:xgboost-optuna": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_optuna --trials 50",
     "lst-scenario:xgboost-notebook": "processing\\local-layers\\.venv\\Scripts\\python.exe -m greenwave_local_layers.image_regression_xgboost_notebook",

@@ -8,7 +8,7 @@ import {
 } from "../src/product-contract.js";
 
 describe("release product contract", () => {
-  it("pins nine public layers, nine comparisons and only relevant action rows", () => {
+  it("pins nine public layers, eleven comparisons and only relevant action rows", () => {
     expect(PUBLIC_LAYER_IDS).toEqual([
       "heat", "landsat-temperature", "urban-atlas", "jaarbak",
       "groenkaart", "landgebruik", "population", "income",
@@ -18,6 +18,7 @@ describe("release product contract", () => {
       "heat-income", "heat-population", "landsat-urban-atlas",
       "landsat-jaarbak", "landsat-groenkaart", "groenkaart-income", "groenkaart-population", "landsat-income",
       "landsat-population",
+      "jaarbak-population", "jaarbak-income",
     ]);
     expect(LAYER_ACTIONS).toEqual({
       heat: "compare",
