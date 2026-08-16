@@ -330,7 +330,10 @@ test("keeps classification visible when density loading fails", async ({ page },
 });
 
 test("opens every public comparison from either participant and restores the initiating layer", async ({ page }, testInfo) => {
-  test.setTimeout(300_000);
+  // This intentionally exercises 22 lazy-loaded entry paths serially. Mobile
+  // emulation is substantially slower on the shared GitHub runner than on a
+  // developer machine, so keep the timeout scoped to this exhaustive matrix.
+  test.setTimeout(480_000);
   await page.goto(".");
   await page.locator("#project-intro-primary").click();
 
