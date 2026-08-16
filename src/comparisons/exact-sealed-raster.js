@@ -168,7 +168,7 @@ async function installProtocol() {
   return protocolPromise;
 }
 
-function waitForSource(map, sourceId) {
+function waitForSource(map, sourceId, signal) {
   return new Promise((resolve, reject) => {
     let settled = false;
     const finish = (error) => {
@@ -177,6 +177,7 @@ function waitForSource(map, sourceId) {
       window.clearTimeout(timeout);
       map.off("sourcedata", onData);
       map.off("error", onError);
+      signal?.removeEventListener("abort", onAbort);
       if (error) reject(error); else resolve();
     };
     const onData = (event) => {
@@ -185,9 +186,12 @@ function waitForSource(map, sourceId) {
     const onError = (event) => {
       if (event.sourceId === sourceId) finish(event.error ?? new Error("Exact raster failed to load."));
     };
+    const onAbort = () => finish(new DOMException("Exact raster load superseded.", "AbortError"));
     map.on("sourcedata", onData);
     map.on("error", onError);
+    signal?.addEventListener("abort", onAbort, { once: true });
     const timeout = window.setTimeout(() => finish(new Error("Exact raster timed out.")), import.meta.env.DEV ? 45_000 : 15_000);
+    if (signal?.aborted) onAbort();
     queueMicrotask(() => { if (map.getSource(sourceId) && map.isSourceLoaded(sourceId)) finish(); });
   });
 }
@@ -198,6 +202,7 @@ export function createExactSealedRaster({ id, beforeLayerId, opacity = 1 }) {
   let activeSlot = -1;
   let generation = 0;
   let activeToken = "";
+  let pendingLoad;
 
   const tilePixel = (point, zoom = 17) => {
     const world = 2 ** zoom;
@@ -225,6 +230,9 @@ export function createExactSealedRaster({ id, beforeLayerId, opacity = 1 }) {
     async show(nextMap, configuration) {
       map = nextMap;
       await installProtocol();
+      pendingLoad?.abort();
+      const loadController = new AbortController();
+      pendingLoad = loadController;
       const requestGeneration = ++generation;
       const slot = activeSlot === 0 ? 1 : 0;
       removeSlot(slot);
@@ -241,7 +249,7 @@ export function createExactSealedRaster({ id, beforeLayerId, opacity = 1 }) {
         paint: { "raster-opacity": 0, "raster-resampling": "nearest", "raster-fade-duration": 0 },
       }, beforeLayerId);
       try {
-        await waitForSource(map, sourceId);
+        await waitForSource(map, sourceId, loadController.signal);
         if (requestGeneration !== generation) return false;
         map.setPaintProperty(layerId, "raster-opacity", opacity);
         const oldSlot = activeSlot;
@@ -254,10 +262,15 @@ export function createExactSealedRaster({ id, beforeLayerId, opacity = 1 }) {
       } catch (error) {
         configurations.delete(token);
         removeSlot(slot);
+        if (error?.name === "AbortError" || requestGeneration !== generation) return false;
         throw error;
+      } finally {
+        if (pendingLoad === loadController) pendingLoad = undefined;
       }
     },
     remove() {
+      pendingLoad?.abort();
+      pendingLoad = undefined;
       generation += 1;
       removeSlot(0);
       removeSlot(1);
