@@ -10,7 +10,7 @@ describe("map and data source product registry", () => {
     ));
     expect(new Set(products.map(({ url }) => url)).size).toBe(products.length);
     expect(new Set(products.map(({ labelKey }) => labelKey)).size).toBe(products.length);
-    expect(products).toHaveLength(13);
+    expect(products).toHaveLength(12);
   });
 
   it("has matching English and Dutch product labels", () => {

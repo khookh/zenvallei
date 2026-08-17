@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("live release exposes nine layers, the scenario and both Landsat comparisons", async ({ page }) => {
+test("live release exposes seven thematic maps, the scenario and both Landsat comparisons", async ({ page }) => {
   const failedSameOrigin = [];
   const applicationOrigin = new URL(process.env.LIVE_PAGES_URL ?? "https://khookh.github.io/zenvallei/").origin;
   page.on("response", (response) => {
@@ -11,15 +11,15 @@ test("live release exposes nine layers, the scenario and both Landsat comparison
   await page.goto(`.?smoke=${Date.now()}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#project-intro")).toBeVisible();
   await page.locator("#project-intro-primary").click();
-  await expect(page.locator("[data-layer]")).toHaveCount(9);
+  await expect(page.locator("[data-layer]")).toHaveCount(8);
   await expect(page.locator('[data-layer="land-cover-scenario"]')).toBeVisible();
-  await expect(page.locator('[data-layer="population"]')).toBeVisible();
+  await expect(page.locator('[data-layer="population"]')).toHaveCount(1);
   await expect(page.locator("#dataset-status")).toHaveCount(0);
 
   const landsatButton = page.locator('[data-layer="landsat-temperature"]');
   await landsatButton.click();
   await expect(landsatButton).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
-  await expect(page.locator("#active-layer-title")).toHaveText("Landsat surface temperature");
+  await expect(page.locator("#active-layer-title")).toHaveText("Heatwave surface temperature");
   await expect(page.locator("#analysis-compare")).toBeVisible();
   await page.locator("#analysis-compare").click();
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveClass(/is-comparison-target/);

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(projectRoot, ".cache", "local-layers");
 const outputRoot = path.join(projectRoot, "public", "data", "official-layers");
-const datasetIds = ["jaarbak", "groenkaart", "landgebruik", "landsat-temperature", "land-cover-scenario"];
+const datasetIds = ["jaarbak", "groenkaart", "landsat-temperature", "land-cover-scenario"];
 const comparisonIds = [
   "landsat-urban-atlas", "landsat-jaarbak", "landsat-groenkaart",
   "groenkaart-income", "landsat-income",
@@ -84,9 +84,7 @@ async function publishDataset(datasetId, descriptor) {
       await copyAsset(year.dataUrl, ".tif");
     }
   }
-  if (datasetId === "landgebruik") {
-    await copyAsset(manifest.agriculturalDetail.geojsonUrl, ".geojson");
-  } else if (datasetId === "land-cover-scenario") {
+  if (datasetId === "land-cover-scenario") {
     await copyAsset(manifest.baselineAreaStatistics.url, ".json");
     await copyAsset(manifest.analysisWaterMask.url, ".pmtiles");
     await copyAsset(manifest.urbanAtlasClassMaskUrl, ".pmtiles");

@@ -6,11 +6,6 @@ import {
 } from "../src/layers/local-official-layers.js";
 import { createLandsatTemperatureLayer, localDateTime, validateLandsatManifest } from "../src/layers/landsat-temperature-layer.js";
 import { setLanguage } from "../src/i18n.js";
-import {
-  createLandgebruikLayer,
-  validateAgriculturalParcelGeojson,
-  validateLandgebruikManifest,
-} from "../src/layers/landgebruik-layer.js";
 import { parseSingleByteRange } from "../vite.config.js";
 
 function manifest(datasetId = "jaarbak") {
@@ -119,53 +114,4 @@ describe("local temporal raster contract", () => {
     expect(localDateTime("2026-01-22T10:33:40Z")).toMatch(/CET|GMT\+1/);
   });
 
-  it("validates the three-year Landgebruik contract and disables parcel detail outside 2025", async () => {
-    const municipalities = ["Beersel", "Drogenbos", "Halle", "Linkebeek", "Pepingen", "Sint-Genesius-Rode", "Sint-Pieters-Leeuw"];
-    const sectors = Object.fromEntries(Array.from({ length: 154 }, (_, index) => [`S${index}`, { classes: [] }]));
-    const parcelStatistic = {
-      completeAreaHa: 100, parcelAreaHa: 20, parcelPercentage: 20, parcelCount: 8, cropGroups: [],
-    };
-    const years = Object.fromEntries([2019, 2022, 2025].map((year) => [year, {
-      pmtilesVariants: { all: `${year}.pmtiles` }, sectorStats: sectors,
-      municipalityStats: Object.fromEntries(municipalities.map((name) => [name, { classes: [] }])),
-    }]));
-    const payload = {
-      schemaVersion: 1, datasetId: "landgebruik", kind: "compound-temporal",
-      availableYears: [2019, 2022, 2025], defaultYear: 2025,
-      classesOrScale: { items: Array.from({ length: 19 }, (_, index) => ({ value: index + 1, color: "#000" })) },
-      years, source: {},
-      agriculturalDetail: {
-        availableYear: 2025,
-        geojsonUrl: "landgebruik/agpa-2025.geojson",
-        sectorStats: Object.fromEntries(Object.keys(sectors).map((id) => [id, parcelStatistic])),
-        municipalityStats: Object.fromEntries(municipalities.map((name) => [name, parcelStatistic])),
-      },
-    };
-    expect(validateLandgebruikManifest(payload)).toBe(payload);
-    const layer = createLandgebruikLayer({
-      descriptor: {
-        datasetId: "landgebruik", defaultYear: 2025, available: true,
-        manifestUrl: "/__local-data__/landgebruik/manifest.json", assetRoot: "/__local-data__/",
-      },
-      loadManifest: async () => payload,
-    });
-    expect(layer.getTemporalControl().values).toEqual([2019, 2022, 2025]);
-    expect(layer.getSecondaryControl().options.find(({ id }) => id === "agriculture").disabled).toBe(false);
-    expect(layer.setOption({}, "year", 2022)).toBe(true);
-    expect(layer.getSecondaryControl().options.find(({ id }) => id === "agriculture").disabled).toBe(true);
-  });
-
-  it("rejects non-finite parcel properties and invalid percentage statistics", () => {
-    const featureCollection = {
-      type: "FeatureCollection",
-      features: [{
-        type: "Feature",
-        geometry: { type: "Polygon", coordinates: [[[4, 50], [4.1, 50], [4, 50.1], [4, 50]]] },
-        properties: { sectorId: "A", municipality: "Halle", cropGroup: "Grassland", area_ha: 1.5 },
-      }],
-    };
-    expect(validateAgriculturalParcelGeojson(featureCollection)).toBe(featureCollection);
-    featureCollection.features[0].properties.area_ha = Number.NaN;
-    expect(() => validateAgriculturalParcelGeojson(featureCollection)).toThrow("invalid feature");
-  });
 });

@@ -38,6 +38,21 @@ async function clickHeatMetric(page, metric) {
   return headerButton;
 }
 
+const THEME_BY_LAYER = {
+  "landsat-temperature": "heat", heat: "heat",
+  "urban-atlas": "land-green", jaarbak: "land-green", groenkaart: "land-green",
+  population: "demography", income: "demography",
+};
+
+async function activateLayer(page, layerId) {
+  const theme = THEME_BY_LAYER[layerId];
+  const tab = theme ? page.locator(`[data-layer-tab="${theme}"]`) : null;
+  const picking = await page.locator("#layer-switch").evaluate((element) => element.classList.contains("is-comparison-mode"));
+  if (tab && !picking && !await tab.isVisible()) await showControls(page);
+  if (tab && !picking) await tab.click();
+  await page.locator(`[data-layer="${layerId}"]`).click();
+}
+
 async function showControls(page, { minimiseResults = true } = {}) {
   // Let a close/minimise request complete before reading the adaptive state.
   // Otherwise a fast test can inspect the previous frame and immediately
@@ -201,11 +216,68 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
 });
 
+test("defaults to the latest heatwave map and thematic tabs only browse choices", async ({ page }) => {
+  await expect(page.locator("#active-layer-title")).toHaveText("Oppervlaktetemperatuur tijdens hittegolven");
+  await expect(page.locator("#temporal-output")).toContainText("22 jun 2026");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator('[role="tab"]')).toHaveCount(3);
+  await page.locator('[data-layer-tab="land-green"]').click();
+  expect(await page.evaluate(() => window.__heatMap.getActiveLayer())).toBe("landsat-temperature");
+  await expect(page.locator('[data-layer="urban-atlas"]')).toBeVisible();
+  await page.locator('[data-layer-tab="demography"]').press("Home");
+  await expect(page.locator('[data-layer-tab="heat"]')).toBeFocused();
+});
+
+test("enters and exits the fixed Guide me presentation without stale UI", async ({ page }) => {
+  await expect(page.locator(".app-header #guide-launch")).toBeVisible();
+  await expect(page.locator(".control-heading #guide-launch")).toHaveCount(0);
+  await page.locator("#guide-launch").click();
+  await expect(page.locator("html")).toHaveClass(/is-guide-mode/);
+  await expect(page.locator("#guide-tour")).toBeVisible();
+  await expect(page.locator("#guide-message")).toContainText("Dit is de Zennevallei");
+  await expect(page.locator("#map-controls")).toBeHidden();
+  await expect(page.locator("#detail-panel")).toBeHidden();
+  await expect(page.locator(".maplibregl-ctrl-zoom-in")).toBeHidden();
+  await page.locator("#guide-pause").click();
+  await expect(page.locator("#guide-pause")).toHaveText("Hervatten");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("html")).not.toHaveClass(/is-guide-mode/);
+  await expect(page.locator("#active-layer-title")).toHaveText("Oppervlaktetemperatuur tijdens hittegolven");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator("#guide-launch")).toBeFocused();
+});
+
+test("keeps a complete guide raster visible throughout a heatwave crossfade", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "The desktop run covers the shared raster lifecycle.");
+  test.setTimeout(45_000);
+  await page.locator("#guide-launch").click();
+  await expect(page.locator("#guide-date")).toBeVisible({ timeout: 20_000 });
+  expect(await page.locator("#guide-date").evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(32);
+
+  const opacitySamples = await page.evaluate(async () => {
+    const samples = [];
+    const map = window.__heatMap.map;
+    const started = performance.now();
+    while (performance.now() - started < 4_000) {
+      const opacity = [0, 1].reduce((sum, slot) => {
+        const layerId = `guide-landsat-raster-${slot}`;
+        if (!map.getLayer(layerId)) return sum;
+        return sum + Number(map.getPaintProperty(layerId, "raster-opacity") ?? 0);
+      }, 0);
+      samples.push(opacity);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return samples;
+  });
+  expect(Math.min(...opacitySamples)).toBeGreaterThanOrEqual(0.79);
+  await page.keyboard.press("Escape");
+});
+
 test("sizes short desktop result panels to their content and disclosures", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes("mobile"), "Compact layouts retain bottom-sheet sizing.");
   await page.setViewportSize({ width: 1440, height: 900 });
   await showControls(page, { minimiseResults: false });
-  await page.locator('[data-layer="population"]').click();
+  await activateLayer(page, "population");
   const panel = page.locator("#detail-panel");
   await expect(panel).toHaveAttribute("aria-hidden", "false");
   const initial = await panel.boundingBox();
@@ -247,7 +319,7 @@ test("introduces the personal V0.1 project on every load", async ({ page }) => {
   await expect(dialog.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
   await expect(dialog.locator('a[href="mailto:stefanodonne@gmail.com"]')).toHaveText("Send feedback");
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 20_000 });
-  await expect(page.locator('[data-layer="heat"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-layer="landsat-temperature"]')).toHaveAttribute("aria-pressed", "true");
 
   const accessibilityResults = await new AxeBuilder({ page })
     .include("#project-intro")
@@ -312,6 +384,8 @@ test("opens complete bilingual map and data sources without covering the map", a
 });
 
 test("discloses map controls without changing exploration state", async ({ page }) => {
+  await activateLayer(page, "heat");
+  await showControls(page);
   const controls = page.locator("#map-controls");
   const controlsBody = page.locator("#map-controls-body");
   const controlsToggle = page.locator("#map-controls-toggle");
@@ -331,7 +405,7 @@ test("discloses map controls without changing exploration state", async ({ page 
   await search.fill("23003A001");
   await search.press("Enter");
   await showControls(page);
-  await page.locator('[data-layer="urban-atlas"]').click();
+  await activateLayer(page, "urban-atlas");
   await page.waitForFunction(() => window.__heatMap.getActiveLayer() === "urban-atlas");
   await page.waitForFunction(() => !window.__heatMap.map.isMoving());
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
@@ -390,6 +464,8 @@ test("discloses map controls without changing exploration state", async ({ page 
 
 test("keeps controls, legend and results collision-free across adaptive layouts", async ({ page }) => {
   test.setTimeout(90_000);
+  await activateLayer(page, "heat");
+  await showControls(page);
   await page.locator("#sector-search").fill("23003A001");
   await page.locator("#sector-search").press("Enter");
   const indicators = page.locator('details[data-section="indicators"]');
@@ -440,6 +516,7 @@ test("keeps controls, legend and results collision-free across adaptive layouts"
           fontSizes: [".layer-category-title", ".layer-button", ".layer-context-copy", ".field-label"]
             .map((selector) => Number.parseFloat(getComputedStyle(document.querySelector(selector)).fontSize)),
           targetHeights: [...document.querySelectorAll(".layer-button")]
+            .filter((element) => element.getClientRects().length)
             .map((element) => element.getBoundingClientRect().height),
         }));
         compactMetrics.fontSizes.forEach((size) => expect(size).toBeGreaterThanOrEqual(12));
@@ -509,6 +586,8 @@ test("matches the refined hierarchy in Dutch and English", async ({ page }) => {
   await page.locator("#language-toggle").click();
   await expect(page.locator(".app-header")).toHaveScreenshot("header-en.png", { animations: "disabled" });
   await expect(page.locator("#map-controls")).toHaveScreenshot("controls-en.png", { animations: "disabled" });
+  await activateLayer(page, "heat");
+  await showControls(page);
   await page.locator('[data-heat-metric="vulnerability"]').click();
   await expect(page.locator(".app-header")).toHaveScreenshot("header-vulnerability-en.png", { animations: "disabled" });
 
@@ -524,17 +603,19 @@ test("matches the refined hierarchy in Dutch and English", async ({ page }) => {
 });
 
 test("loads all sectors and opens a complete score breakdown from search", async ({ page }) => {
+  await activateLayer(page, "heat");
+  await showControls(page);
   await expect(page).toHaveTitle("Zennevallei - heat resilience");
   await expect(page.locator(".brand-mark")).toBeVisible();
   await expect(page.locator(".brand-mark")).toHaveAttribute("src", /assets\/zennevallei-river-mark\.png$/);
   await expect(page.locator(".eyebrow")).toHaveText("Zennevallei");
-  await expect(page.locator("[data-layer]")).toHaveCount(9);
+  await expect(page.locator("[data-layer]")).toHaveCount(8);
   await expect(page.locator(".layer-category")).toHaveCount(3);
   await expect(page.locator('[data-layer-category="heat"]')).toContainText("Hitte");
   await expect(page.locator('[data-layer-category="land-green"]')).toContainText("Landgebruik");
   await expect(page.locator('[data-layer-category="demography"]')).toContainText("Demografie");
-  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(3);
-  await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(4);
+  await expect(page.locator('[data-layer-category="heat"] [data-layer]')).toHaveCount(2);
+  await expect(page.locator('[data-layer-category="land-green"] [data-layer]')).toHaveCount(3);
   await expect(page.locator('[data-layer-category="demography"] [data-layer]')).toHaveCount(2);
   await expect(page.locator("[data-heat-metric]")).toHaveCount(3);
   await expect(page.locator("#heat-metric-control")).toBeVisible();
@@ -560,7 +641,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
   await expect(page.locator("#layer-switch")).toHaveClass(/is-comparison-mode/);
   await expect(page.locator('[data-layer="income"]')).toHaveClass(/is-comparison-target/);
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-disabled", "true");
-  await page.locator('[data-layer="income"]').click();
+  await activateLayer(page, "income");
   await expect(page.locator("#analysis-pair-label")).toContainText("Mediaan belastbaar inkomen");
   await expect(page.locator("#analysis-pair-note")).toContainText("vergelijkingsgrafiek");
   expect(await page.evaluate(() => ({
@@ -605,7 +686,7 @@ test("loads all sectors and opens a complete score breakdown from search", async
 });
 
 test("maps Statbel median taxable income without creating municipality medians", async ({ page }) => {
-  await page.locator('[data-layer="income"]').click();
+  await activateLayer(page, "income");
   await expect(page.locator("#active-layer-title")).toHaveText("Mediaan belastbaar inkomen");
   await expect(page.locator("#temporal-output")).toHaveText("2023");
   await expect(page.locator("#legend-title")).toContainText("Mediaan netto belastbaar inkomen");
@@ -627,6 +708,8 @@ test("maps Statbel median taxable income without creating municipality medians",
 });
 
 test("switches between combined, heat and vulnerability scores without losing exploration state", async ({ page }) => {
+  await activateLayer(page, "heat");
+  await showControls(page);
   await page.locator("#municipality-select").selectOption("Beersel");
   await showControls(page);
   const search = page.locator("#sector-search");
@@ -704,10 +787,10 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await expect(panel.locator(".score-caption")).toContainText("Vulnerability: 8 out of 10");
 
   await showControls(page);
-  await page.locator('[data-layer="urban-atlas"]').click();
+  await activateLayer(page, "urban-atlas");
   await expect(page.locator("#heat-metric-control")).toBeHidden();
   await showControls(page);
-  await page.locator('[data-layer="heat"]').click();
+  await activateLayer(page, "heat");
   await expect(page.locator("#heat-metric-control")).toBeVisible();
 
   await expect(page.locator('[data-heat-metric="vulnerability"]')).toHaveAttribute("aria-pressed", "true");
@@ -718,11 +801,13 @@ test("switches between combined, heat and vulnerability scores without losing ex
   await expect(page.locator("#map-loading")).toBeHidden({ timeout: 20_000 });
   await page.waitForFunction(() => document.documentElement.dataset.appReady === "true");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.locator('[data-heat-metric="final"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#active-layer-title")).toHaveText("Heat vulnerability");
+  await expect(page.locator('[data-layer="landsat-temperature"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#active-layer-title")).toHaveText("Heatwave surface temperature");
 });
 
 test("switches the complete interface to English without resetting exploration state", async ({ page }) => {
+  await activateLayer(page, "heat");
+  await showControls(page);
   await expect(page.locator("html")).toHaveAttribute("lang", "nl");
   await expect(page).toHaveTitle("Zennevallei - heat resilience");
   await expect(page.locator("#language-toggle")).toHaveText("EN");
@@ -795,7 +880,7 @@ test("loads Urban Atlas lazily and presents seven exhaustive category groups", a
   const atlasButton = page.locator('[data-layer="urban-atlas"]');
   await expect(atlasButton).toHaveAttribute("aria-disabled", "false");
   await showControls(page);
-  await atlasButton.click();
+  await activateLayer(page, "urban-atlas");
   await page.waitForFunction(() => window.__heatMap.map.getLayer("urban-atlas-fill")
     && window.__heatMap.map.getLayoutProperty("urban-atlas-fill", "visibility") === "visible");
   const firstRender = await page.evaluate(() => performance.getEntriesByName("urban-atlas-first-render")[0]?.duration);
@@ -871,10 +956,10 @@ test("loads Urban Atlas lazily and presents seven exhaustive category groups", a
 test("filters all environmental overlays and opens area-weighted municipality summaries", async ({ page }) => {
   const panel = page.locator("#detail-panel");
   await page.locator("#municipality-select").selectOption("Beersel");
-  await expect(panel).toHaveAttribute("aria-hidden", "true");
+  await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
 
   await showControls(page);
-  await page.locator('[data-layer="urban-atlas"]').click();
+  await activateLayer(page, "urban-atlas");
   await expect(panel).toHaveAttribute("aria-hidden", "false");
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
   await expect(panel).toContainText("Categorieverdeling Urban Atlas");
@@ -908,7 +993,7 @@ test("filters all environmental overlays and opens area-weighted municipality su
   await expect(panel).toContainText("Gemeenteoverzicht · 39 Statbel-sectoren");
 
   await showControls(page);
-  await page.locator('[data-layer="heat"]').click();
+  await activateLayer(page, "heat");
   await expect(panel).toHaveAttribute("aria-hidden", "true");
 });
 
@@ -922,11 +1007,10 @@ test("closes stale results on layer changes and opens meaningful Zennevallei sum
     ["urban-atlas", "Categorieverdeling Urban Atlas"],
     ["jaarbak", "Afgedekte oppervlakte"],
     ["groenkaart", "Hoog groen"],
-    ["landgebruik", "Grootste klasse"],
   ];
   for (const [layerId, expectedText] of summaries) {
     await showControls(page);
-    await page.locator(`[data-layer="${layerId}"]`).click();
+    await activateLayer(page, layerId);
     await expect(panel).toHaveAttribute("aria-hidden", "false");
     await expect(page.locator("#sector-search")).toHaveValue("");
     await expect(panel).toContainText("HELE ZENNEVALLEI · 154 STATBEL-SECTOREN");
@@ -948,7 +1032,7 @@ test("loads the published 100 m density modes only when requested", async ({ pag
     if (request.url().includes("/density/") && request.url().endsWith(".tif")) requests.push(request.url());
   });
   await showControls(page);
-  await page.locator('[data-layer="jaarbak"]').click();
+  await activateLayer(page, "jaarbak");
   await expect.poll(() => page.evaluate(() => window.__heatMap.map.getLayoutProperty(
     "jaarbak-local-raster", "visibility",
   ))).toBe("visible");
@@ -968,7 +1052,7 @@ test("loads the published 100 m density modes only when requested", async ({ pag
     classification: window.__heatMap.map.getLayoutProperty("jaarbak-local-raster", "visibility"),
     density: window.__heatMap.map.getLayoutProperty("jaarbak-density-raster", "visibility"),
   }))).toEqual({ classification: "visible", density: "none" });
-  await page.locator('[data-layer="groenkaart"]').click();
+  await activateLayer(page, "groenkaart");
   await expect.poll(() => page.evaluate(() => window.__heatMap.map.getLayoutProperty(
     "groenkaart-local-raster", "visibility",
   ))).toBe("visible");
@@ -1007,6 +1091,8 @@ test("loads the published 100 m density modes only when requested", async ({ pag
 });
 
 test("filters the map and exposes no-data sectors honestly", async ({ page }) => {
+  await activateLayer(page, "heat");
+  await showControls(page);
   await page.locator("#municipality-select").selectOption("Halle");
   await expect(page.locator("#visible-count")).toHaveText("41 sectoren");
   await showControls(page);
@@ -1030,6 +1116,7 @@ test("filters the map and exposes no-data sectors honestly", async ({ page }) =>
 });
 
 test("opens a sector by clicking the rendered overlay", async ({ page }) => {
+  await activateLayer(page, "heat");
   await page.locator("#language-toggle").click();
   const controlsToggle = page.locator("#map-controls-toggle");
   if (await controlsToggle.isVisible()) await controlsToggle.click();
@@ -1057,7 +1144,7 @@ test("offers an accessible explanatory layer", async ({ page }) => {
   await expect(panel).toContainText("What each layer tells you");
   await expect(panel).toContainText("Land use");
   await expect(panel).toContainText("154 statistical sectors in seven Zennevallei municipalities");
-  await expect(panel.locator(".about-layer-row")).toHaveCount(9);
+  await expect(panel.locator(".about-layer-row")).toHaveCount(8);
   await expect(panel).toContainText("A personal and open V0.1 project");
   await expect(panel.locator('a[href="https://github.com/khookh/zenvallei"]')).toHaveAttribute("rel", "noopener noreferrer");
   await expect(panel).toContainText("No cookies, analytics, accounts or persistent map choices are used");
@@ -1073,7 +1160,9 @@ test("offers an accessible explanatory layer", async ({ page }) => {
 });
 
 test("keeps the explanatory controls and panel free of automated accessibility violations", async ({ page }) => {
+  await activateLayer(page, "heat");
   for (const metric of ["final", "heat", "vulnerability"]) {
+    await showControls(page);
     await page.locator(`[data-heat-metric="${metric}"]`).click();
     const controlsResults = await new AxeBuilder({ page })
       .exclude("#map")

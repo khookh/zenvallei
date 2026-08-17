@@ -42,6 +42,21 @@ async function reopenCurrentScope(page) {
   await expect(panel).toHaveAttribute("aria-hidden", "false");
 }
 
+const THEME_BY_LAYER = {
+  "landsat-temperature": "heat", heat: "heat",
+  "urban-atlas": "land-green", jaarbak: "land-green", groenkaart: "land-green",
+  population: "demography", income: "demography",
+};
+
+async function activateLayer(page, layerId) {
+  const theme = THEME_BY_LAYER[layerId];
+  const tab = theme ? page.locator(`[data-layer-tab="${theme}"]`) : null;
+  const picking = await page.locator("#layer-switch").evaluate((element) => element.classList.contains("is-comparison-mode"));
+  if (tab && !picking && !await tab.isVisible()) await expandControls(page);
+  if (tab && !picking) await tab.click();
+  await page.locator(`[data-layer="${layerId}"]`).click();
+}
+
 async function expandComparisonLegend(page) {
   const legend = page.locator("#legend");
   if (!await legend.evaluate((element) => element.open)) {
@@ -74,7 +89,7 @@ async function rasterVisibility(page) {
 
 async function activateComparison(page, fromLayer, targetLayer, readySelector = "#detail-panel .sealed-urban-scatter:not(.is-expanded)") {
   await expandControls(page);
-  await page.locator(`[data-layer="${fromLayer}"]`).click();
+  await activateLayer(page, fromLayer);
   await expect(page.locator(`[data-layer="${fromLayer}"]`)).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => window.__heatMap.getActiveLayer())).toBe(fromLayer);
   await expandControls(page);
@@ -98,9 +113,11 @@ test("compares heat vulnerability with authoritative sector population", async (
   await page.locator("#project-intro-primary").click();
 
   await expandControls(page);
+  await activateLayer(page, "heat");
+  await expandControls(page);
   await page.locator("#analysis-compare").click();
   await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-comparison-target/);
-  await page.locator('[data-layer="population"]').click();
+  await activateLayer(page, "population");
   await expect(page.locator("#active-layer-title")).toHaveText("Heat vulnerability × population");
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
 
@@ -205,10 +222,10 @@ test("reveals the aligned sealed mask and Landsat comparison atomically", async 
   // warming the analytical catalogue before comparison assets are requested.
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 120_000 });
   await page.locator("#project-intro-primary").click();
-  await page.locator('[data-layer="landsat-temperature"]').click();
+  await activateLayer(page, "landsat-temperature");
   await expect(page.locator("#temporal-output")).toContainText("22 Jun 2026");
   await page.locator("#analysis-compare").click();
-  await page.locator('[data-layer="jaarbak"]').click();
+  await activateLayer(page, "jaarbak");
 
   await expect(page.locator("#legend-title")).toHaveText("Temperature and soil sealing", { timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => {
@@ -589,13 +606,13 @@ test("paints a local land-cover scenario and switches between both estimates", a
   });
   if (isMobile) await page.touchscreen.tap(...inspectionPoint);
   else await page.mouse.move(...inspectionPoint);
-  await expect(page.locator(".maplibregl-popup")).toContainText("Urban Atlas:");
+  await expect(page.locator(".maplibregl-popup")).toContainText("Urban Atlas:", { timeout: 20_000 });
   await expect(page.locator(".maplibregl-popup")).toContainText(/2026 Heatwave XGBoost: .*°C ΔLST/);
   await expect(page.locator(".maplibregl-popup")).not.toContainText("Radoux et al. model");
   expect(await page.evaluate(() => window.__heatMap.map.getCanvas().style.cursor)).toBe("pointer");
 });
 
-test("serves all nine layers from the prepared working catalogue in local-data mode", async ({ page }, testInfo) => {
+test("serves seven thematic layers and the scenario tool from the prepared working catalogue", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const isMobile = testInfo.project.name.includes("mobile");
   const errors = [];
@@ -613,15 +630,20 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-app-ready", "true", { timeout: 80_000 });
   await page.locator("#project-intro-primary").click();
-  await expect(page.locator("[data-layer]")).toHaveCount(9);
+  await expect(page.locator("[data-layer]")).toHaveCount(8);
   await expect(page.locator('[data-layer="land-cover-scenario"]')).toHaveCount(1);
   await expect(page.locator('[data-layer="land-cover"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="vegetation"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="tree-cover-density"]')).toHaveCount(0);
-  expect(localRequests.filter((url) => url.endsWith("manifest.json"))).toEqual([]);
-  expect(localRequests.filter((url) => url.endsWith(".pmtiles"))).toEqual([]);
+  expect(localRequests.filter((url) => url.endsWith("manifest.json"))).toEqual([
+    expect.stringContaining("/landsat-temperature/manifest.json"),
+  ]);
+  expect(localRequests.filter((url) => url.endsWith(".pmtiles")))
+    .toEqual(expect.arrayContaining([expect.stringContaining("/landsat-temperature/")]));
+  expect(localRequests.filter((url) => url.endsWith(".pmtiles"))
+    .every((url) => url.includes("/landsat-temperature/"))).toBe(true);
 
-  await page.locator('[data-layer="jaarbak"]').click();
+  await activateLayer(page, "jaarbak");
   await expect(page.locator("#active-layer-title")).toHaveText("Soil sealing 2024");
   if (isMobile) {
     await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
@@ -634,7 +656,7 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   expect(localRequests.some((url) => url.includes("/jaarbak/manifest.json"))).toBe(true);
   expect(localRequests.some((url) => url.endsWith("jaarbak-2024-density.tif"))).toBe(false);
   expect(localRequests.some((url) => url.includes("/groenkaart/manifest.json"))).toBe(false);
-  expect(localRequests.some((url) => url.includes("/landsat-temperature/manifest.json"))).toBe(false);
+  expect(localRequests.some((url) => url.includes("/landsat-temperature/manifest.json"))).toBe(true);
   await expect(page.locator("#map-mode-action")).toHaveText("Show density");
   await page.locator("#map-mode-action").click();
   await expect(page.locator("#map-mode-action")).toHaveText("Show classification");
@@ -664,7 +686,7 @@ test("serves all nine layers from the prepared working catalogue in local-data m
     await expandControls(page);
   }
 
-  await page.locator('[data-layer="groenkaart"]').click();
+  await activateLayer(page, "groenkaart");
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
   await expect(page.locator("#panel-title")).toHaveText("Entire Zennevallei");
   if (isMobile) await expandControls(page);
@@ -698,8 +720,8 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   await page.locator("#temporal-previous").click();
   await expect(page.locator("#temporal-output")).toHaveText("2018");
 
-  await page.locator('[data-layer="landsat-temperature"]').click();
-  await expect(page.locator("#active-layer-title")).toHaveText("Landsat surface temperature");
+  await activateLayer(page, "landsat-temperature");
+  await expect(page.locator("#active-layer-title")).toHaveText("Heatwave surface temperature");
   if (isMobile) {
     await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
     await expandControls(page);
@@ -714,13 +736,13 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   await expect(page.locator('[data-layer="landsat-temperature"]')).toHaveClass(/is-comparison-primary/);
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveClass(/is-comparison-target/);
   await expect(page.locator('[data-layer="jaarbak"]')).toHaveClass(/is-comparison-target/);
-  for (const target of ["landgebruik", "heat"]) {
+  for (const target of ["heat"]) {
     await expect(page.locator(`[data-layer="${target}"]`)).not.toHaveClass(/is-comparison-target/);
   }
   await expect(page.locator('[data-layer="groenkaart"]')).toHaveClass(/is-comparison-target/);
   await expect(page.locator('[data-layer="income"]')).toHaveClass(/is-comparison-target/);
   await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-comparison-target/);
-  await page.locator('[data-layer="urban-atlas"]').click();
+  await activateLayer(page, "urban-atlas");
   await expect(page.locator("#analysis-pair-label")).toContainText("Urban Atlas 2021");
   await expect(page.locator("#legend-title")).toHaveText("Temperature by Urban Atlas surface");
   await expect(page.locator('[data-comparison-series="family:greenUrbanAreas"]')).toHaveAttribute("aria-pressed", "true");
@@ -784,7 +806,7 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   await expect(page.locator("[data-comparison-chart-dialog]")).not.toBeVisible();
   if (isMobile) await expandControls(page);
   await page.locator("#analysis-pair-change").click();
-  await page.locator('[data-layer="jaarbak"]').click();
+  await activateLayer(page, "jaarbak");
   await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing");
   await expect(page.locator('[data-layer="jaarbak"]')).toHaveClass(/is-linked-comparison/);
   await expect(page.locator("#legend-title")).toHaveText("Temperature and soil sealing", { timeout: 20_000 });
@@ -825,7 +847,7 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   ))).toBe(.72);
   if (isMobile) await expandControls(page);
   await page.locator("#analysis-pair-change").click();
-  await page.locator('[data-layer="urban-atlas"]').click();
+  await activateLayer(page, "urban-atlas");
   // Comparison activation renders the adaptive result sheet asynchronously.
   // Wait for that canonical state before reopening mobile controls; otherwise
   // the completed transition can legitimately collapse controls mid-click.
@@ -865,50 +887,29 @@ test("serves all nine layers from the prepared working catalogue in local-data m
   await expect(page.locator("#detail-panel")).toContainText("Urban Atlas land-cover results");
 
   await page.locator("#language-toggle").click();
-  await expect(page.locator('[data-layer="landsat-temperature"]')).toContainText("Landsat-oppervlaktetemperatuur");
+  await expect(page.locator('[data-layer="landsat-temperature"]')).toContainText("Oppervlaktetemperatuur tijdens hittegolven");
   await expect(page.locator("#detail-panel")).toContainText("Temperatuurverdeling per oppervlak");
   await expect(page.locator("#detail-panel")).toContainText("geen luchttemperatuur");
   if (isMobile) {
     await closePanelIfOpen(page);
     await expandControls(page);
   }
-  await page.locator('[data-layer="jaarbak"]').click();
+  await activateLayer(page, "jaarbak");
   expect(localRequests.filter((url) => url.includes("/jaarbak/manifest.json"))).toHaveLength(1);
   if (isMobile) {
     await closePanelIfOpen(page);
     await expandControls(page);
   }
 
-  await page.locator('[data-layer="landgebruik"]').click();
-  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
-  await expect(page.locator("#panel-title")).toHaveText("Halle");
-  if (isMobile) await expandControls(page);
-  await expect(page.locator("#active-layer-title")).toHaveText("Landgebruik Vlaanderen");
-  await expect(page.locator("#temporal-output")).toHaveText("2025");
-  await expect(page.locator("#secondary-control")).toBeVisible();
-  expect(localRequests.some((url) => url.endsWith("agpa-2025.geojson"))).toBe(false);
-  await page.locator('[data-secondary-option="agriculture"]').click();
-  await page.locator("#sector-search").fill("23003A001");
-  await page.locator("#sector-search").press("Enter");
-  await expect(page.locator("#detail-panel")).toContainText("23003A001");
-  await expect(page.locator("#legend-title")).toContainText("Landbouwgebruikspercelen 2025");
-  await expect.poll(() => localRequests.some((url) => url.endsWith("agpa-2025.geojson"))).toBe(true);
-  await expect(page.locator("#detail-panel")).toContainText("20%");
-  await expect(page.locator("#detail-panel")).toContainText("20 ha in 8 gekarteerde percelen");
-  if (isMobile) {
-    await closePanelIfOpen(page);
-    await expandControls(page);
-  }
-  await page.locator("#temporal-previous").click();
-  await expect(page.locator('[data-secondary-option="agriculture"]')).toBeDisabled();
-
-  await page.locator('[data-layer="income"]').click();
+  await activateLayer(page, "income");
   await expect(page.locator("#active-layer-title")).toHaveText("Mediaan belastbaar inkomen");
   await expect(page.locator("#temporal-output")).toHaveText("2023");
 
-  await page.locator('[data-layer="heat"]').click();
+  await activateLayer(page, "heat");
+  await expandControls(page);
+  await page.locator("#municipality-select").selectOption("");
   await page.locator("#analysis-compare").click();
-  await page.locator('[data-layer="income"]').click();
+  await activateLayer(page, "income");
   await expect(page.locator("#active-layer-title")).toContainText("Hittekwetsbaarheid × mediaan belastbaar inkomen");
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
   const inlineHeatIncomeChart = page.locator("[data-heat-income-chart]:not(.is-expanded)");

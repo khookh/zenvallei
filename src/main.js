@@ -5,7 +5,9 @@ import { findSectorFromQuery, loadApplicationData, sectorSearchLabel, sectorsFor
 import { DEFAULT_HEAT_METRIC } from "./heat-metric.js";
 import { DEFAULT_LANGUAGE, applyDocumentTranslations, getLanguage, setLanguage, t } from "./i18n.js";
 import { buildLayerRegistry } from "./layers/registry.js";
-import { categoryLabel, LAYER_CATEGORIES } from "./layers/categories.js";
+import {
+  categoryLabel, LAYER_CATEGORIES, SCENARIO_TOOL_ID, THEMATIC_LAYER_IDS,
+} from "./layers/categories.js";
 import { createMapController } from "./map-controller.js";
 import { createMapSurfaceLayout } from "./map-surface-layout.js";
 import { renderLegendModel } from "./legend.js";
@@ -14,6 +16,7 @@ import { createDetailPanel } from "./panel-shell.js";
 import { createProjectIntro } from "./project-intro.js";
 import { safeExternalUrl } from "./security.js";
 import { moveSegmentFocus } from "./controllers/focus-navigation.js";
+import { createGuideTour, GUIDE_REPORT_URLS } from "./guide-tour.js";
 import {
   comparisonContains, comparisonForLayers, comparisonPair, comparisonTargets,
 } from "./comparison-pairs.js";
@@ -36,7 +39,24 @@ const elements = {
   legendNote: document.querySelector("#legend-note"),
   layerSwitch: document.querySelector("#layer-switch"),
   layerButtons: [],
+  layerTabs: [],
+  layerTabPanels: [],
   layerCategoryHeadings: [],
+  scenarioToolButton: document.querySelector("#scenario-tool-button"),
+  guideLaunch: document.querySelector("#guide-launch"),
+  projectIntroGuide: document.querySelector("#project-intro-guide"),
+  guideTour: document.querySelector("#guide-tour"),
+  guideMessage: document.querySelector("#guide-message"),
+  guideHeatwaves: document.querySelector("#guide-heatwaves"),
+  guideDate: document.querySelector("#guide-date"),
+  guideRecords: document.querySelector("#guide-records"),
+  guideRecordGrid: document.querySelector("#guide-record-grid"),
+  guideReportLink: document.querySelector("#guide-report-link"),
+  guidePause: document.querySelector("#guide-pause"),
+  guideExit: document.querySelector("#guide-exit"),
+  guideExplore: document.querySelector("#guide-explore"),
+  guideRetry: document.querySelector("#guide-retry"),
+  guideError: document.querySelector("#guide-error"),
   secondaryControl: document.querySelector("#secondary-control"),
   secondaryPrompt: document.querySelector("#secondary-control-prompt"),
   secondarySwitch: document.querySelector("#secondary-switch"),
@@ -99,7 +119,9 @@ const application = {
   basemapUnavailable: false,
   fatalError: null,
   announcement: null,
-  activeLayer: "heat",
+  activeLayer: "landsat-temperature",
+  activeCategoryId: "heat",
+  guide: null,
   activeHeatMetric: DEFAULT_HEAT_METRIC,
   mapControlsCollapsed: false,
   analysisPickMode: null,
@@ -112,8 +134,12 @@ const application = {
   surfaceLayout: null,
   projectIntro: null,
 };
+let pendingIntroGuide = false;
 
 const activeLayer = () => application.layers?.get(application.activeLayer);
+const guideDateLabel = (value) => new Intl.DateTimeFormat(getLanguage() === "nl" ? "nl-BE" : "en-GB", {
+  day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Brussels",
+}).format(new Date(value));
 const activeComparison = () => application.comparisons.get(application.activeComparisonId) ?? null;
 const activeAnalysisTargets = (layer) => comparisonTargets(
   layer?.id,
@@ -194,7 +220,17 @@ function showFatalError(error) {
 
 function updateLayerControls() {
   if (!application.layers) return;
-  elements.layerSwitch.classList.toggle("is-comparison-mode", Boolean(application.analysisPickMode));
+  const comparisonMode = Boolean(application.analysisPickMode);
+  elements.layerSwitch.classList.toggle("is-comparison-mode", comparisonMode);
+  elements.layerTabs.forEach(({ category, button }) => {
+    const selected = category.id === application.activeCategoryId;
+    button.textContent = categoryLabel(category);
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+  });
+  elements.layerTabPanels.forEach(({ category, panel }) => {
+    panel.hidden = !comparisonMode && category.id !== application.activeCategoryId;
+  });
   elements.layerCategoryHeadings.forEach(({ category, heading }) => {
     heading.textContent = categoryLabel(category);
   });
@@ -232,17 +268,45 @@ function updateLayerControls() {
     button.classList.toggle("is-linked-comparison", Boolean(linkedComparison && !pick));
     button.classList.toggle("is-comparison-muted", Boolean(pick && !isCompatible && !isPrimary));
   });
+  const scenarioLayer = application.layers.get(SCENARIO_TOOL_ID);
+  elements.scenarioToolButton.hidden = !scenarioLayer;
+  elements.scenarioToolButton.disabled = !scenarioLayer?.isAvailable();
+  elements.scenarioToolButton.setAttribute("aria-pressed", String(application.activeLayer === SCENARIO_TOOL_ID));
+  elements.scenarioToolButton.classList.toggle("is-active", application.activeLayer === SCENARIO_TOOL_ID);
 }
 
 function createLayerControls() {
   const fragment = document.createDocumentFragment();
   elements.layerButtons = [];
+  elements.layerTabs = [];
+  elements.layerTabPanels = [];
   elements.layerCategoryHeadings = [];
+
+  const tabList = document.createElement("div");
+  tabList.className = "layer-tabs";
+  tabList.setAttribute("role", "tablist");
+  tabList.setAttribute("aria-label", t("layers.themeTabs"));
+
+  LAYER_CATEGORIES.forEach((category) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "layer-tab";
+    tab.id = `layer-tab-${category.id}`;
+    tab.dataset.layerTab = category.id;
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-controls", `layer-tab-panel-${category.id}`);
+    tabList.append(tab);
+    elements.layerTabs.push({ category, button: tab });
+  });
+  fragment.append(tabList);
 
   LAYER_CATEGORIES.forEach((category) => {
     const section = document.createElement("section");
     section.className = "layer-category";
     section.dataset.layerCategory = category.id;
+    section.id = `layer-tab-panel-${category.id}`;
+    section.setAttribute("role", "tabpanel");
+    section.setAttribute("aria-labelledby", `layer-tab-${category.id}`);
 
     const heading = document.createElement("h3");
     heading.id = `layer-category-${category.id}`;
@@ -255,8 +319,9 @@ function createLayerControls() {
     group.setAttribute("role", "group");
     group.setAttribute("aria-labelledby", heading.id);
 
-    [...application.layers.values()]
-      .filter((layer) => layer.categoryId === category.id)
+    THEMATIC_LAYER_IDS[category.id]
+      .map((id) => application.layers.get(id))
+      .filter(Boolean)
       .forEach((layer) => {
         const button = document.createElement("button");
         button.className = "layer-button";
@@ -269,9 +334,37 @@ function createLayerControls() {
 
     section.append(heading, group);
     fragment.append(section);
+    elements.layerTabPanels.push({ category, panel: section });
   });
 
+  const thematicIds = new Set(Object.values(THEMATIC_LAYER_IDS).flat());
+  const localOnlyLayers = [...application.layers.values()]
+    .filter(({ id }) => !thematicIds.has(id) && id !== SCENARIO_TOOL_ID);
+  if (localOnlyLayers.length) {
+    const localGroup = document.createElement("div");
+    localGroup.className = "layer-category-options local-tool-options";
+    localGroup.setAttribute("aria-label", t("layers.localTools"));
+    localOnlyLayers.forEach((layer) => {
+      const button = document.createElement("button");
+      button.className = "layer-button";
+      button.type = "button";
+      button.dataset.layer = layer.id;
+      button.setAttribute("aria-pressed", "false");
+      localGroup.append(button);
+      elements.layerButtons.push(button);
+    });
+    fragment.append(localGroup);
+  }
+
   elements.layerSwitch.replaceChildren(fragment);
+}
+
+function selectLayerTab(categoryId, { focus = false } = {}) {
+  if (!THEMATIC_LAYER_IDS[categoryId]) return false;
+  application.activeCategoryId = categoryId;
+  updateLayerControls();
+  if (focus) elements.layerTabs.find(({ category }) => category.id === categoryId)?.button.focus();
+  return true;
 }
 
 function updateAnalysisPairing() {
@@ -462,6 +555,10 @@ function updateScenarioEditor() {
   const layer = activeLayer();
   const model = layer?.getScenarioEditorModel?.() ?? null;
   elements.scenarioEditor.hidden = !model;
+  const unfinishedScenario = Boolean(application.layers?.get(SCENARIO_TOOL_ID)?.isDrawingActive?.());
+  elements.guideLaunch.disabled = unfinishedScenario;
+  elements.projectIntroGuide.disabled = unfinishedScenario;
+  elements.guideLaunch.title = unfinishedScenario ? t("guide.finishDrawingFirst") : "";
   if (!model) return;
   const targets = ["unseal", "sealed", "high", "remove-high", "restore"];
   elements.scenarioTargets.setAttribute("aria-label", t("scenario.targetLabel"));
@@ -583,6 +680,7 @@ function applyLanguage(language) {
   application.panel?.setLanguage();
   application.mapController?.setLanguage();
   application.projectIntro?.setLanguage();
+  application.guide?.setLanguage();
   updateAnnouncement();
 }
 
@@ -599,6 +697,11 @@ application.projectIntro = createProjectIntro({
 setLanguage(DEFAULT_LANGUAGE);
 applyLanguage(DEFAULT_LANGUAGE);
 application.projectIntro.open();
+elements.projectIntroGuide.addEventListener("click", () => {
+  application.projectIntro.close();
+  if (application.guide) application.guide.start(elements.projectIntroGuide);
+  else pendingIntroGuide = true;
+});
 elements.languageToggle.addEventListener("click", () => {
   applyLanguage(getLanguage() === "nl" ? "en" : "nl");
 });
@@ -620,11 +723,6 @@ async function start() {
   if (Object.keys(data.officialLayers ?? {}).length) {
     const officialRasterLayers = (await import("./layers/local-official-layers.js")).createOfficialRasterLayers(data.officialLayers);
     extraLayers.push(...officialRasterLayers);
-    if (data.officialLayers.landgebruik) {
-      extraLayers.push((await import("./layers/landgebruik-layer.js")).createLandgebruikLayer({
-        descriptor: data.officialLayers.landgebruik,
-      }));
-    }
     if (data.officialLayers["landsat-temperature"]) {
       extraLayers.push((await import("./layers/landsat-temperature-layer.js")).createLandsatTemperatureLayer({
         descriptor: data.officialLayers["landsat-temperature"],
@@ -821,6 +919,7 @@ async function start() {
     geojson: data.geojson,
     scores: data.scores,
     layers: application.layers,
+    initialLayerId: application.activeLayer,
     config: MAP_CONFIG,
     onSectorSelect: selectSector,
     onBasemapError: () => {
@@ -1067,6 +1166,82 @@ async function start() {
   });
   await application.mapController.ready;
   application.mapController.setViewportPadding(application.surfaceLayout.getPadding());
+  const guideResponse = await fetch(`${import.meta.env.BASE_URL}data/guide-geography.geojson`, { cache: "no-store" });
+  if (!guideResponse.ok) throw new Error(`Guide geography HTTP ${guideResponse.status}.`);
+  const guideGeography = await guideResponse.json();
+  const guideLandsatLayer = application.layers.get("landsat-temperature");
+  const guideObservation = (observationId) => guideLandsatLayer.getRuntimeData()?.manifest?.observations?.[observationId];
+  application.guide = createGuideTour({
+    root: elements.guideTour,
+    message: elements.guideMessage,
+    heatwaves: elements.guideHeatwaves,
+    date: elements.guideDate,
+    records: elements.guideRecords,
+    recordGrid: elements.guideRecordGrid,
+    reportLink: elements.guideReportLink,
+    pauseButton: elements.guidePause,
+    exitButton: elements.guideExit,
+    exploreButton: elements.guideExplore,
+    retryButton: elements.guideRetry,
+    error: elements.guideError,
+    translate: t,
+    reportUrl: () => GUIDE_REPORT_URLS[getLanguage()],
+    async enter() {
+      if (activeComparison()?.isActive()) await application.deactivateAnalysisPairing();
+      clearSectorSelection();
+      elements.municipality.value = "";
+      populateSectorOptions(data.scores);
+      application.mapController.setMunicipality("");
+      panel.close({ restoreFocus: false, force: true });
+      application.surfaceLayout.requestPanel("closed");
+      document.documentElement.classList.add("is-guide-mode");
+      document.documentElement.classList.remove("guide-has-legend");
+      application.mapController.setViewportPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+      application.mapController.enterGuideMode(guideGeography);
+    },
+    setRegionProgress: (progress) => application.mapController.setGuideRegionProgress(progress),
+    setMunicipalityCount: (count) => application.mapController.setGuideMunicipalityCount(count),
+    prefetchObservation(observationId, signal) {
+      const archive = guideObservation(observationId)?.pmtilesVariants?.all;
+      if (!archive) return;
+      // Warm the PMTiles header while the preceding guide frame is visible.
+      fetch(archive, {
+        cache: "force-cache",
+        headers: { Range: "bytes=0-16383" },
+        signal,
+      }).catch(() => {});
+    },
+    async showObservation(observationId, signal, { first = false } = {}) {
+      const observation = guideObservation(observationId);
+      const archive = observation?.pmtilesVariants?.all;
+      if (!archive) throw new Error(`Guide observation '${observationId}' is unavailable.`);
+      await application.mapController.showGuideRaster(archive, { signal, fadeGeography: first });
+      document.documentElement.classList.add("guide-has-legend");
+      return guideDateLabel(observation.acquiredAt);
+    },
+    async leave() {
+      application.mapController.exitGuideMode();
+      application.activeLayer = "landsat-temperature";
+      application.activeCategoryId = "heat";
+      application.mapController.setLayerOption("landsat-temperature", "observation", "landsat-2026-06-22");
+      await application.mapController.setLayer("landsat-temperature");
+      application.mapControlsCollapsed = false;
+      updateMapControlsDisclosure({ refreshMap: false });
+      updateLayerControls();
+      updateSecondaryControls();
+      updateLayerContext();
+      renderLegend();
+      application.mapController.setViewportPadding(application.surfaceLayout.getPadding());
+      application.mapController.resetView();
+      document.documentElement.classList.remove("is-guide-mode", "guide-has-legend");
+      elements.guideLaunch.focus({ preventScroll: true });
+    },
+  });
+  elements.guideLaunch.addEventListener("click", () => application.guide.start(elements.guideLaunch));
+  if (pendingIntroGuide) {
+    pendingIntroGuide = false;
+    application.guide.start(elements.projectIntroGuide);
+  }
   document.documentElement.dataset.appReady = "true";
   performance.mark("heat-map-ready");
   performance.measure("heat-map-initialization", "heat-map-start", "heat-map-ready");
@@ -1299,81 +1474,98 @@ async function start() {
     const current = application.mapController.getLayerOption(activeLayer().id, temporal.optionName);
     activateTemporalValue(values[Math.min(values.length - 1, values.indexOf(current) + 1)]);
   });
-  elements.layerButtons.forEach((button) => {
-    button.addEventListener("click", async () => {
-      const layerId = button.dataset.layer;
-      if (application.analysisPickMode) {
-        selectAnalysisPairing(layerId);
-        return;
-      }
-      const layer = application.layers.get(layerId);
-      if (!layer?.isAvailable()) {
-        const reasonKey = layer?.getUnavailableReasonKey?.() ?? "error.default";
-        elements.layerHelp.textContent = t(reasonKey);
-        application.announcement = { type: "unavailable", layerId, reasonKey };
-        updateAnnouncement();
-        return;
-      }
-      button.setAttribute("aria-busy", "true");
-      const changedLayer = application.activeLayer !== layerId;
-      if (activeComparison()?.isActive() && layerId !== application.comparisonSession?.canonicalLayerId) {
-        activeComparison().deactivate();
-        application.activeComparisonId = null;
-        application.comparisonSession = null;
-        application.mapController.setPopupModelProvider(null);
-        application.mapController.setPointInspectionProvider(null);
-      }
-      let activated;
-      try {
-        activated = await application.mapController.setLayer(layerId);
-      } finally {
-        button.removeAttribute("aria-busy");
-      }
-      if (!activated) {
-        const reasonKey = layer.getUnavailableReasonKey?.() ?? "error.default";
-        elements.layerHelp.textContent = t(reasonKey);
-        application.announcement = { type: "unavailable", layerId, reasonKey };
-        updateAnnouncement();
-        return;
-      }
-      application.activeLayer = layerId;
-      if (changedLayer && panel.isOpen()) {
-        panel.close({ restoreFocus: false });
-      }
-      if (changedLayer) clearSectorSelection();
-      if (application.analysisPickMode) cancelAnalysisPickMode({ restoreFocus: false });
-      elements.layerHelp.textContent = "";
-      updateLayerControls();
-      updateSecondaryControls();
-      updateLayerContext();
-      renderLegend();
-      let openedScopeSummary = false;
-      if (changedLayer) {
-        openedScopeSummary = openCurrentScopeSummary(button);
-      } else if (selectedSectorId) {
-        panel.setActiveLayer(layerId);
-      } else if (activeComparison()?.isActive()) {
-        panel.open(elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(), button, layerId);
-      } else if (elements.municipality.value && supportsMunicipalitySummary()) {
-        panel.open(municipalityRecord(elements.municipality.value), button, layerId);
-      } else if (!elements.municipality.value && supportsRegionSummary()) {
-        panel.open(regionRecord(), button, layerId);
-      } else if (panel.isMunicipalitySummary?.()) {
-        panel.close({ restoreFocus: false });
-      }
-      application.announcement = { type: "layer", layerId };
+
+  const activateLayerFromControl = async (layerId, button) => {
+    if (application.analysisPickMode) {
+      selectAnalysisPairing(layerId);
+      return;
+    }
+    const layer = application.layers.get(layerId);
+    if (!layer?.isAvailable()) {
+      const reasonKey = layer?.getUnavailableReasonKey?.() ?? "error.default";
+      elements.layerHelp.textContent = t(reasonKey);
+      application.announcement = { type: "unavailable", layerId, reasonKey };
       updateAnnouncement();
-      if (openedScopeSummary) {
-        // Adaptive layouts collapse the layer controls after opening results.
-        // Move focus into the visible panel only after that layout settles, so
-        // keyboard focus never remains inside a hidden control group.
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          if (panel.isOpen()) elements.detailPanel.focus({ preventScroll: true });
-        }));
-      } else {
-        button.focus({ preventScroll: true });
-      }
-    });
+      return;
+    }
+    button.setAttribute("aria-busy", "true");
+    const changedLayer = application.activeLayer !== layerId;
+    if (activeComparison()?.isActive() && layerId !== application.comparisonSession?.canonicalLayerId) {
+      activeComparison().deactivate();
+      application.activeComparisonId = null;
+      application.comparisonSession = null;
+      application.mapController.setPopupModelProvider(null);
+      application.mapController.setPointInspectionProvider(null);
+    }
+    let activated;
+    try {
+      activated = await application.mapController.setLayer(layerId);
+    } finally {
+      button.removeAttribute("aria-busy");
+    }
+    if (!activated) {
+      const reasonKey = layer.getUnavailableReasonKey?.() ?? "error.default";
+      elements.layerHelp.textContent = t(reasonKey);
+      application.announcement = { type: "unavailable", layerId, reasonKey };
+      updateAnnouncement();
+      return;
+    }
+    application.activeLayer = layerId;
+    const categoryId = Object.entries(THEMATIC_LAYER_IDS)
+      .find(([, ids]) => ids.includes(layerId))?.[0];
+    if (categoryId) application.activeCategoryId = categoryId;
+    if (changedLayer && panel.isOpen()) panel.close({ restoreFocus: false });
+    if (changedLayer) clearSectorSelection();
+    if (application.analysisPickMode) cancelAnalysisPickMode({ restoreFocus: false });
+    elements.layerHelp.textContent = "";
+    updateLayerControls();
+    updateSecondaryControls();
+    updateLayerContext();
+    renderLegend();
+    let openedScopeSummary = false;
+    if (changedLayer) {
+      openedScopeSummary = openCurrentScopeSummary(button);
+    } else if (selectedSectorId) {
+      panel.setActiveLayer(layerId);
+    } else if (activeComparison()?.isActive()) {
+      panel.open(elements.municipality.value ? municipalityRecord(elements.municipality.value) : regionRecord(), button, layerId);
+    } else if (elements.municipality.value && supportsMunicipalitySummary()) {
+      panel.open(municipalityRecord(elements.municipality.value), button, layerId);
+    } else if (!elements.municipality.value && supportsRegionSummary()) {
+      panel.open(regionRecord(), button, layerId);
+    } else if (panel.isMunicipalitySummary?.()) {
+      panel.close({ restoreFocus: false });
+    }
+    application.announcement = { type: "layer", layerId };
+    updateAnnouncement();
+    if (openedScopeSummary) {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (panel.isOpen()) elements.detailPanel.focus({ preventScroll: true });
+      }));
+    } else {
+      button.focus({ preventScroll: true });
+    }
+  };
+
+  elements.layerSwitch.addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-layer-tab]");
+    if (tab) {
+      selectLayerTab(tab.dataset.layerTab, { focus: true });
+      return;
+    }
+  });
+  elements.layerSwitch.addEventListener("keydown", (event) => {
+    const tab = event.target.closest("[role=tab]");
+    if (!tab) return;
+    moveSegmentFocus(event, elements.layerTabs.map(({ button }) => button), tab);
+    const focused = document.activeElement?.dataset?.layerTab;
+    if (focused) selectLayerTab(focused);
+  });
+  elements.scenarioToolButton.addEventListener("click", () => {
+    activateLayerFromControl(SCENARIO_TOOL_ID, elements.scenarioToolButton);
+  });
+  elements.layerButtons.forEach((button) => {
+    button.addEventListener("click", () => activateLayerFromControl(button.dataset.layer, button));
     button.addEventListener("keydown", (event) => moveSegmentFocus(
       event,
       elements.layerButtons.filter((candidate) => candidate.getAttribute("aria-disabled") !== "true"),

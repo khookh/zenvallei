@@ -41,6 +41,9 @@ export async function loadApplicationData(baseUrl = import.meta.env.BASE_URL) {
         return { layers: {}, comparisons: {} };
       }
       const layers = Object.fromEntries(Object.entries(index.datasets).flatMap(([id, descriptor]) => {
+        // Landgebruik remains a preparation-only scenario input. It is not a
+        // map product and an older local cache must not bring it back into UI.
+        if (id === "landgebruik") return [];
         if (!descriptor || descriptor.datasetId !== id
           || !/^[a-z0-9-]+\/manifest\.json$/i.test(descriptor.manifestUrl ?? "")) return [];
         return [[id, {

@@ -28,7 +28,7 @@ export const SOURCE_PRODUCTS = Object.freeze({
   heat: { authorityId: "departmentCare", labelKey: "sources.productHeat", url: "https://www.departementzorg.be/nl/hittekwetsbaarheidskaart-vlaanderen" },
   jaarbak: { authorityId: "departmentEnvironment", labelKey: "sources.productJaarbak", url: "https://www.vlaanderen.be/datavindplaats/catalogus/jaarlijkse-bodemafdekkingskaart-jaarbak-1-m-resolutie-2023" },
   landUse: { authorityId: "departmentEnvironment", labelKey: "sources.productLandUse", url: "https://www.vlaanderen.be/datavindplaats/catalogus/landgebruik-vlaanderen-toestand-2025" },
-  agricultureParcels: { authorityId: "agricultureFisheries", labelKey: "sources.productAgricultureParcels", url: "https://www.vlaanderen.be/datavindplaats/catalogus/landbouwgebruikspercelen-lvgp" },
+  agricultureParcels: { authorityId: "agricultureFisheries", labelKey: "sources.productAgricultureParcels", url: "https://www.vlaanderen.be/datavindplaats/catalogus/landbouwgebruikspercelen-lvgp", mapDialog: false },
   populationModel: { authorityId: "departmentEnvironment", labelKey: "sources.productPopulationModel", url: "https://www.vlaanderen.be/datavindplaats/catalogus/inwonersdichtheid-per-ha-vlaanderen-toestand-2019" },
   greenMap: { authorityId: "natureForests", labelKey: "sources.productGreenMap", url: "https://www.vlaanderen.be/datavindplaats/catalogus/groenkaart-vlaanderen-2021" },
   urbanAtlas: { authorityId: "copernicusClms", labelKey: "sources.productUrbanAtlas", url: "https://land.copernicus.eu/en/products/urban-atlas/urban-atlas-2021" },

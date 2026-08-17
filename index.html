@@ -18,9 +18,13 @@
         <img class="brand-mark" src="%BASE_URL%assets/zennevallei-river-mark.png" alt="" aria-hidden="true" />
         <div class="header-copy">
           <p class="eyebrow" data-i18n="brand.eyebrow">Zennevallei</p>
-          <h1 id="active-layer-title" data-i18n="brand.title">Heat vulnerability</h1>
+          <h1 id="active-layer-title" data-i18n="brand.title">Heatwave surface temperature</h1>
         </div>
         <div class="header-actions">
+          <button class="guide-launch-button header-guide-button" id="guide-launch" type="button" aria-label="Guide me" data-i18n-aria-label="guide.launch">
+            <span class="header-guide-icon" aria-hidden="true">&#9655;</span>
+            <span class="header-guide-label" data-i18n="guide.launch">Guide me</span>
+          </button>
           <button class="info-button header-about-button" id="about-button" type="button" aria-label="Open an explanation of this map" data-i18n-aria-label="controls.about">
             <span class="info-glyph" aria-hidden="true">i</span>
             <span class="header-about-label" data-i18n="controls.aboutShort">About</span>
@@ -41,7 +45,7 @@
           id="map"
           class="map"
           role="region"
-          aria-label="Interactive heat-vulnerability map of Zennevallei"
+          aria-label="Interactive map of Zennevallei"
           data-i18n-aria-label="map.region"
         ></div>
 
@@ -69,6 +73,10 @@
 
           <div class="map-controls-body" id="map-controls-body">
           <div class="layer-switch" id="layer-switch" aria-label="Map layer" data-i18n-aria-label="layers.region"></div>
+          <button class="scenario-tool-button" id="scenario-tool-button" type="button" data-layer="land-cover-scenario">
+            <span class="scenario-tool-icon" aria-hidden="true">✦</span>
+            <span data-i18n="scenario.toolLabel">Land-cover change tool</span>
+          </button>
           <div class="secondary-control" id="secondary-control" hidden>
             <p id="secondary-control-prompt">Show score</p>
             <div class="secondary-switch" id="secondary-switch" role="group" aria-label="Layer options"></div>
@@ -166,8 +174,8 @@
 
         <details class="legend" id="legend" open>
           <summary>
-            <span id="legend-title" data-i18n="legend.title">Heat vulnerability score</span>
-            <span class="legend-summary-note" id="legend-note">0–10</span>
+          <span id="legend-title">Land-surface temperature</span>
+            <span class="legend-summary-note" id="legend-note">15–50°C</span>
           </summary>
           <div class="legend-content" id="legend-content" tabindex="0" role="region" aria-label="Legend contents" data-i18n-aria-label="legend.content"></div>
         </details>
@@ -192,6 +200,28 @@
         </div>
 
         <div class="sr-only" id="selection-announcement" aria-live="polite"></div>
+
+        <section class="guide-tour" id="guide-tour" aria-live="polite" aria-label="Guide me tour" data-i18n-aria-label="guide.region" hidden>
+          <div class="guide-card">
+            <p class="guide-kicker" data-i18n="guide.kicker">Guide me</p>
+            <p class="guide-message" id="guide-message"></p>
+            <ul class="guide-heatwaves" id="guide-heatwaves" hidden></ul>
+            <time class="guide-date" id="guide-date" hidden></time>
+            <section class="guide-records" id="guide-records" aria-label="June 2026 heatwave records" data-i18n-aria-label="guide.recordsLabel" hidden>
+              <div class="guide-record-grid" id="guide-record-grid"></div>
+              <a class="guide-report-link" id="guide-report-link" href="https://www.meteo.be/nl/klimaat/klimaat-van-belgie/klimatologisch-overzicht/2026/juni" target="_blank" rel="noopener noreferrer" data-i18n="guide.officialReport">Official KMI/IRM report</a>
+            </section>
+            <div class="guide-error" id="guide-error" hidden>
+              <p data-i18n="guide.loadFailed">This observation could not be loaded.</p>
+              <button id="guide-retry" type="button" data-i18n="guide.retry">Retry</button>
+            </div>
+            <button class="guide-explore" id="guide-explore" type="button" data-i18n="guide.explore" hidden>Explore the map</button>
+          </div>
+          <div class="guide-actions">
+            <button id="guide-pause" type="button" data-i18n="guide.pause">Pause</button>
+            <button id="guide-exit" type="button" data-i18n="guide.exit">Exit</button>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -237,6 +267,7 @@
 
         <div class="project-intro-footer">
           <button class="project-intro-primary" id="project-intro-primary" type="button" autofocus data-i18n="intro.openMap">Open map</button>
+          <button class="project-intro-guide" id="project-intro-guide" type="button" data-i18n="guide.launch">Guide me</button>
           <div class="project-intro-links">
             <a href="https://github.com/khookh/zenvallei" target="_blank" rel="noopener noreferrer" data-i18n="intro.github">View or collaborate on GitHub</a>
             <a href="mailto:stefanodonne@gmail.com" data-i18n="intro.contact">Send feedback</a>

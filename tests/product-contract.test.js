@@ -4,16 +4,17 @@ import {
   PUBLIC_COMPARISON_IDS,
   LAYER_ACTIONS,
   PUBLIC_LAYER_IDS,
+  PUBLIC_TOOL_IDS,
   validateProductContract,
 } from "../src/product-contract.js";
 
 describe("release product contract", () => {
-  it("pins nine public layers, eleven comparisons and only relevant action rows", () => {
+  it("pins seven thematic layers, one scenario tool and eleven comparisons", () => {
     expect(PUBLIC_LAYER_IDS).toEqual([
-      "heat", "landsat-temperature", "urban-atlas", "jaarbak",
-      "groenkaart", "landgebruik", "population", "income",
-      "land-cover-scenario",
+      "landsat-temperature", "heat", "urban-atlas", "jaarbak",
+      "groenkaart", "population", "income",
     ]);
+    expect(PUBLIC_TOOL_IDS).toEqual(["land-cover-scenario"]);
     expect(PUBLIC_COMPARISON_IDS).toEqual([
       "heat-income", "heat-population", "landsat-urban-atlas",
       "landsat-jaarbak", "landsat-groenkaart", "groenkaart-income", "groenkaart-population", "landsat-income",
@@ -29,7 +30,7 @@ describe("release product contract", () => {
   });
 
   it("rejects a release that silently omits a layer or comparison", () => {
-    const layers = new Map(PUBLIC_LAYER_IDS.map((id) => [id, {}]));
+    const layers = new Map([...PUBLIC_LAYER_IDS, ...PUBLIC_TOOL_IDS].map((id) => [id, {}]));
     const comparisons = new Map(PUBLIC_COMPARISON_IDS.map((id) => [id, {}]));
     expect(validateProductContract(layers, comparisons)).toBe(true);
     layers.delete("landsat-temperature");
@@ -37,21 +38,21 @@ describe("release product contract", () => {
   });
 
   it("allows only the notebook Test layer in playground mode", () => {
-    const layers = new Map([...PUBLIC_LAYER_IDS, "notebook-test"].map((id) => [id, {}]));
+    const layers = new Map([...PUBLIC_LAYER_IDS, ...PUBLIC_TOOL_IDS, "notebook-test"].map((id) => [id, {}]));
     const comparisons = new Map(PUBLIC_COMPARISON_IDS.map((id) => [id, {}]));
     expect(validateProductContract(layers, comparisons, { playground: true })).toBe(true);
   });
 
   it("publishes the scenario without a mode-specific layer branch", () => {
     expect(LOCAL_ONLY_LAYER_IDS).toEqual([]);
-    const layers = new Map([...PUBLIC_LAYER_IDS, ...LOCAL_ONLY_LAYER_IDS].map((id) => [id, {}]));
+    const layers = new Map([...PUBLIC_LAYER_IDS, ...PUBLIC_TOOL_IDS, ...LOCAL_ONLY_LAYER_IDS].map((id) => [id, {}]));
     const comparisons = new Map(PUBLIC_COMPARISON_IDS.map((id) => [id, {}]));
     expect(validateProductContract(layers, comparisons, { localData: true })).toBe(true);
     expect(validateProductContract(layers, comparisons)).toBe(true);
   });
 
   it("requires every functional comparison in every public mode", () => {
-    const layers = new Map(PUBLIC_LAYER_IDS.map((id) => [id, {}]));
+    const layers = new Map([...PUBLIC_LAYER_IDS, ...PUBLIC_TOOL_IDS].map((id) => [id, {}]));
     const comparisons = new Map(PUBLIC_COMPARISON_IDS.map((id) => [id, {}]));
     expect(validateProductContract(layers, comparisons)).toBe(true);
     comparisons.delete("heat-income");

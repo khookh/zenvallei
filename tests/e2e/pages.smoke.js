@@ -45,6 +45,21 @@ async function showResults(page) {
   await expect(panel).toHaveAttribute("aria-hidden", "false");
 }
 
+const THEME_BY_LAYER = {
+  "landsat-temperature": "heat", heat: "heat",
+  "urban-atlas": "land-green", jaarbak: "land-green", groenkaart: "land-green",
+  population: "demography", income: "demography",
+};
+
+async function activateLayer(page, layerId) {
+  const theme = THEME_BY_LAYER[layerId];
+  const tab = theme ? page.locator(`[data-layer-tab="${theme}"]`) : null;
+  const picking = await page.locator("#layer-switch").evaluate((element) => element.classList.contains("is-comparison-mode"));
+  if (tab && !picking && !await tab.isVisible()) await showControls(page);
+  if (tab && !picking) await tab.click();
+  await page.locator(`[data-layer="${layerId}"]`).click();
+}
+
 async function rasterVisibility(page) {
   return page.evaluate(() => {
     const map = window.__heatMap.map;
@@ -64,7 +79,7 @@ async function rasterVisibility(page) {
 
 async function activateComparison(page, fromLayer, targetLayer, testInfo) {
   if (testInfo.project.name.includes("mobile")) await showControls(page);
-  await page.locator(`[data-layer="${fromLayer}"]`).click();
+  await activateLayer(page, fromLayer);
   await expect(page.locator(`[data-layer="${fromLayer}"]`)).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
   if (testInfo.project.name.includes("mobile")) await showControls(page);
   if (fromLayer === "groenkaart") {
@@ -93,7 +108,7 @@ async function removeComparison(page, restoredLayer, testInfo) {
 }
 
 test("serves the complete application below the GitHub Pages project path", async ({ page }, testInfo) => {
-  test.setTimeout(90_000);
+  test.setTimeout(120_000);
   const failedOwnRequests = [];
   const ownResponses = [];
   const rangeResponses = [];
@@ -110,9 +125,9 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await expect(page.locator("#project-intro")).toBeVisible();
   await expect(page.locator(".project-intro-heading img")).toHaveAttribute("src", "/zenvallei/assets/zennevallei-river-mark.png");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.locator("[data-layer]")).toHaveCount(9);
+  await expect(page.locator("[data-layer]")).toHaveCount(8);
   expect((await page.locator("[data-layer]").evaluateAll((elements) => elements.map((element) => element.dataset.layer))).sort())
-    .toEqual(["groenkaart", "heat", "income", "jaarbak", "land-cover-scenario", "landgebruik", "landsat-temperature", "population", "urban-atlas"]);
+    .toEqual(["groenkaart", "heat", "income", "jaarbak", "land-cover-scenario", "landsat-temperature", "population", "urban-atlas"]);
   await expect(page.locator('[data-layer="land-cover"], [data-layer="vegetation"], [data-layer="tree-cover-density"]')).toHaveCount(0);
   await expect(page.locator('[data-layer="notebook-test"]')).toHaveCount(0);
   await expect(page.locator("#visible-count")).toHaveText("154 sectors");
@@ -133,20 +148,20 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await expect(page.locator('[data-layer="income"]')).toHaveClass(/is-comparison-target/);
   await expect(page.locator('[data-layer="population"]')).toHaveClass(/is-comparison-target/);
   await page.locator("#analysis-pick-cancel").click();
-  await page.locator('[data-layer="urban-atlas"]').click();
+  await activateLayer(page, "urban-atlas");
   await expect(page.locator('[data-layer="urban-atlas"]')).toHaveAttribute("aria-pressed", "true");
   if (testInfo.project.name.includes("mobile")) await showControls(page);
   await expect(page.locator("#analysis-compare")).toBeVisible();
   await expect(page.locator("#map-mode-action")).toBeHidden();
   expect(ownResponses.some((url) => url.includes("/zenvallei/data/urban-atlas.geojson"))).toBe(true);
   if (testInfo.project.name.includes("mobile")) await showControls(page);
-  await page.locator('[data-layer="landsat-temperature"]').click();
+  await activateLayer(page, "landsat-temperature");
   if (testInfo.project.name.includes("mobile")) await showControls(page);
   await expect(page.locator("#analysis-compare")).toBeVisible();
   await expect(page.locator("#analysis-compare")).toHaveText(/Compare/);
   for (const layerId of ["jaarbak", "groenkaart"]) {
     if (testInfo.project.name.includes("mobile")) await showControls(page);
-    await page.locator(`[data-layer="${layerId}"]`).click();
+    await activateLayer(page, layerId);
     await expect(page.locator(`[data-layer="${layerId}"]`)).toHaveAttribute("aria-pressed", "true");
     if (testInfo.project.name.includes("mobile")) await showControls(page);
     await expect(page.locator("#map-mode-action")).toBeVisible();
@@ -154,18 +169,14 @@ test("serves the complete application below the GitHub Pages project path", asyn
   }
   for (const layerId of ["population", "income"]) {
     if (testInfo.project.name.includes("mobile")) await showControls(page);
-    await page.locator(`[data-layer="${layerId}"]`).click();
+    await activateLayer(page, layerId);
     await expect(page.locator(`[data-layer="${layerId}"]`)).toHaveAttribute("aria-pressed", "true");
     if (testInfo.project.name.includes("mobile")) await showControls(page);
     await expect(page.locator("#map-mode-action")).toBeHidden();
     await expect(page.locator("#analysis-compare")).toBeVisible();
   }
   if (testInfo.project.name.includes("mobile")) await showControls(page);
-  await page.locator('[data-layer="landgebruik"]').click();
-  await expect(page.locator("#map-mode-action")).toBeHidden();
-  await expect(page.locator("#analysis-compare")).toBeHidden();
-  if (testInfo.project.name.includes("mobile")) await showControls(page);
-  await page.locator('[data-layer="population"]').click();
+  await activateLayer(page, "population");
   await expect(page.locator("#active-layer-title")).toHaveText("Population density");
   await expect(page.locator('[data-secondary-option="statbel-2025"]')).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/population/population-grid-2025.geojson"))).toBe(true);
@@ -185,7 +196,7 @@ test("serves the complete application below the GitHub Pages project path", asyn
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/landsat-temperature/manifest.json"))).toBe(true);
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/jaarbak/manifest.json"))).toBe(true);
   await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/groenkaart/manifest.json"))).toBe(true);
-  await expect.poll(() => ownResponses.some((url) => url.endsWith("/data/official-layers/landgebruik/manifest.json"))).toBe(true);
+  expect(ownResponses.some((url) => url.includes("/data/official-layers/landgebruik/"))).toBe(false);
   await expect.poll(() => rangeResponses.includes(206)).toBe(true);
   const landsatManifest = await page.evaluate(async () => (await fetch("./data/official-layers/landsat-temperature/manifest.json")).json());
   expect(landsatManifest.timelineItems.map(({ value }) => value)).toEqual([
@@ -205,18 +216,18 @@ test("serves the complete application below the GitHub Pages project path", asyn
   if (!testInfo.project.name.includes("mobile")) {
     // Preserve a user's density preference while the comparison temporarily
     // forces JaarBAK's binary classification.
-    await page.locator('[data-layer="jaarbak"]').click();
+    await activateLayer(page, "jaarbak");
     await page.locator("#map-mode-action").click();
     await expect.poll(() => rasterVisibility(page)).toMatchObject({ jaarbak: "none", density: "visible" });
-    await page.locator('[data-layer="landsat-temperature"]').click();
+    await activateLayer(page, "landsat-temperature");
     await page.locator("#analysis-compare").click();
     await expect(page.locator('[data-layer="urban-atlas"]')).toHaveClass(/is-comparison-target/);
     await expect(page.locator('[data-layer="jaarbak"]')).toHaveClass(/is-comparison-target/);
-    await page.locator('[data-layer="urban-atlas"]').click();
+    await activateLayer(page, "urban-atlas");
     await expect(page.locator("#analysis-pair-label")).toContainText("Urban Atlas 2021");
     await expect.poll(() => ownResponses.some((url) => url.endsWith("/landsat-urban-atlas/manifest.json"))).toBe(true);
     await page.locator("#analysis-pair-change").click();
-    await page.locator('[data-layer="jaarbak"]').click();
+    await activateLayer(page, "jaarbak");
     await expect(page.locator("#analysis-pair-label")).toContainText("Soil sealing");
     await expect.poll(() => ownResponses.some((url) => url.endsWith("/landsat-jaarbak/manifest.json"))).toBe(true);
     await expect.poll(() => rasterVisibility(page), { timeout: 20_000 }).toEqual({
@@ -224,9 +235,9 @@ test("serves the complete application below the GitHub Pages project path", asyn
     });
     await page.locator("#analysis-pair-remove").click();
     await expect.poll(() => rasterVisibility(page)).toMatchObject({ landsat: "visible", jaarbak: "none", sealed: "missing" });
-    await page.locator('[data-layer="jaarbak"]').click();
+    await activateLayer(page, "jaarbak");
     await expect.poll(() => rasterVisibility(page)).toMatchObject({ jaarbak: "none", density: "visible" });
-    await page.locator('[data-layer="landsat-temperature"]').click();
+    await activateLayer(page, "landsat-temperature");
     await page.locator("#panel-close").click();
     // The panel closes with a short transition. Wait until it no longer covers
     // the map before moving the pointer, otherwise a slower CI runner can send
@@ -315,7 +326,7 @@ test("keeps classification visible when density loading fails", async ({ page },
   }));
   await page.goto(".");
   await page.locator("#project-intro-primary").click();
-  await page.locator('[data-layer="groenkaart"]').click();
+  await activateLayer(page, "groenkaart");
   await page.locator("#map-mode-action").click();
   await expect(page.locator("#map-mode-action")).not.toHaveAttribute("aria-busy", "true");
   await expect.poll(() => page.evaluate(() => {

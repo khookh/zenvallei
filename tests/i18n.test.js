@@ -52,10 +52,8 @@ describe("English–Dutch translations", () => {
     expect(t("authority.landsat", {}, "en")).toBe("NASA/USGS Landsat");
     expect(t("authority.meteorologicalInstitute", {}, "en")).toBe("Royal Meteorological Institute of Belgium (RMI)");
     expect(t("layers.groenkaart", { year: 2021 }, "en")).toBe("Flanders Green Map 2021");
-    expect(t("layers.landgebruik", {}, "en")).toBe("Flanders land use");
     expect(t("jaarbak.contextMeta", { year: 2024 }, "nl")).toBe("Bodemafdekking · 1 m · 2024");
     expect(t("groenkaart.contextMeta", { year: 2021 }, "nl")).toBe("Groenkaart Vlaanderen · 1 m · 2021");
-    expect(t("landgebruik.contextMeta", { year: 2025 }, "nl")).toBe("Landgebruik Vlaanderen · 10 m · 2025");
     ["Flemish Government", "Flemish Department", "Government of Flanders, Department", "ANB and Digital Flanders", "Green Map Flanders", "Land use Flanders"]
       .forEach((obsolete) => expect(english).not.toContain(obsolete));
   });
@@ -78,7 +76,7 @@ describe("English–Dutch translations", () => {
   it("falls back to English for unsupported languages and unknown keys", () => {
     expect(setLanguage("fr")).toBe("en");
     expect(getLanguage()).toBe("en");
-    expect(t("brand.title")).toBe("Heat vulnerability");
+    expect(t("brand.title")).toBe("Heatwave surface temperature");
     expect(t("missing.translation.key")).toBe("missing.translation.key");
   });
 
@@ -130,7 +128,7 @@ describe("English–Dutch translations", () => {
       "layers.context.heatText", "layers.context.heatScoreText", "layers.context.vulnerabilityText",
       "layers.context.urbanAtlasText", "landsat.contextText", "jaarbak.contextText",
       "jaarbak.densityContext", "groenkaart.contextText", "groenkaart.densityContext",
-      "landgebruik.contextText", "landgebruik.agricultureContext", "population.currentContextText",
+      "population.currentContextText",
       "population.modelContextText", "income.contextText", "scenario.contextText",
       "heatIncome.contextText", "heatPopulation.contextText", "comparison.contextText",
       "soilComparison.contextTextExact", "landsatGreen.contextText", "greenIncome.contextText",
@@ -175,7 +173,7 @@ describe("English–Dutch translations", () => {
     expect(document.documentElement.lang).toBe("en");
     expect(document.title).toBe("Zennevallei - heat resilience");
     expect(document.querySelector('meta[name="description"]').content).toContain("154 statistical sectors");
-    expect(document.querySelector("span").textContent).toBe("Heat vulnerability");
+    expect(document.querySelector("span").textContent).toBe("Heatwave surface temperature");
     expect(document.querySelector("input").placeholder).toBe("Name or sector code");
     expect(document.querySelector("button").getAttribute("aria-label")).toBe("Open an explanation of this map");
   });

@@ -506,75 +506,6 @@ function renderLocalOfficialRaster(model) {
     </div></article>`;
 }
 
-function renderLandgebruik(model) {
-  const { record, manifest, year, mode, stats, parcelStats } = model;
-  const definitions = new Map((manifest?.classesOrScale?.items ?? []).map((item) => [String(item.value), item]));
-  const classes = (stats?.classes ?? []).map((item) => {
-    const definition = definitions.get(String(item.code));
-    return {
-      ...item,
-      label: t(`landgebruik.class.${item.code}`),
-      color: definition?.color ?? "#657575",
-      group: definition?.group ?? "other",
-    };
-  });
-  const dominant = classes.reduce((best, item) => item.areaHa > (best?.areaHa ?? -1) ? item : best, null);
-  const cropColor = new Map((manifest?.agriculturalDetail?.cropGroups ?? []).map((item) => [item.sourceLabel, item.color]));
-  const cropGroups = (parcelStats?.cropGroups ?? []).map((item) => ({
-    ...item,
-    label: t(`landgebruik.cropGroup.${item.sourceLabel}`),
-    color: cropColor.get(item.sourceLabel) ?? "#8f8f8f",
-  }));
-  const groupOrder = ["settlement", "economic", "infrastructure", "recreation", "agriculture", "nature", "water", "other"];
-  const breakdown = groupOrder.map((group) => {
-    const rows = classes.filter((item) => item.group === group);
-    if (!rows.length) return "";
-    return `<section class="landgebruik-breakdown-group"><h4>${escapeHtml(t(`landgebruik.group.${group}`))}</h4><div class="local-breakdown-list">${rows.map(localClassRow).join("")}</div></section>`;
-  }).join("");
-  const agricultural = mode === "agriculture";
-  const hero = agricultural
-    ? localHero(record, t("landgebruik.agriculture2025"), parcelStats ? `
-        <div class="score-hero" style="--hero-color:#9ad7cf">
-          <div class="score-orb local-percentage-orb"><strong>${escapeHtml(formatNumber(parcelStats.parcelPercentage, 1))}</strong><span>%</span></div>
-          <div><span class="score-caption">${escapeHtml(t("landgebruik.parcelShareHeadline"))}</span><p>${escapeHtml(t("landgebruik.parcelAreaSupport", {
-            area: formatNumber(parcelStats.parcelAreaHa), count: parcelStats.parcelCount,
-          }))}</p></div>
-        </div>` : `<p class="panel-empty-state">${escapeHtml(t("landgebruik.noParcels"))}</p>`, t("landgebruik.parcelScale"))
-    : localHero(record, t("landgebruik.referenceYear", { year }), dominant ? `
-        <div class="score-hero">
-          <div class="land-cover-orb" style="--class-color:${escapeHtml(dominant.color)}" aria-hidden="true"></div>
-          <div><span class="score-caption">${escapeHtml(t("landgebruik.dominantClass"))}</span><p class="land-cover-dominant">${escapeHtml(dominant.label)} · ${escapeHtml(formatNumber(dominant.percentage, 1))}%</p></div>
-        </div>` : `<p class="panel-empty-state">${escapeHtml(t("officialData.noData"))}</p>`, t("landgebruik.contextMeta", { year }));
-  return `
-    <article class="panel-article landgebruik-panel">
-      ${hero}
-      <div class="panel-body local-layer-body">
-        <section aria-labelledby="landgebruik-summary-title">
-          <div class="section-heading"><p class="section-kicker">${escapeHtml(t("layers.landgebruik"))}</p><h3 id="landgebruik-summary-title">${escapeHtml(t(agricultural ? "landgebruik.agriculturePanelTitle" : "landgebruik.panelTitle"))}</h3></div>
-          ${agricultural && parcelStats ? `
-            ${localComposition(cropGroups, t("landgebruik.cropBreakdown"))}
-            <h4 class="local-breakdown-title">${escapeHtml(t("landgebruik.cropBreakdown"))}</h4>
-            <div class="local-breakdown-list">${cropGroups.map(localClassRow).join("")}</div>` : ""}
-          ${!agricultural && stats ? `
-            ${localComposition(classes, t("landgebruik.composition"))}
-            <h4 class="local-breakdown-title">${escapeHtml(t("landgebruik.composition"))}</h4>
-            <div class="landgebruik-breakdown">${breakdown}</div>` : ""}
-        </section>
-        <details class="detail-accordion methodology-accordion" data-section="landgebruik-methodology">
-          <summary data-focus-key="landgebruik-methodology-summary"><span>${escapeHtml(t("landgebruik.methodologyTitle"))}</span></summary>
-          <div class="accordion-content methodology-copy">
-            <p>${escapeHtml(t(agricultural ? "landgebruik.agriculturePanelExplanation" : "landgebruik.panelExplanation"))}</p>
-            <p>${escapeHtml(t("landgebruik.methodology"))}</p>
-            <p>${escapeHtml(t("landgebruik.parcelMethodology"))}</p>
-            <p><strong>${escapeHtml(t("panel.warningLabel"))}</strong> ${escapeHtml(t("landgebruik.comparisonWarning"))}</p>
-            ${localSource(manifest)}
-            ${manifest?.agriculturalDetail?.source?.url ? `<p><a href="${safeHref(manifest.agriculturalDetail.source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("landgebruik.parcelSourceName"))}</a></p>` : ""}
-          </div>
-        </details>
-      </div>
-    </article>`;
-}
-
 function landsatDateTime(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat(getLanguage() === "nl" ? "nl-BE" : "en-GB", {
@@ -2006,7 +1937,6 @@ export function renderSectorPanelModel(model) {
   }
   if (model.template === "notebook-test") return renderNotebookTestRecord(model);
   if (model.template === "local-official-raster") return renderLocalOfficialRaster(model);
-  if (model.template === "landgebruik") return renderLandgebruik(model);
   if (model.template === "landsat-temperature") return renderLandsatTemperature(model);
   if (model.template === "landsat-urban-atlas-comparison") return renderLandsatUrbanAtlasComparison(model);
   if (model.template === "landsat-jaarbak-comparison") return renderLandsatJaarbakComparison(model);

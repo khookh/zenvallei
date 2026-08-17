@@ -4,14 +4,16 @@
  * smoke tests and distribution validation.
  */
 export const PUBLIC_LAYER_IDS = Object.freeze([
-  "heat",
   "landsat-temperature",
+  "heat",
   "urban-atlas",
   "jaarbak",
   "groenkaart",
-  "landgebruik",
   "population",
   "income",
+]);
+
+export const PUBLIC_TOOL_IDS = Object.freeze([
   "land-cover-scenario",
 ]);
 
@@ -39,9 +41,10 @@ export const LAYER_ACTIONS = Object.freeze({
 });
 
 export function validateProductContract(registry, comparisons, { playground = false, localData = false } = {}) {
+  const releaseProducts = [...PUBLIC_LAYER_IDS, ...PUBLIC_TOOL_IDS];
   const expectedLayers = playground
-    ? [...PUBLIC_LAYER_IDS, "notebook-test"]
-    : localData ? [...PUBLIC_LAYER_IDS, ...LOCAL_ONLY_LAYER_IDS] : PUBLIC_LAYER_IDS;
+    ? [...releaseProducts, "notebook-test"]
+    : localData ? [...releaseProducts, ...LOCAL_ONLY_LAYER_IDS] : releaseProducts;
   const observedLayers = [...registry.keys()];
   const missingLayers = expectedLayers.filter((id) => !observedLayers.includes(id));
   const unexpectedLayers = observedLayers.filter((id) => !expectedLayers.includes(id));

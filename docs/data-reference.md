@@ -14,9 +14,11 @@ derivatives are published.
 | `population` | Statbel variable population grid and sector population, 2025; Flanders 100 m density model and matching Statbel population, 2019 | The 2025 grid supplies current variable cells and exact scope totals. The 2019 100 m model is used only where comparisons need a uniform grid | Current density layer; comparison panels state when the 2019 model is used |
 | `jaarbak` | Soil sealing (official product: JaarBAK), 2018-2024, native 1 m EPSG:31370 | Official classes are validated and clipped. Sector shares use complete source area; density is sealed share inside a 100 m circle | Categorical PMTiles or optional 100 m density surface |
 | `groenkaart` | Flanders Green Map, 2018 and 2021, native 1 m EPSG:31370 | Four official classes remain categorical. Sector shares use complete area; selected high/low-green density is calculated inside 100 m | Categorical PMTiles or optional selected-class density |
-| `landgebruik` | Flanders Land Use, 2019/2022/2025, 10 m EPSG:31370; 2025 agricultural parcels | Nineteen classes use nearest-neighbour categorical alignment. Parcel intersections and crop groups are calculated separately | Temporal land-use raster plus detailed 2025 parcel geometry |
 | `landsat-temperature` | NASA/USGS Landsat 8/9 Collection 2 Level-2 via Planetary Computer; six heatwave acquisitions from 2020-2026 | Scale/offset convert ST_B10 to °C. QA_PIXEL, ST_QA, saturation, nodata and scene support determine clear versus obscured cells on an aligned 30 m EPSG:32631 grid | Daytime land-surface temperature, never air temperature; clear and cloud-obscured coverage are distinguished |
 | `land-cover-scenario` | Green Map 2021, Soil sealing 2024, Urban Atlas 2021, Flanders Land Use 2025 water and Landsat 22 June 2026 | Exact 1 m upper-surface edits feed Radoux or the verified 2026 XGBoost model; outputs are method-specific ΔLST on 30 m centres | Public browser worker; edits and calculated fields remain session-only |
+
+Flanders Land Use is not an available map. Its derived water mask is retained
+only as an internal input to the Land-cover change tool.
 
 ## Comparisons
 

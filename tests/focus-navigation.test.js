@@ -18,4 +18,13 @@ describe("segmented-control focus", () => {
     moveSegmentFocus({ key: "Enter", preventDefault: vi.fn() }, [button], button);
     expect(button.focus).not.toHaveBeenCalled();
   });
+
+  it("supports Home and End for accessible tablists", () => {
+    const buttons = [document.createElement("button"), document.createElement("button"), document.createElement("button")];
+    document.body.append(...buttons);
+    moveSegmentFocus({ key: "End", preventDefault: vi.fn() }, buttons, buttons[0]);
+    expect(document.activeElement).toBe(buttons[2]);
+    moveSegmentFocus({ key: "Home", preventDefault: vi.fn() }, buttons, buttons[2]);
+    expect(document.activeElement).toBe(buttons[0]);
+  });
 });

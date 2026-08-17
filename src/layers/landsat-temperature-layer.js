@@ -281,6 +281,7 @@ export function createLandsatTemperatureLayer({ descriptor: inputDescriptor, loa
       activeObservation = value;
       return mapLayer.refresh();
     },
+    waitUntilReady: (options) => mapLayer.whenReady(options),
     getOption: (name) => name === "observation" ? activeObservation : null,
     getAttributions() {
       const source = manifest?.source ?? descriptor.source;

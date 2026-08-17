@@ -17,6 +17,33 @@ const COMMON_LAYER_IDS = Object.freeze({
   inspectionRadius: "point-inspection-radius",
 });
 const INSPECTION_RADIUS_SOURCE_ID = "point-inspection-radius-source";
+const GUIDE_SOURCE_ID = "guide-geography-source";
+const GUIDE_LAYER_IDS = Object.freeze({
+  municipalityFill: "guide-municipality-fill",
+  municipalityCasing: "guide-municipality-casing",
+  municipalityLine: "guide-municipality-line",
+  regionShadow: "guide-region-shadow",
+  regionCasing: "guide-region-casing",
+  regionLine: "guide-region-line",
+});
+const GUIDE_RASTER_IDS = Object.freeze([0, 1].map((slot) => ({
+  source: `guide-landsat-source-${slot}`,
+  layer: `guide-landsat-raster-${slot}`,
+})));
+
+function abortableDelay(milliseconds, signal) {
+  if (milliseconds <= 0) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(finish, milliseconds);
+    const onAbort = () => finish(new DOMException("Aborted", "AbortError"));
+    function finish(error = null) {
+      window.clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+      if (error) reject(error); else resolve();
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
 
 function radiusPolygon(lngLat, radiusMeters, points = 64) {
   const latitudeRadians = lngLat.lat * Math.PI / 180;
@@ -111,6 +138,10 @@ export function createMapController({
   let hoveredId = null;
   let inspectionTimer = 0;
   let inspectionRequest = null;
+  let guideMode = false;
+  let guideMarkers = [];
+  let guideRasterSlot = -1;
+  let guideRasterGeneration = 0;
   const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, maxWidth: "260px" });
 
   const clearInspection = () => {
@@ -429,11 +460,217 @@ export function createMapController({
     return true;
   };
 
+  const setSharedLayersVisible = (visible) => {
+    Object.values(COMMON_LAYER_IDS).forEach((layerId) => {
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+    });
+  };
+
+  const guideLineGradient = (progress, color) => {
+    if (progress <= 0) return "rgba(0,0,0,0)";
+    if (progress >= 1) return color;
+    return ["step", ["line-progress"], color, progress, "rgba(0,0,0,0)"];
+  };
+
   return {
     map,
     ready,
     refreshInteractionCursor,
     openSourceDialog(triggerElement = null) { sourceDialog.open(triggerElement); },
+    enterGuideMode(geography) {
+      guideMode = true;
+      clearInspection();
+      popup.remove();
+      layers.forEach((layer) => layer.setVisible(map, false));
+      setSharedLayersVisible(false);
+      if (map.getSource(GUIDE_SOURCE_ID)) return;
+      map.addSource(GUIDE_SOURCE_ID, { type: "geojson", data: geography, lineMetrics: true });
+      map.addLayer({
+        id: GUIDE_LAYER_IDS.municipalityFill, type: "fill", source: GUIDE_SOURCE_ID,
+        filter: ["all", ["==", ["get", "kind"], "municipality"], ["<", ["get", "revealIndex"], 0]],
+        paint: { "fill-color": "#087d79", "fill-opacity": 0.2 },
+      });
+      map.addLayer({
+        id: GUIDE_LAYER_IDS.municipalityCasing, type: "line", source: GUIDE_SOURCE_ID,
+        filter: ["all", ["==", ["get", "kind"], "municipality"], ["<", ["get", "revealIndex"], 0]],
+        paint: { "line-color": "rgba(3,28,35,0.96)", "line-width": 5.4 },
+      });
+      map.addLayer({
+        id: GUIDE_LAYER_IDS.municipalityLine, type: "line", source: GUIDE_SOURCE_ID,
+        filter: ["all", ["==", ["get", "kind"], "municipality"], ["<", ["get", "revealIndex"], 0]],
+        paint: { "line-color": "rgba(247,255,254,0.99)", "line-width": 2.7 },
+      });
+      guideMarkers = geography.features
+        .filter(({ properties }) => properties.kind === "municipality-label")
+        .map((feature) => {
+          const label = document.createElement("span");
+          label.className = "guide-municipality-label";
+          label.textContent = feature.properties.name;
+          label.hidden = true;
+          return {
+            revealIndex: feature.properties.revealIndex,
+            element: label,
+            marker: new maplibregl.Marker({ element: label, anchor: "center" })
+              .setLngLat(feature.geometry.coordinates).addTo(map),
+          };
+        });
+      map.addLayer({
+        id: GUIDE_LAYER_IDS.regionShadow, type: "line", source: GUIDE_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "region-outline"],
+        paint: { "line-width": 11, "line-gradient": guideLineGradient(0, "rgba(3,25,31,0.98)") },
+      });
+      map.addLayer({
+        id: GUIDE_LAYER_IDS.regionCasing, type: "line", source: GUIDE_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "region-outline"],
+        paint: { "line-width": 7.2, "line-gradient": guideLineGradient(0, "rgba(255,255,255,0.99)") },
+      });
+      map.addLayer({
+        id: GUIDE_LAYER_IDS.regionLine, type: "line", source: GUIDE_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "region-outline"],
+        paint: { "line-width": 3.5, "line-gradient": guideLineGradient(0, "#19b8b1") },
+      });
+      const { clientWidth, clientHeight } = map.getCanvas();
+      const spareWidth = Math.max(0, clientWidth - clientHeight * 1.12);
+      const sidePadding = Math.max(44, spareWidth / 2);
+      fit(fullBounds, {
+        padding: { top: 44, right: sidePadding, bottom: 44, left: sidePadding },
+        maxZoom: 11.7,
+        duration: 0,
+      });
+    },
+    setGuideRegionProgress(progress) {
+      if (!guideMode) return;
+      if (map.getLayer(GUIDE_LAYER_IDS.regionShadow)) {
+        map.setPaintProperty(GUIDE_LAYER_IDS.regionShadow, "line-gradient", guideLineGradient(progress, "rgba(3,25,31,0.98)"));
+        map.setPaintProperty(GUIDE_LAYER_IDS.regionCasing, "line-gradient", guideLineGradient(progress, "rgba(255,255,255,0.99)"));
+        map.setPaintProperty(GUIDE_LAYER_IDS.regionLine, "line-gradient", guideLineGradient(progress, "#19b8b1"));
+      }
+    },
+    setGuideMunicipalityCount(count) {
+      [GUIDE_LAYER_IDS.municipalityFill, GUIDE_LAYER_IDS.municipalityCasing, GUIDE_LAYER_IDS.municipalityLine].forEach((layerId) => {
+        if (map.getLayer(layerId)) map.setFilter(layerId, ["all", ["==", ["get", "kind"], "municipality"], ["<", ["get", "revealIndex"], count]]);
+      });
+      guideMarkers.forEach(({ revealIndex, element }) => { element.hidden = revealIndex >= count; });
+    },
+    setGuideGeographyVisible(visible) {
+      Object.values(GUIDE_LAYER_IDS).forEach((layerId) => {
+        if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+      });
+      guideMarkers.forEach(({ element }) => {
+        element.style.display = visible ? "" : "none";
+        element.style.opacity = visible ? "1" : "0";
+      });
+    },
+    async showGuideRaster(url, { signal, fadeGeography = false } = {}) {
+      const generation = ++guideRasterGeneration;
+      const nextSlot = (guideRasterSlot + 1) % GUIDE_RASTER_IDS.length;
+      const next = GUIDE_RASTER_IDS[nextSlot];
+      const transitionMs = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
+      if (map.getLayer(next.layer)) map.removeLayer(next.layer);
+      if (map.getSource(next.source)) map.removeSource(next.source);
+      map.addSource(next.source, { type: "raster", url: `pmtiles://${url}`, tileSize: 256 });
+      map.addLayer({
+        id: next.layer, type: "raster", source: next.source,
+        paint: {
+          "raster-opacity": 0,
+          "raster-opacity-transition": { duration: transitionMs, delay: 0 },
+          "raster-fade-duration": 0,
+          "raster-resampling": "nearest",
+        },
+      }, map.getLayer(GUIDE_LAYER_IDS.municipalityFill) ? GUIDE_LAYER_IDS.municipalityFill : COMMON_LAYER_IDS.hit);
+      const probe = fetch(url, { cache: "no-store", headers: { Range: "bytes=0-0" }, signal });
+      const loaded = new Promise((resolve, reject) => {
+        const timeout = window.setTimeout(() => finish(new Error("Guide raster readiness timed out.")), import.meta.env.DEV ? 45_000 : 15_000);
+        const onSourceData = (event) => {
+          if (event.sourceId === next.source && (event.tile || event.isSourceLoaded || map.isSourceLoaded(next.source))) finish();
+        };
+        const onError = (event) => { if (event.sourceId === next.source) finish(event.error ?? new Error("Guide raster failed.")); };
+        const onAbort = () => finish(new DOMException("Aborted", "AbortError"));
+        function finish(error = null) {
+          window.clearTimeout(timeout);
+          map.off("sourcedata", onSourceData);
+          map.off("error", onError);
+          signal?.removeEventListener("abort", onAbort);
+          if (error) reject(error); else resolve();
+        }
+        map.on("sourcedata", onSourceData);
+        map.on("error", onError);
+        signal?.addEventListener("abort", onAbort, { once: true });
+      });
+      try {
+        const [response] = await Promise.all([probe, loaded]);
+        if (![200, 206].includes(response.status)) throw new Error(`Guide raster HTTP ${response.status}.`);
+        if (signal?.aborted || generation !== guideRasterGeneration || !guideMode) throw new DOMException("Aborted", "AbortError");
+
+        const previous = guideRasterSlot >= 0 ? GUIDE_RASTER_IDS[guideRasterSlot] : null;
+        if (previous && map.getLayer(previous.layer)) {
+          map.setPaintProperty(previous.layer, "raster-opacity-transition", { duration: transitionMs, delay: 0 });
+          map.setPaintProperty(previous.layer, "raster-opacity", 0);
+        }
+        map.setPaintProperty(next.layer, "raster-opacity", 0.8);
+
+        if (fadeGeography) {
+          const transitions = [
+            [GUIDE_LAYER_IDS.municipalityFill, "fill-opacity", 0],
+            [GUIDE_LAYER_IDS.municipalityCasing, "line-opacity", 0],
+            [GUIDE_LAYER_IDS.municipalityLine, "line-opacity", 0],
+            [GUIDE_LAYER_IDS.regionShadow, "line-opacity", 0],
+            [GUIDE_LAYER_IDS.regionCasing, "line-opacity", 0],
+            [GUIDE_LAYER_IDS.regionLine, "line-opacity", 0],
+          ];
+          transitions.forEach(([layerId, property, value]) => {
+            if (!map.getLayer(layerId)) return;
+            map.setPaintProperty(layerId, `${property}-transition`, { duration: transitionMs, delay: 0 });
+            map.setPaintProperty(layerId, property, value);
+          });
+          guideMarkers.forEach(({ element }) => {
+            element.style.transitionDuration = `${transitionMs}ms`;
+            element.style.opacity = "0";
+          });
+        }
+
+        map.triggerRepaint();
+        await abortableDelay(transitionMs, signal);
+        if (signal?.aborted || generation !== guideRasterGeneration || !guideMode) throw new DOMException("Aborted", "AbortError");
+
+        if (fadeGeography) {
+          Object.values(GUIDE_LAYER_IDS).forEach((layerId) => {
+            if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", "none");
+          });
+          guideMarkers.forEach(({ element }) => { element.style.display = "none"; });
+        }
+        if (previous) {
+          if (map.getLayer(previous.layer)) map.removeLayer(previous.layer);
+          if (map.getSource(previous.source)) map.removeSource(previous.source);
+        }
+        guideRasterSlot = nextSlot;
+        map.triggerRepaint();
+        return true;
+      } catch (error) {
+        if (map.getLayer(next.layer)) map.removeLayer(next.layer);
+        if (map.getSource(next.source)) map.removeSource(next.source);
+        throw error;
+      }
+    },
+    exitGuideMode() {
+      guideMode = false;
+      guideRasterGeneration += 1;
+      GUIDE_RASTER_IDS.forEach(({ layer, source }) => {
+        if (map.getLayer(layer)) map.removeLayer(layer);
+        if (map.getSource(source)) map.removeSource(source);
+      });
+      guideRasterSlot = -1;
+      Object.values(GUIDE_LAYER_IDS).reverse().forEach((layerId) => {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+      });
+      if (map.getSource(GUIDE_SOURCE_ID)) map.removeSource(GUIDE_SOURCE_ID);
+      guideMarkers.forEach(({ marker }) => marker.remove());
+      guideMarkers = [];
+      setSharedLayersVisible(true);
+      currentLayer()?.setVisible(map, true);
+      applyLayerFilter();
+      fit(fullBounds, { maxZoom: 12, duration: 0 });
+    },
     setMunicipality(municipality) {
       activeMunicipality = municipality;
       applyLayerFilter();

@@ -110,7 +110,7 @@ await fs.access(browserAssetPath(urbanAtlas.geojsonUrl));
 const officialRoot = path.join(dataRoot, "official-layers");
 const officialIndex = JSON.parse(await fs.readFile(path.join(officialRoot, "index.json"), "utf8"));
 const officialIds = Object.keys(officialIndex.datasets ?? {});
-const expectedOfficialIds = ["groenkaart", "jaarbak", "land-cover-scenario", "landgebruik", "landsat-temperature"];
+const expectedOfficialIds = ["groenkaart", "jaarbak", "land-cover-scenario", "landsat-temperature"];
 const expectedComparisonIds = [
   "groenkaart-income", "groenkaart-population", "jaarbak-income", "jaarbak-population",
   "landsat-groenkaart", "landsat-income", "landsat-jaarbak", "landsat-population", "landsat-urban-atlas",
@@ -346,4 +346,4 @@ if (JSON.stringify(publishedLandsatObservations) !== JSON.stringify(expectedLand
   throw new Error(`Published Landsat timeline must contain the six clearest approved heatwave observations: ${publishedLandsatObservations.join(", ")}.`);
 }
 
-console.log(`Validated ${sectorIds.size} sectors, nine application layers and all prepared browser assets.`);
+console.log(`Validated ${sectorIds.size} sectors, seven thematic layers, one scenario tool and all prepared browser assets.`);

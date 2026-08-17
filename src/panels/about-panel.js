@@ -38,11 +38,8 @@ export function renderAboutPanel(model) {
         <div class="about-layer-category">
           <h4 class="about-category-title">${escapeHtml(t("about.categoryHeat"))}</h4>
           <ul class="about-layer-index">
-            ${aboutLayerRow("heat", t("layers.heat"))}
             ${aboutLayerRow("landsat", t("layers.landsatTemperature"))}
-            ${officialLayers?.["land-cover-scenario"] ? aboutLayerRow("scenario", t("layers.landCoverScenario"), {
-              label: t(SOURCE_PRODUCTS.xgboost.labelKey), url: SOURCE_PRODUCTS.xgboost.url,
-            }) : ""}
+            ${aboutLayerRow("heat", t("layers.heat"))}
           </ul>
         </div>
         <div class="about-layer-category">
@@ -51,7 +48,6 @@ export function renderAboutPanel(model) {
             ${aboutLayerRow("urbanAtlas", t("layers.urbanAtlas", { year: urbanAtlas?.activeYear ?? 2021 }))}
             ${aboutLayerRow("jaarbak", t("layers.jaarbak", { year: officialLayers?.jaarbak?.defaultYear ?? 2024 }))}
             ${aboutLayerRow("groenkaart", t("layers.groenkaart", { year: officialLayers?.groenkaart?.defaultYear ?? 2021 }))}
-            ${aboutLayerRow("landgebruik", t("layers.landgebruik"))}
           </ul>
         </div>
         <div class="about-layer-category">
@@ -62,6 +58,14 @@ export function renderAboutPanel(model) {
           </ul>
         </div>
       </section>
+      ${officialLayers?.["land-cover-scenario"] ? `<section>
+        <div class="section-heading"><p class="section-kicker">${escapeHtml(t("about.toolKicker"))}</p><h3>${escapeHtml(t("about.toolTitle"))}</h3></div>
+        <ul class="about-layer-index">
+          ${aboutLayerRow("scenario", t("scenario.toolLabel"), {
+            label: t(SOURCE_PRODUCTS.xgboost.labelKey), url: SOURCE_PRODUCTS.xgboost.url,
+          })}
+        </ul>
+      </section>` : ""}
       <section class="about-note about-project">
         <p class="section-kicker">${escapeHtml(t("about.projectKicker"))}</p>
         <h3>${escapeHtml(t("about.projectTitle"))}</h3>

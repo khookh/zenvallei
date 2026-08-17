@@ -265,7 +265,7 @@ describe("progressive detail panel", () => {
     expect(html).toContain('<h2 id="panel-title">Hele Zennevallei</h2>');
   });
 
-  it("provides a compact eight-layer orientation and routes sources to the source dialog", () => {
+  it("provides seven thematic layers plus the separate scenario tool", () => {
     const provenance = {
       output: {
         sectorCount: 154,
@@ -277,7 +277,7 @@ describe("progressive detail panel", () => {
     const panel = document.querySelector("#panel");
     expect(panel.textContent).toContain("Wat elke laag vertelt");
     expect(panel.textContent).toContain("Landgebruik");
-    expect(panel.querySelectorAll(".about-layer-row")).toHaveLength(8);
+    expect(panel.querySelectorAll(".about-layer-row")).toHaveLength(7);
     expect(panel.textContent).toContain("154 statistische sectoren in zeven Zennevallei-gemeenten");
     expect(panel.querySelectorAll(".about-method")).toHaveLength(0);
     expect(panel.querySelector("[data-open-map-sources]")?.textContent).toBe("Kaart- en databronnen");
@@ -292,7 +292,7 @@ describe("progressive detail panel", () => {
     api.setLanguage();
     expect(panel.textContent).toContain("What each layer tells you");
     expect(panel.textContent).toContain("Land use");
-    expect(panel.querySelectorAll(".about-layer-row")).toHaveLength(8);
+    expect(panel.querySelectorAll(".about-layer-row")).toHaveLength(7);
     expect(panel.textContent).toContain("154 statistical sectors in seven Zennevallei municipalities");
     expect(panel.textContent).toContain("A personal and open V0.1 project");
     expect(panel.textContent).toContain("No cookies, analytics, accounts or persistent map choices");
@@ -575,27 +575,6 @@ describe("progressive detail panel", () => {
     expect(greenMap).not.toContain("--score-color:#ffff00");
     expect(greenMap.match(/<details/g)).toHaveLength(2);
 
-  });
-
-  it("leads agricultural use with complete-area percentage and keeps crop shares explicit", () => {
-    setLanguage("en");
-    const html = renderSectorPanelModel({
-      template: "landgebruik", mode: "agriculture", year: 2025,
-      record: records["23027C091"],
-      stats: { classes: [] },
-      parcelStats: {
-        completeAreaHa: 414.29, parcelAreaHa: 296.35, parcelPercentage: 71.53, parcelCount: 163,
-        cropGroups: [{ sourceLabel: "Grasland", areaHa: 180, percentage: 60.74 }],
-      },
-      manifest: {
-        source: {}, classesOrScale: { items: [] },
-        agriculturalDetail: { cropGroups: [{ sourceLabel: "Grasland", color: "#BFFF7F" }], source: {} },
-      },
-    });
-    expect(html).toContain("71.5");
-    expect(html).toContain("296.35 ha across 163 mapped parcels");
-    expect(html).toContain("complete Statbel-defined area");
-    expect(html).toContain("mapped parcel area as their denominator");
   });
 
   it("presents Statbel income as a fiscal indicator without fabricating a distribution", () => {
