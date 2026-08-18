@@ -325,9 +325,9 @@ a:focus-visible {
 .layer-category-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
 .layer-category-options .layer-button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .layer-button { min-height: 44px; padding: 6px 8px; border: 0; border-radius: 10px; color: #456168; background: rgba(255, 255, 255, 0.18); font-size: 0.65rem; font-weight: 760; line-height: 1.2; transition: color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
-.layer-button:hover:not([aria-disabled="true"]) { color: var(--ink); background: rgba(255, 255, 255, 0.72); }
+.layer-button:hover:not([aria-disabled="true"]):not(.is-active) { color: var(--ink); background: rgba(255, 255, 255, 0.72); }
 .layer-button.is-active { color: white; background: var(--teal); box-shadow: 0 4px 12px rgba(11, 110, 105, 0.22); }
-.layer-button[aria-busy="true"] { cursor: progress; opacity: 0.76; }
+.layer-button[aria-busy="true"] { cursor: progress; }
 .layer-button[aria-disabled="true"] { cursor: not-allowed; color: #87999c; opacity: 0.72; }
 .layer-switch.is-comparison-mode .layer-tabs { display: none; }
 .layer-switch.is-comparison-mode .layer-category:not(:has(.is-comparison-target)) { display: none; }

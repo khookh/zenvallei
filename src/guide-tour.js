@@ -189,6 +189,7 @@ export function createGuideTour({
       renderRecords();
       await hold(timing.recordRevealMs, token);
     }
+    setMessage("guide.finalMessage");
     exploreButton.hidden = false;
   };
 

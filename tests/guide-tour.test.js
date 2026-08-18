@@ -52,6 +52,15 @@ describe("Guide me story contract", () => {
     expect(guideCopy).not.toMatch(/Le Soir|RTBF|RTL Belgique/i);
   });
 
+  it("ends with a bilingual preview of future guide insights", () => {
+    expect(en["guide.finalMessage"]).toBe(
+      "The Guide me tour will soon reveal more insights from this tool. For now, this is a test animation. :)",
+    );
+    expect(nl["guide.finalMessage"]).toBe(
+      "De rondleiding zal binnenkort meer inzichten uit deze tool tonen. Voorlopig is dit een testanimatie. :)",
+    );
+  });
+
   it("ships one region and seven north-to-south municipality unions", () => {
     const geography = JSON.parse(fs.readFileSync(geographyPath, "utf8"));
     const region = geography.features.find(({ properties }) => properties.kind === "region");

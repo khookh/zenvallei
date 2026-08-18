@@ -13,6 +13,10 @@ duration, seven days above 30°C, the 39.4°C national maximum measured at
 Ophoven on 26 June and the 24.1°C highest minimum during a Uccle heatwave.
 Press sources and health claims are intentionally absent from the tour; one
 quiet link opens the official language-specific KMI/IRM June report.
+After the fourth fact appears, the closing sentence makes clear that this is a
+test animation and that future versions of Guide me will reveal more insights.
+The four facts, 2026 observation and temperature legend remain visible behind
+that final invitation to explore the map.
 
 The tour reads the same PMTiles archives and temperature legend as the normal
 Heatwave surface-temperature map. It does not interpolate, alter or recalculate

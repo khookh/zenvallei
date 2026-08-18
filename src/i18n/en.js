@@ -300,6 +300,7 @@ export const en = Object.freeze({
   "guide.heatwave.2026June": "17–28 June 2026",
   "guide.landsatMessage": "This map shows daytime land-surface temperature estimated from NASA/USGS Landsat observations during documented heatwaves.",
   "guide.finalHeatwaveIntro": "This Landsat image is from 22 June. The heatwave continued until 28 June.",
+  "guide.finalMessage": "The Guide me tour will soon reveal more insights from this tool. For now, this is a test animation. :)",
   "guide.recordsLabel": "June 2026 heatwave records",
   "guide.record.durationValue": "12 days of heatwave",
   "guide.record.durationDetail": "It lasted from 17 to 28 June.",

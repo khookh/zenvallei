@@ -300,6 +300,7 @@ export const nl = Object.freeze({
   "guide.heatwave.2026June": "17–28 juni 2026",
   "guide.landsatMessage": "Deze kaart toont de landoppervlaktetemperatuur overdag, geschat op basis van NASA/USGS Landsat-waarnemingen tijdens gedocumenteerde hittegolven.",
   "guide.finalHeatwaveIntro": "Dit Landsat-beeld is van 22 juni. De hittegolf duurde voort tot 28 juni.",
+  "guide.finalMessage": "De rondleiding zal binnenkort meer inzichten uit deze tool tonen. Voorlopig is dit een testanimatie. :)",
   "guide.recordsLabel": "Records van de hittegolf van juni 2026",
   "guide.record.durationValue": "12 dagen hittegolf",
   "guide.record.durationDetail": "Ze duurde van 17 tot en met 28 juni.",

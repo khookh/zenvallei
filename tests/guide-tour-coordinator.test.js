@@ -78,7 +78,7 @@ describe("Guide me coordinator", () => {
     expect(dom.root.dataset.stage).toBe("records");
     expect(dom.grid.querySelectorAll(".guide-record:not([hidden])")).toHaveLength(4);
     expect(dom.report.href).toBe("https://www.meteo.be/nl/report");
-    expect(dom.message.textContent).toBe("guide.finalHeatwaveIntro");
+    expect(dom.message.textContent).toBe("guide.finalMessage");
   });
 
   it("retains the last stable frame while a failed observation waits for Retry", async () => {
